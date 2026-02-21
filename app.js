@@ -20,9 +20,15 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 app.get("/webhook", (req, res) => {
   const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
 
-  if (req.query["hub.verify_token"] === verifyToken) {
-    return res.send(req.query["hub.challenge"]);
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode === "subscribe" && token === verifyToken) {
+    console.log("WhatsApp Webhook verified");
+    return res.status(200).send(challenge);
   }
+
   return res.sendStatus(403);
 });
 
@@ -73,9 +79,15 @@ app.post("/webhook", async (req, res) => {
 app.get("/instagram-webhook", (req, res) => {
   const verifyToken = process.env.IG_VERIFY_TOKEN;
 
-  if (req.query["hub.verify_token"] === verifyToken) {
-    return res.send(req.query["hub.challenge"]);
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode === "subscribe" && token === verifyToken) {
+    console.log("Instagram Webhook verified");
+    return res.status(200).send(challenge);
   }
+
   return res.sendStatus(403);
 });
 
@@ -119,8 +131,9 @@ app.post("/instagram-webhook", async (req, res) => {
 });
 
 // -------------------------------
-//  SERVER START
+//  SERVER START (RENDER FIXED)
 // -------------------------------
-app.listen(3000, () => {
-  console.log("Server running on port 3000");
+const port = process.env.PORT || 3000;
+app.listen(port, () => {
+  console.log("Server running on port " + port);
 });
