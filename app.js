@@ -12,7 +12,7 @@ app.use(bodyParser.json());
 // -------------------------------
 import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // -------------------------------
 //  WHATSAPP WEBHOOK (VERIFY)
@@ -136,4 +136,5 @@ app.post("/instagram-webhook", async (req, res) => {
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("Server running on port " + port);
+
 });
