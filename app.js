@@ -44,7 +44,27 @@ app.post("/webhook", async (req, res) => {
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
-    const text = message.text?.body;
+
+    // ---- TÜM MESAJ TİPLERİNİ DESTEKLE ----
+    let text = null;
+
+    if (message.type === "text") {
+      text = message.text.body;
+    }
+
+    if (message.type === "interactive") {
+      const interactive = message.interactive;
+      if (interactive.type === "button_reply") {
+        text = interactive.button_reply.title;
+      }
+      if (interactive.type === "list_reply") {
+        text = interactive.list_reply.title;
+      }
+    }
+
+    if (!text) text = "Merhaba!";
+
+    console.log("Incoming message:", text, "from:", from);
 
     // Gemini cevabı
     const result = await model.generateContent(text);
@@ -136,5 +156,4 @@ app.post("/instagram-webhook", async (req, res) => {
 const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("Server running on port " + port);
-
 });
