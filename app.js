@@ -161,7 +161,6 @@ const samcheProfile = `
 SamChe Company LLC is a UAE‑based consultancy focused on Private AI systems, digital growth strategy, and business setup clarity.
 We guide clients through UAE market entry, free zone selection, compliance clarity, launch planning, and AI‑powered digital growth.
 `;
-
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -313,8 +312,7 @@ app.post("/webhook", async (req, res) => {
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
-
-    // HIGH‑LEVEL CONSULTANT PROMPT
+        // HIGH‑LEVEL CONSULTANT PROMPT
     const prompt =
       lang === "tr"
         ? `
@@ -338,13 +336,13 @@ Cevaplama kuralların:
 7. Gerektiğinde canlı temsilciye yönlendirebileceğini nazikçe belirt.
 8. SamChe Company LLC’nin kurumsal imajına uygun, stratejik ve sakin bir ton kullan.
 
-Her cevabın mümkün olduğunca şu yapıda olsun:
-- Kısa ve net bir giriş
+Her cevabın şu yapıda olsun:
+- Kısa ve net giriş
 - Durum / bağlam analizi
-- Seçenekler ve her birinin değerlendirmesi
+- Seçenekler ve değerlendirmeleri
 - Önerilen yol haritası (adım adım)
-- Varsa riskler ve kritik dikkat noktaları
-- Son cümlede kullanıcıyı bir sonraki adıma taşıyan kısa bir danışman sorusu
+- Riskler ve kritik noktalar
+- Son cümlede kullanıcıyı bir sonraki adıma taşıyan danışman sorusu
 
 Şirket profili:
 ${samcheProfile}
@@ -377,13 +375,13 @@ Response rules:
 7. When appropriate, gently suggest speaking with a live consultant.
 8. Maintain a calm, strategic, and trustworthy voice aligned with SamChe’s brand.
 
-Each answer should ideally follow this structure:
+Each answer should follow this structure:
 - Brief, clear opening
 - Situation / context analysis
-- Options and evaluation of each
+- Options and evaluation
 - Recommended step‑by‑step roadmap
-- Risks and critical considerations (if relevant)
-- A closing question that guides the user to a concrete next step
+- Risks and critical considerations
+- A closing question guiding the user to the next step
 
 Company profile:
 ${samcheProfile}
@@ -399,15 +397,55 @@ ${text}
 
 مجالات خبرتك:
 - تأسيس الشركات في دبي والإمارات والوضوح التنظيمي
-- اختيار المناطق الحرة، التراخيص، والامتثال (Compliance)
+- اختيار المناطق الحرة، التراخيص، والامتثال
 - تخطيط التأشيرات، نماذج التكاليف، الهيكلة التشغيلية
 - دخول السوق، تصميم نموذج العمل، تحليل المنافسة
 - النمو الرقمي، استراتيجية العلامة التجارية، استراتيجية المحتوى
 - دمج الذكاء الاصطناعي، الأتمتة، وتحسين الكفاءة
 
 قواعد الإجابة:
-1. استخدم نبرة مهنية، استشارية، وموثوقة.
-2. قدّم إجابات منظمة وتحليلية قائمة على الرؤية والاستبصار.
-3. اعرض الخيارات مع مزايا وعيوب وآثار استراتيجية لكل خيار.
-4. تجنب الإجابات القصيرة أو السطحية؛ اجعل الرد غنيًا وواضحًا.
-5. وضّح
+1. استخدم نبرة مهنية واستشارية وموثوقة.
+2. قدم إجابات تحليلية ومنظمة تعتمد على الرؤية والخبرة.
+3. اعرض الخيارات مع مزايا وعيوب وآثار استراتيجية.
+4. تجنب الإجابات القصيرة أو السطحية.
+5. وضّح التكاليف والجداول الزمنية والمخاطر بوضوح.
+6. لا تذكر أي تفاصيل تقنية أو داخلية.
+7. عند الحاجة، اقترح التواصل مع مستشار مباشر.
+8. حافظ على نبرة هادئة واستراتيجية تتماشى مع هوية SamChe.
+
+هيكل الإجابة:
+- مقدمة قصيرة
+- تحليل الوضع
+- الخيارات وتقييمها
+- خارطة طريق خطوة بخطوة
+- المخاطر والنقاط الحرجة
+- سؤال ختامي يوجه المستخدم للخطوة التالية
+
+ملف الشركة:
+${samcheProfile}
+
+سياق المحادثة:
+${historyText}
+
+رسالة المستخدم الأخيرة:
+${text}
+        `;
+
+    const reply = await callGemini(prompt, lang);
+
+    session.history.push({ role: "assistant", text: reply });
+
+    await sendMessage(from, reply);
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.sendStatus(500);
+  }
+});
+
+// -------------------------------
+//  SERVER
+// -------------------------------
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log("SamChe Bot running on port " + port));
