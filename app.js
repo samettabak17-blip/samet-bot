@@ -8,12 +8,12 @@ const app = express();
 app.use(bodyParser.json());
 
 // -------------------------------
-//  SESSION / HAFIZA
+//  SESSION / MEMORY
 // -------------------------------
 const sessions = {};
 
 // -------------------------------
-//  WHATSAPP MESAJ GÖNDERME
+//  SEND WHATSAPP MESSAGE
 // -------------------------------
 async function sendMessage(to, body) {
   try {
@@ -37,11 +37,41 @@ async function sendMessage(to, body) {
 }
 
 // -------------------------------
-//  GEMINI REST API (v1) – AXIOS
+//  CORPORATE FALLBACK
 // -------------------------------
-async function callGemini(prompt) {
+function corporateFallback(lang) {
+  if (lang === "tr") {
+    return (
+      "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
+      "Dubai’de şirket kuruluşu, vizeler, maliyetler, serbest bölgeler, iş planı, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz. " +
+      "Dilerseniz sizi canlı bir temsilciye de yönlendirebilirim.\n\n" +
+      "Canlı temsilci: +971 52 728 8586"
+    );
+  }
+
+  if (lang === "en") {
+    return (
+      "I couldn’t fully understand your question, but I’d be glad to assist. " +
+      "You can ask more specifically about Dubai company setup, visas, costs, free zones, business planning, market strategy, or AI solutions. " +
+      "If you prefer, I can also connect you with a live consultant.\n\n" +
+      "Live consultant: +971 52 728 8586"
+    );
+  }
+
+  return (
+    "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
+    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، التأشيرات، التكاليف، المناطق الحرة، خطط الأعمال، الاستراتيجيات أو حلول الذكاء الاصطناعي. " +
+    "ويمكنني تحويلك إلى مستشار مباشر إذا رغبت.\n\n" +
+    "المستشار المباشر: ‎+971 52 728 8586"
+  );
+}
+
+// -------------------------------
+//  GEMINI REST API – 1.5 PRO LATEST
+// -------------------------------
+async function callGemini(prompt, lang) {
   const url =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-latest:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -53,19 +83,22 @@ async function callGemini(prompt) {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    return (
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Soruyu biraz daha farklı ifade eder misiniz?"
-    );
+    const reply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    if (!reply.trim()) {
+      return corporateFallback(lang);
+    }
+
+    return reply;
   } catch (err) {
     console.error("Gemini API error:", err.response?.data || err.message);
-
-    return "Soruyu biraz daha farklı ifade eder misiniz?";
+    return corporateFallback(lang);
   }
 }
 
 // -------------------------------
-//  SABİT METİNLER
+//  STATIC TEXTS
 // -------------------------------
 const servicesList = {
   tr:
@@ -113,9 +146,9 @@ const introAfterLang = {
 };
 
 const contactText = {
-  tr: "SamChe Company LLC İletişim:\n+971 52 728 8586\ninfo@samchecompany.com",
-  en: "SamChe Company LLC Contact:\n+971 52 728 8586\ninfo@samchecompany.com",
-  ar: "بيانات الاتصال:\n+971 52 728 8586\ninfo@samchecompany.com",
+  tr: "Canlı temsilci: +971 52 728 8586\nE‑posta: info@samchecompany.com",
+  en: "Live consultant: +971 52 728 8586\nEmail: info@samchecompany.com",
+  ar: "مستشار مباشر: ‎+971 52 728 8586\nالبريد: info@samchecompany.com",
 };
 
 const chatbotDemo = {
@@ -130,23 +163,20 @@ We guide clients through UAE market entry, free zone selection, compliance clari
 `;
 
 // -------------------------------
-//  WEBHOOK DOĞRULAMA
+//  WEBHOOK VERIFY
 // -------------------------------
 app.get("/webhook", (req, res) => {
-  const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN;
-
   if (
     req.query["hub.mode"] === "subscribe" &&
-    req.query["hub.verify_token"] === verifyToken
+    req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN
   ) {
     return res.status(200).send(req.query["hub.challenge"]);
   }
-
   return res.sendStatus(403);
 });
 
 // -------------------------------
-//  FİYAT HESABI
+//  PRICE CALCULATION
 // -------------------------------
 function calculateSetupPrice(visas) {
   const v = parseInt(visas || "1", 10);
@@ -156,7 +186,7 @@ function calculateSetupPrice(visas) {
 }
 
 // -------------------------------
-//  WEBHOOK MESAJ
+//  WEBHOOK MESSAGE HANDLER
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
@@ -167,7 +197,7 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // İlk mesaj
+    // FIRST MESSAGE
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
@@ -189,7 +219,7 @@ app.post("/webhook", async (req, res) => {
 
     const session = sessions[from];
 
-    // Dil seçimi
+    // LANGUAGE SELECTION
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -205,29 +235,32 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
 
-    // İletişim isteği
+    // CONTACT REQUEST
     if (
       lower.includes("iletişim") ||
       lower.includes("contact") ||
-      lower.includes("call")
+      lower.includes("call") ||
+      lower.includes("telefon") ||
+      lower.includes("whatsapp")
     ) {
       await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
     }
 
-    // Chatbot demo
+    // CHATBOT DEMO
     if (lower.includes("chatbot") || lower.includes("demo")) {
       await sendMessage(from, chatbotDemo[lang]);
       return res.sendStatus(200);
     }
 
-    // Şirket kurma akışı
+    // COMPANY SETUP FLOW
     if (
       session.flow.mode === "chat" &&
       (lower.includes("şirket kur") ||
         lower.includes("sirket kur") ||
         lower.includes("company setup") ||
-        lower.includes("business setup"))
+        lower.includes("business setup") ||
+        lower.includes("company formation"))
     ) {
       session.flow.mode = "setup_sector";
       await sendMessage(
@@ -248,10 +281,10 @@ app.post("/webhook", async (req, res) => {
       await sendMessage(
         from,
         lang === "tr"
-          ? "Kaç vize planlıyorsunuz?"
+          ? "Yaklaşık kaç vize (ortak/çalışan) planlıyorsunuz?"
           : lang === "en"
-          ? "How many visas do you plan?"
-          : "كم عدد التأشيرات المطلوبة؟"
+          ? "Approximately how many visas (partners/employees) do you plan?"
+          : "تقريبًا كم عدد التأشيرات (شركاء/موظفين) التي تخطط لها؟"
       );
       return res.sendStatus(200);
     }
@@ -264,16 +297,16 @@ app.post("/webhook", async (req, res) => {
 
       const msg =
         lang === "tr"
-          ? `Sektör: ${session.flow.sector}\nVize: ${text}\n\nYaklaşık maliyet: ${min}–${max} AED`
+          ? `Sektör: ${session.flow.sector}\nVize sayısı: ${text}\n\nGenel piyasa koşullarına göre yaklaşık şirket kuruluş maliyeti: ${min}–${max} AED aralığındadır.\nBu rakamlar serbest bölge seçimi, ofis modeli ve ek hizmetlere göre netleştirilebilir.`
           : lang === "en"
-          ? `Sector: ${session.flow.sector}\nVisas: ${text}\n\nEstimated cost: ${min}–${max} AED`
-          : `القطاع: ${session.flow.sector}\nالتأشيرات: ${text}\n\nالتكلفة التقريبية: ${min}–${max} درهم`;
+          ? `Sector: ${session.flow.sector}\nVisas: ${text}\n\nBased on typical market ranges, the approximate company setup cost would be around: ${min}–${max} AED.\nThese figures can be refined based on free zone choice, office model and additional services.`
+          : `القطاع: ${session.flow.sector}\nعدد التأشيرات: ${text}\n\nاستنادًا إلى نطاقات السوق العامة، فإن التكلفة التقريبية لتأسيس الشركة تكون في حدود: ${min}–${max} درهم إماراتي.\nيمكن تعديل هذه الأرقام حسب المنطقة الحرة، نوع المكتب والخدمات الإضافية.`;
 
       await sendMessage(from, msg);
       return res.sendStatus(200);
     }
 
-    // Hafıza
+    // MEMORY
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
 
@@ -283,12 +316,12 @@ app.post("/webhook", async (req, res) => {
 
     const prompt =
       lang === "tr"
-        ? `Sen SamChe Company LLC'nin resmi asistanısın.\n${samcheProfile}\n\nSohbet geçmişi:\n${historyText}\n\nKullanıcı mesajı:\n${text}`
+        ? `Sen SamChe Company LLC'nin resmi ve kurumsal yapay zekâ asistanısın.\n\nŞirket profili:\n${samcheProfile}\n\nRolün:\n- Dubai şirket kuruluş danışmanı\n- BAE pazar ve iş stratejisi danışmanı\n- Özel yapay zekâ ve dijital büyüme danışmanı\n\nKurallar:\n- Profesyonel, net ve uygulanabilir cevaplar ver.\n- Fiyat, süreç, strateji ve yol haritası konusunda adım adım yönlendirme yap.\n- SamChe Company LLC'nin kurumsal imajına uygun, güven veren bir tonda konuş.\n- Gerektiğinde canlı temsilciye yönlendirebileceğini belirt.\n\nSohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `You are the official assistant of SamChe Company LLC.\n${samcheProfile}\n\nConversation:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المساعد الرسمي لشركة SamChe Company LLC.\n${samcheProfile}\n\nالمحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the official, corporate AI assistant of SamChe Company LLC.\n\nCompany profile:\n${samcheProfile}\n\nYour role:\n- Dubai business setup consultant\n- UAE market and strategy advisor\n- Private AI and digital growth consultant\n\nRules:\n- Provide professional, clear and actionable answers.\n- Guide step‑by‑step on costs, structure, strategy and next steps.\n- Maintain a confident, advisory tone aligned with SamChe’s brand.\n- When appropriate, you may suggest speaking with a live consultant.\n\nConversation history:\n${historyText}\n\nUser's latest message:\n${text}`
+        : `أنت المساعد الذكي الرسمي لشركة SamChe Company LLC.\n\nملف الشركة:\n${samcheProfile}\n\nدورك:\n- مستشار لتأسيس الأعمال في دبي\n- مستشار لاستراتيجية السوق في الإمارات\n- مستشار لحلول الذكاء الاصطناعي والنمو الرقمي\n\nالقواعد:\n- قدّم إجابات مهنية وواضحة وقابلة للتنفيذ.\n- ارشد المستخدم خطوة بخطوة في التكاليف، الهيكلة، الاستراتيجية والخطوات التالية.\n- استخدم نبرة رسمية وموثوقة تتماشى مع هوية SamChe.\n- عند الحاجة، يمكنك اقتراح التواصل مع مستشار مباشر.\n\nسياق المحادثة:\n${historyText}\n\nرسالة المستخدم الأخيرة:\n${text}`;
 
-    const reply = await callGemini(prompt);
+    const reply = await callGemini(prompt, lang);
 
     session.history.push({ role: "assistant", text: reply });
 
