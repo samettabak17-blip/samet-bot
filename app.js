@@ -231,7 +231,7 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde asla uydurma bilgiler verme.İletişim bilgileri istendiğinde şu bilgileri ver.mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram:samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc  Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde .İletişim bilgilerini sadece kullanıcı istediğinde ver.kullanıcı ıstemediğinde hiçbir mesaja iletişim bilgisi ekleme.kullanıcı ıletişim bilgisi istediğinde sadece 1 kere ver.iletişim bilgileri: mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram:samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc  Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
         ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
         : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
@@ -259,6 +259,7 @@ app.post("/webhook", async (req, res) => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
