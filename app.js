@@ -1,3 +1,5 @@
+// app.js – WhatsApp + Gemini 2.0 Flash (final)
+
 import express from "express";
 import bodyParser from "body-parser";
 import axios from "axios";
@@ -44,6 +46,31 @@ async function sendMessage(to, body) {
 }
 
 // -------------------------------
+//  CORPORATE FALLBACK
+// -------------------------------
+function corporateFallback(lang) {
+  if (lang === "tr") {
+    return (
+      "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
+      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz.\n\n" +
+      "Canlı temsilci: +971 52 728 8586"
+    );
+  }
+  if (lang === "en") {
+    return (
+      "I couldn’t fully understand your question, but I’d be glad to assist. " +
+      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
+      "Live consultant: +971 52 728 8586"
+    );
+  }
+  return (
+    "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
+    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي.\n\n" +
+    "المستشار المباشر: ‎+971 52 728 8586"
+  );
+}
+
+// -------------------------------
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
@@ -72,22 +99,52 @@ async function callGemini(prompt) {
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
+const servicesList = {
+  tr:
+    "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
+    "1. Şirketlere Özel Yapay Zekâ Sistemleri\n" +
+    "2. Dijital Büyüme & İçerik Stratejisi\n" +
+    "3. Marka Yönetimi & Sosyal Medya\n" +
+    "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
+    "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
+    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
+  en:
+    "SamChe Company LLC provides:\n" +
+    "1. Private AI Systems\n" +
+    "2. Digital Growth & Content Strategy\n" +
+    "3. Branding & Social Media\n" +
+    "4. Audience Growth & Performance Optimization\n" +
+    "5. UAE Business Setup & Market Entry\n" +
+    "6. Free Zone Selection & Compliance",
+  ar:
+    "تقدم SamChe Company LLC:\n" +
+    "1. أنظمة ذكاء اصطناعي خاصة\n" +
+    "2. استراتيجية النمو الرقمي والمحتوى\n" +
+    "3. إدارة العلامة التجارية ووسائل التواصل\n" +
+    "4. نمو الجمهور وتحسين الأداء\n" +
+    "5. تأسيس الأعمال في الإمارات\n" +
+    "6. اختيار المناطق الحرة والامتثال",
+};
+
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.Size nasıl yardımcı olabilirim?",
+    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.Size nasıl yardımcı olabilirim? \n\n" +
+    servicesList.tr,
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you?",
+    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you? \n\n" +
+    servicesList.en,
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.",
+    "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.\n\n" +
+    servicesList.ar,
 };
 
 const contactText = {
-  tr: "Temsilci: +971 52 728 8586",
-  en: "Consultant: +971 52 728 8586",
-  ar: "المستشار: ‎+971 52 728 8586",
+  tr: "Canlı temsilci: +971 52 728 8586",
+  en: "Live consultant: +971 52 728 8586",
+  ar: "مستشار مباشر: ‎+971 52 728 8586",
 };
 
 // -------------------------------
@@ -151,6 +208,18 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
 
+    // CONTACT
+    if (
+      lower.includes("contact") ||
+      lower.includes("iletişim") ||
+      lower.includes("whatsapp") ||
+      lower.includes("call") ||
+      lower.includes("telefon")
+    ) {
+      await sendMessage(from, contactText[lang]);
+      return res.sendStatus(200);
+    }
+
     // MEMORY
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
@@ -159,112 +228,24 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    // -------------------------------
-    //  PROMPT WITH ALL RULES
-    // -------------------------------
+    // PROMPT
     const prompt =
       lang === "tr"
-        ? `
-SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik ve yönlendirici cevaplar verirsin. Kullanıcı ne sorarsa sorsun aşağıdaki kurallara göre yanıt ver:
-
-1) Kullanıcı “yapay zeka destekli chatbot”, “AI chatbot”, “whatsapp botu”, “instagram botu”, “web botu” isterse:
-   - Şu sayfaya yönlendir:
-     https://aichatbot.samchecompany.com/
-
-2) Kullanıcı “yapay zeka destekli sistemler”, “AI automation”, “AI system”, “otomasyon”, “AI solutions” isterse:
-   - Fiyat listesi:
-     • Basic AI System: 1.500 AED
-     • Advanced AI Automation: 3.500 AED
-     • Enterprise AI System: 7.500 AED
-
-3) Kullanıcı “şirket kurulum maliyeti” sorarsa:
-   - Yönlendir:
-     https://guide.samchecompany.com/
-
-4) Kullanıcı sadece “oturum ücreti”, “residence fee”, “residence cost”, “freelance visa” sorarsa:
-   Oturum ücreti totalde her şey dahil (13.000 AED). İşlemleri Türkiye’den başlatabiliyoruz.
-   Ödeme yöntemleri:
-   • İlk ödeme  (4000 AED)
-   • 2. ödeme  (8000 AED)
-   • 3. ödeme  (1000 AED)
-
-5) Kullanıcı “şirket kurmak”, “Dubai’de şirket”, “free zone”, “LLC”, “license” sorarsa:
-   - Genel bilgi ver ve temsilciye yönlendir: +971 52 728 8586
-
-6) Kullanıcı “vize”, “oturum”, “residence”, “visa” sorarsa:
-   - Genel bilgi ver:
-     “Vize ve oturum süreçleri kişinin durumuna göre değişir.”
-   - Temsilciye yönlendir.
-
-7) Kullanıcı fiyat sorarsa:
-   - Kesin rakam verme:
-     “Fiyatlar hizmete göre değişir. Kesin bilgi için temsilci: +971 52 728 8586”
-`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `
-You are the corporate AI consultant of SamChe Company LLC. Follow these rules:
-
-1) If the user asks for “AI chatbot”, “WhatsApp bot”, “Instagram bot”, “website bot”:
-   https://aichatbot.samchecompany.com/
-
-2) If the user asks for “AI systems”, “AI automation”, “AI integration”:
-   • Basic AI System: 1,500 AED
-   • Advanced AI Automation: 3,500 AED
-   • Enterprise AI System: 7,500 AED
-
-3) If the user asks about “company setup cost”:
-   https://chat.samchecompany.com/
-
-4) If the user asks about “residence fee”, “residence cost”, “freelance visa”:
-   The total residence fee is 13,000 AED all-inclusive.
-   Payments:
-   • 4,000 AED
-   • 8,000 AED
-   • 1,000 AED
-
-5) If the user asks about “company setup”, “free zone”, “LLC”, “license”:
-   Provide general info and direct to consultant.
-
-6) If the user asks about “visa”, “residence”, “entry permit”:
-   Provide general info and direct to consultant.
-
-7) If the user asks about pricing:
-   “Pricing varies. For accurate details: +971 52 728 8586”
-`
-        : `
-أنت المستشار الذكي لشركة SamChe Company LLC. اتبع القواعد التالية:
-
-1) إذا طلب المستخدم “شات بوت ذكاء اصطناعي”:
-   https://aichatbot.samchecompany.com/
-
-2) إذا طلب “أنظمة ذكاء اصطناعي”:
-   • 1500 درهم
-   • 3500 درهم
-   • 7500 درهم
-
-3) إذا سأل عن “تكلفة تأسيس شركة”:
-   https://chat.samchecompany.com/
-
-4) إذا سأل عن “رسوم الإقامة” أو “freelance visa”:
-   الرسوم الإجمالية 13,000 درهم.
-   الدفعات:
-   • 4000 درهم
-   • 8000 درهم
-   • 1000 درهم
-
-5) إذا سأل عن “تأسيس شركة”:
-   قدّم معلومات عامة ثم وجّهه إلى المستشار.
-
-6) إذا سأل عن “تأشيرة” أو “إقامة”:
-   قدّم معلومات عامة ثم وجّهه إلى المستشار.
-
-7) إذا سأل عن الأسعار:
-   “الأسعار تختلف حسب الخدمة. للمعلومات الدقيقة: ‎+971 52 728 8586”
-`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
     const reply = await callGemini(prompt);
 
-    await sendMessage(from, reply || "Bir hata oluştu.");
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
+    }
+
+    session.history.push({ role: "assistant", text: reply });
+
+    await sendMessage(from, reply);
 
     res.sendStatus(200);
   } catch (err) {
@@ -278,3 +259,6 @@ You are the corporate AI consultant of SamChe Company LLC. Follow these rules:
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
+
+
