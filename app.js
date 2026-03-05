@@ -4,15 +4,11 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-
 const app = express();
 app.use(bodyParser.json());
 
 // -------------------------------
-//  BASIT SESSION / HAFIZA & DURUM
+//  BASİT SESSION / HAFIZA & DURUM
 // -------------------------------
 const sessions = {};
 // sessions[from] = { lang, history, flow: { mode, sector, visas } }
@@ -35,6 +31,35 @@ async function sendMessage(to, body) {
       },
     }
   );
+}
+
+// -------------------------------
+//  GEMINI REST API (v1) İLE ÇAĞRI
+// -------------------------------
+async function callGemini(prompt) {
+  const url =
+    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Gemini API error:", response.status, errText);
+    throw new Error("Gemini API error");
+  }
+
+  const data = await response.json();
+  const reply =
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    "Şu anda teknik bir sorun yaşıyorum, lütfen biraz sonra tekrar deneyin.";
+  return reply;
 }
 
 // -------------------------------
@@ -109,6 +134,17 @@ const chatbotDemo = {
     "لعرض تجريبي وأسعار روبوتات الدردشة بالذكاء الاصطناعي، يرجى زيارة:\nhttps://aichatbot.samchecompany.com/",
 };
 
+const samcheProfile = `
+SamChe Company LLC is a UAE‑based consultancy focused on Private AI systems, digital growth strategy, and business setup clarity for entrepreneurs and small businesses.
+We help clients build structure, confidence, and long‑term momentum across both their online presence and their company formation journey.
+
+Our digital advisory work includes AI‑powered content strategy, branding, social media development, audience growth, and performance optimization—ensuring every action is measurable, practical, and aligned with real‑world execution.
+
+On the business setup side, we guide clients through UAE market entry, free zone selection, compliance clarity, and launch planning, removing uncertainty and enabling informed decision‑making.
+
+By combining AI innovation, digital strategy, and UAE regulatory insight, SamChe empowers founders and businesses to grow with simplicity, confidence, and strategic direction.
+`;
+
 // -------------------------------
 //  WEBHOOK DOĞRULAMA
 // -------------------------------
@@ -127,7 +163,7 @@ app.get("/webhook", (req, res) => {
 });
 
 // -------------------------------
-//  ŞİRKET KURULUMU FİYAT HESABI (BASİT LOGİK)
+//  ŞİRKET KURULUMU FİYAT HESABI
 // -------------------------------
 function calculateSetupPrice(visas) {
   const v = parseInt(visas || "1", 10);
@@ -210,11 +246,10 @@ app.post("/webhook", async (req, res) => {
 
     // AI chatbot demo / fiyat isteği
     if (
-      lower.includes("bot") ||
       lower.includes("chatbot") ||
       lower.includes("ai bot") ||
-      lower.includes("demo") ||
-      lower.includes("fiyat") && lower.includes("bot")
+      (lower.includes("bot") && lower.includes("fiyat")) ||
+      lower.includes("demo")
     ) {
       await sendMessage(from, chatbotDemo[lang]);
       return res.sendStatus(200);
@@ -224,11 +259,13 @@ app.post("/webhook", async (req, res) => {
     if (
       session.flow.mode === "chat" &&
       (lower.includes("şirket kurmak") ||
+        lower.includes("sirket kurmak") ||
         lower.includes("company setup") ||
         lower.includes("business setup") ||
         lower.includes("company formation") ||
         lower.includes("dubai'de şirket") ||
-        lower.includes("dubai de şirket"))
+        lower.includes("dubaide şirket") ||
+        lower.includes("dubaide sirket"))
     ) {
       session.flow.mode = "setup_sector";
       await sendMessage(
@@ -309,17 +346,7 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    const samcheProfile = `
-SamChe Company LLC is a UAE‑based consultancy focused on Private AI systems, digital growth strategy, and business setup clarity for entrepreneurs and small businesses.
-We help clients build structure, confidence, and long‑term momentum across both their online presence and their company formation journey.
-
-Our digital advisory work includes AI‑powered content strategy, branding, social media development, audience growth, and performance optimization—ensuring every action is measurable, practical, and aligned with real‑world execution.
-
-On the business setup side, we guide clients through UAE market entry, free zone selection, compliance clarity, and launch planning, removing uncertainty and enabling informed decision‑making.
-
-By combining AI innovation, digital strategy, and UAE regulatory insight, SamChe empowers founders and businesses to grow with simplicity, confidence, and strategic direction.
-    `;
-
+    // Dile göre kurumsal prompt
     const prompts = {
       en: `
 You are the private, official assistant of SamChe Company LLC.
@@ -334,7 +361,7 @@ Rules:
 - Do NOT mention any external model, provider, or source.
 - Respond in clear, formal English.
 - You can guide step‑by‑step on: company setup, visas, costs, strategy, AI integration into business, and digital growth.
-- If user asks for AI chatbot pricing or demo, you may also suggest visiting the AI chatbot page, but only if they explicitly ask.
+- If user explicitly asks for AI chatbot pricing or demo, you may also suggest visiting the AI chatbot page.
 
 Company profile:
 ${samcheProfile}
@@ -395,8 +422,18 @@ ${text}
       `,
     };
 
-    const result = await model.generateContent(prompts[lang]);
-    const reply = result.response.text();
+    let reply;
+    try {
+      reply = await callGemini(prompts[lang]);
+    } catch (e) {
+      console.error("Gemini call failed:", e);
+      reply =
+        lang === "tr"
+          ? "Şu anda teknik bir sorun yaşıyorum, lütfen biraz sonra tekrar deneyin."
+          : lang === "en"
+          ? "I am currently experiencing a technical issue. Please try again in a moment."
+          : "أواجه حاليًا مشكلة تقنية، يرجى المحاولة مرة أخرى بعد قليل.";
+    }
 
     session.history.push({ role: "assistant", text: reply });
 
@@ -416,6 +453,3 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => {
   console.log("SamChe Bot running on port " + port);
 });
-
-
-
