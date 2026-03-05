@@ -7,14 +7,8 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.json());
 
-// -------------------------------
-//  SESSION MEMORY
-// -------------------------------
 const sessions = {};
 
-// -------------------------------
-//  SEND WHATSAPP MESSAGE
-// -------------------------------
 async function sendMessage(to, body) {
   try {
     await axios.post(
@@ -22,13 +16,13 @@ async function sendMessage(to, body) {
       {
         messaging_product: "whatsapp",
         to,
-        text: { body }
+        text: { body },
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
-        }
+          "Content-Type": "application/json",
+        },
       }
     );
   } catch (err) {
@@ -36,9 +30,6 @@ async function sendMessage(to, body) {
   }
 }
 
-// -------------------------------
-//  CORPORATE FALLBACK
-// -------------------------------
 function corporateFallback(lang) {
   if (lang === "tr") {
     return (
@@ -61,36 +52,29 @@ function corporateFallback(lang) {
   );
 }
 
-// -------------------------------
-//  OPENAI GPT‑4.1‑PRO CALL
-// -------------------------------
-async function callOpenAI(prompt) {
+async function callGemini(prompt) {
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
+
   try {
     const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
+      url,
       {
-        model: "gpt-4.1-pro",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.4
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
       },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        }
-      }
+      { headers: { "Content-Type": "application/json" } }
     );
 
-    return response.data.choices[0].message.content;
+    const reply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    return reply.trim() || null;
   } catch (err) {
-    console.error("OpenAI API error:", err.response?.data || err.message);
+    console.error("Gemini API error:", err.response?.data || err.message);
     return null;
   }
 }
 
-// -------------------------------
-//  STATIC TEXTS
-// -------------------------------
 const servicesList = {
   tr:
     "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
@@ -115,7 +99,7 @@ const servicesList = {
     "3. إدارة العلامة التجارية ووسائل التواصل\n" +
     "4. نمو الجمهور وتحسين الأداء\n" +
     "5. تأسيس الأعمال في الإمارات\n" +
-    "6. اختيار المناطق الحرة والامتثال"
+    "6. اختيار المناطق الحرة والامتثال",
 };
 
 const introAfterLang = {
@@ -130,18 +114,15 @@ const introAfterLang = {
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
     "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.\n\n" +
-    servicesList.ar
+    servicesList.ar,
 };
 
 const contactText = {
   tr: "Canlı temsilci: +971 52 728 8586",
   en: "Live consultant: +971 52 728 8586",
-  ar: "مستشار مباشر: ‎+971 52 728 8586"
+  ar: "مستشار مباشر: ‎+971 52 728 8586",
 };
 
-// -------------------------------
-//  WEBHOOK VERIFY
-// -------------------------------
 app.get("/webhook", (req, res) => {
   if (
     req.query["hub.mode"] === "subscribe" &&
@@ -152,19 +133,6 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
-// -------------------------------
-//  PRICE CALCULATION
-// -------------------------------
-function calculateSetupPrice(visas) {
-  const v = parseInt(visas || "1", 10);
-  const base =
-    v <= 1 ? 12000 : v === 2 ? 15000 : v === 3 ? 18000 : 20000 + (v - 3) * 2000;
-  return { min: base + 6000, max: base + 7000 };
-}
-
-// -------------------------------
-//  WEBHOOK MESSAGE HANDLER
-// -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
@@ -174,12 +142,10 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // FIRST MESSAGE
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
         history: [],
-        flow: { mode: "chat", sector: null, visas: null }
       };
 
       await sendMessage(
@@ -195,7 +161,6 @@ app.post("/webhook", async (req, res) => {
 
     const session = sessions[from];
 
-    // LANGUAGE SELECTION
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -211,7 +176,6 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
 
-    // CONTACT REQUEST
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
@@ -222,72 +186,21 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // COMPANY SETUP FLOW
-    if (
-      session.flow.mode === "chat" &&
-      (lower.includes("company") ||
-        lower.includes("şirket") ||
-        lower.includes("business setup"))
-    ) {
-      session.flow.mode = "setup_sector";
-      await sendMessage(
-        from,
-        lang === "tr"
-          ? "Hangi sektörde şirket kurmak istiyorsunuz?"
-          : lang === "en"
-          ? "Which sector will your company operate in?"
-          : "في أي قطاع ترغب في تأسيس الشركة؟"
-      );
-      return res.sendStatus(200);
-    }
-
-    if (session.flow.mode === "setup_sector") {
-      session.flow.sector = text;
-      session.flow.mode = "setup_visas";
-
-      await sendMessage(
-        from,
-        lang === "tr"
-          ? "Kaç vize planlıyorsunuz?"
-          : lang === "en"
-          ? "How many visas do you plan?"
-          : "كم عدد التأشيرات التي تخطط لها؟"
-      );
-      return res.sendStatus(200);
-    }
-
-    if (session.flow.mode === "setup_visas") {
-      session.flow.visas = text;
-      session.flow.mode = "chat";
-
-      const { min, max } = calculateSetupPrice(text);
-
-      const msg =
-        lang === "tr"
-          ? `Sektör: ${session.flow.sector}\nVize: ${text}\nYaklaşık maliyet: ${min}–${max} AED`
-          : lang === "en"
-          ? `Sector: ${session.flow.sector}\nVisas: ${text}\nEstimated cost: ${min}–${max} AED`
-          : `القطاع: ${session.flow.sector}\nالتأشيرات: ${text}\nالتكلفة التقريبية: ${min}–${max} درهم`;
-
-      await sendMessage(from, msg);
-      return res.sendStatus(200);
-    }
-
-    // MEMORY
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
 
-    const historyText = session.history.map(m => `User: ${m.text}`).join("\n");
+    const historyText = session.history
+      .map((m) => `User: ${m.text}`)
+      .join("\n");
 
-    // CONSULTANT PROMPT
     const prompt =
       lang === "tr"
-        ? `Sen SamChe Company LLC’nin üst düzey danışmanlık diline sahip yapay zekâ asistanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `Sen SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
         ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
         : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
-    const reply = await callOpenAI(prompt);
+    const reply = await callGemini(prompt);
 
     if (!reply) {
       await sendMessage(from, corporateFallback(lang));
@@ -305,8 +218,5 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-// -------------------------------
-//  SERVER
-// -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
