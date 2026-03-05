@@ -7,29 +7,45 @@ dotenv.config();
 const app = express();
 app.use(bodyParser.json());
 
+// -------------------------------
+//  SESSION MEMORY
+// -------------------------------
 const sessions = {};
 
+// -------------------------------
+//  WHATSAPP SEND (4096 LIMIT SAFE)
+// -------------------------------
 async function sendMessage(to, body) {
   try {
-    await axios.post(
-      `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        text: { body },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json",
+    const chunks = [];
+    for (let i = 0; i < body.length; i += 4000) {
+      chunks.push(body.substring(i, i + 4000));
+    }
+
+    for (const chunk of chunks) {
+      await axios.post(
+        `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
+        {
+          messaging_product: "whatsapp",
+          to,
+          text: { body: chunk },
         },
-      }
-    );
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
   } catch (err) {
     console.error("WhatsApp send error:", err.response?.data || err.message);
   }
 }
 
+// -------------------------------
+//  CORPORATE FALLBACK
+// -------------------------------
 function corporateFallback(lang) {
   if (lang === "tr") {
     return (
@@ -52,6 +68,9 @@ function corporateFallback(lang) {
   );
 }
 
+// -------------------------------
+//  GEMINI 2.0 FLASH CALL
+// -------------------------------
 async function callGemini(prompt) {
   const url =
     "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
@@ -75,6 +94,9 @@ async function callGemini(prompt) {
   }
 }
 
+// -------------------------------
+//  STATIC TEXTS
+// -------------------------------
 const servicesList = {
   tr:
     "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
@@ -122,7 +144,9 @@ const contactText = {
   en: "Live consultant: +971 52 728 8586",
   ar: "مستشار مباشر: ‎+971 52 728 8586",
 };
-
+// -------------------------------
+//  WEBHOOK VERIFY
+// -------------------------------
 app.get("/webhook", (req, res) => {
   if (
     req.query["hub.mode"] === "subscribe" &&
@@ -133,6 +157,9 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
+// -------------------------------
+//  WEBHOOK MESSAGE HANDLER
+// -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
@@ -142,6 +169,7 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
+    // FIRST MESSAGE
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
@@ -161,6 +189,7 @@ app.post("/webhook", async (req, res) => {
 
     const session = sessions[from];
 
+    // LANGUAGE SELECTION
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -176,16 +205,19 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
 
+    // CONTACT
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
       lower.includes("whatsapp") ||
-      lower.includes("call")
+      lower.includes("call") ||
+      lower.includes("telefon")
     ) {
       await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
     }
 
+    // MEMORY
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
 
@@ -193,6 +225,32 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
+    // PROMPT
+    const prompt =
+      lang === "tr"
+        ? `Sen SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        : lang === "en"
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+
+    const reply = await callGemini(prompt);
+
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
+    }
+
+    session.history.push({ role: "assistant", text: reply });
+
+    await sendMessage(from, reply);
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Webhook error:", err);
+    res.sendStatus(500);
+  }
+});
+    // PROMPT
     const prompt =
       lang === "tr"
         ? `Sen SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
@@ -218,5 +276,8 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
+// -------------------------------
+//  SERVER
+// -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
