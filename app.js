@@ -8,7 +8,7 @@ const app = express();
 app.use(bodyParser.json());
 
 // -------------------------------
-//  SESSION / MEMORY
+//  SESSION MEMORY
 // -------------------------------
 const sessions = {};
 
@@ -22,13 +22,13 @@ async function sendMessage(to, body) {
       {
         messaging_product: "whatsapp",
         to,
-        text: { body },
+        text: { body }
       },
       {
         headers: {
           Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json",
-        },
+          "Content-Type": "application/json"
+        }
       }
     );
   } catch (err) {
@@ -43,57 +43,48 @@ function corporateFallback(lang) {
   if (lang === "tr") {
     return (
       "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
-      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz. " +
-      "Dilerseniz sizi canlı bir temsilciye de yönlendirebilirim.\n\n" +
+      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz.\n\n" +
       "Canlı temsilci: +971 52 728 8586"
     );
   }
-
   if (lang === "en") {
     return (
       "I couldn’t fully understand your question, but I’d be glad to assist. " +
-      "You may ask more specifically about Dubai company setup, free zone selection, visas, costs, business model, market strategy, or AI solutions. " +
-      "If you prefer, I can also connect you with a live consultant.\n\n" +
+      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
       "Live consultant: +971 52 728 8586"
     );
   }
-
   return (
     "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
-    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، اختيار المنطقة الحرة، التأشيرات، التكاليف، نموذج العمل، استراتيجية السوق أو حلول الذكاء الاصطناعي. " +
-    "ويمكنني تحويلك إلى مستشار مباشر إذا رغبت.\n\n" +
+    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي.\n\n" +
     "المستشار المباشر: ‎+971 52 728 8586"
   );
 }
 
 // -------------------------------
-//  GEMINI REST API – 1.5 PRO LATEST
+//  OPENAI GPT‑4.1‑PRO CALL
 // -------------------------------
-async function callGemini(prompt, lang) {
-  const url =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-latest:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
-
+async function callOpenAI(prompt) {
   try {
     const response = await axios.post(
-      url,
+      "https://api.openai.com/v1/chat/completions",
       {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        model: "gpt-4.1-pro",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.4
       },
-      { headers: { "Content-Type": "application/json" } }
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
     );
 
-    const reply =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    if (!reply.trim()) {
-      return corporateFallback(lang);
-    }
-
-    return reply;
+    return response.data.choices[0].message.content;
   } catch (err) {
-    console.error("Gemini API error:", err.response?.data || err.message);
-    return corporateFallback(lang);
+    console.error("OpenAI API error:", err.response?.data || err.message);
+    return null;
   }
 }
 
@@ -102,65 +93,52 @@ async function callGemini(prompt, lang) {
 // -------------------------------
 const servicesList = {
   tr:
-    "SamChe Company LLC olarak şu hizmetleri vermekteyiz:\n" +
-    "1. Şirketlere Özel Yapay Zekâ Sistemleri & Otomasyon\n" +
+    "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
+    "1. Şirketlere Özel Yapay Zekâ Sistemleri\n" +
     "2. Dijital Büyüme & İçerik Stratejisi\n" +
-    "3. Marka Yönetimi & Sosyal Medya Geliştirme\n" +
+    "3. Marka Yönetimi & Sosyal Medya\n" +
     "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
-    "5. BAE Şirket Kurulumu & Pazar Giriş Danışmanlığı\n" +
-    "6. Serbest Bölge Seçimi & Uyum (Compliance) Netliği",
+    "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
+    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
   en:
-    "SamChe Company LLC provides the following services:\n" +
-    "1. Private AI Systems & Automation\n" +
+    "SamChe Company LLC provides:\n" +
+    "1. Private AI Systems\n" +
     "2. Digital Growth & Content Strategy\n" +
-    "3. Branding & Social Media Development\n" +
+    "3. Branding & Social Media\n" +
     "4. Audience Growth & Performance Optimization\n" +
-    "5. UAE Business Setup & Market Entry Advisory\n" +
-    "6. Free Zone Selection & Compliance Clarity",
+    "5. UAE Business Setup & Market Entry\n" +
+    "6. Free Zone Selection & Compliance",
   ar:
-    "تقدم شركة SamChe Company LLC الخدمات التالية:\n" +
-    "1. أنظمة ذكاء اصطناعي خاصة وأتمتة\n" +
+    "تقدم SamChe Company LLC:\n" +
+    "1. أنظمة ذكاء اصطناعي خاصة\n" +
     "2. استراتيجية النمو الرقمي والمحتوى\n" +
-    "3. إدارة العلامة التجارية وتطوير وسائل التواصل الاجتماعي\n" +
+    "3. إدارة العلامة التجارية ووسائل التواصل\n" +
     "4. نمو الجمهور وتحسين الأداء\n" +
-    "5. تأسيس الأعمال في الإمارات ودخول السوق\n" +
-    "6. اختيار المناطق الحرة وتوضيح المتطلبات التنظيمية",
+    "5. تأسيس الأعمال في الإمارات\n" +
+    "6. اختيار المناطق الحرة والامتثال"
 };
 
 const introAfterLang = {
   tr:
-    "Merhaba, ben SamChe Company LLC'nin yapay zekâ asistanıyım.\n" +
-    "Dubai’de şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri, dijital büyüme gibi konularda istediğin soruyu sorabilirsin.\n\n" +
-    servicesList.tr +
-    "\n\nSize bugün nasıl yardımcı olabilirim?",
+    "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
+    "Dubai şirket kuruluşu, vizeler, maliyetler, iş planı, strateji ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.\n\n" +
+    servicesList.tr,
   en:
-    "Hello, I am the AI assistant of SamChe Company LLC.\n" +
-    "You can ask anything about company setup in Dubai, visas, cost of living, business plans, strategies, and digital growth.\n\n" +
-    servicesList.en +
-    "\n\nHow may I assist you today?",
+    "Hello, I am the AI consultant of SamChe Company LLC.\n" +
+    "I can assist with Dubai company setup, visas, costs, business planning, strategy, and AI solutions.\n\n" +
+    servicesList.en,
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "يمكنك طرح أي سؤال حول تأسيس الشركات في دبي، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، والنمو الرقمي.\n\n" +
-    servicesList.ar +
-    "\n\nكيف يمكنني مساعدتك اليوم؟",
+    "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.\n\n" +
+    servicesList.ar
 };
 
 const contactText = {
-  tr: "Canlı temsilci: +971 52 728 8586\nE‑posta: info@samchecompany.com",
-  en: "Live consultant: +971 52 728 8586\nEmail: info@samchecompany.com",
-  ar: "مستشار مباشر: ‎+971 52 728 8586\nالبريد: info@samchecompany.com",
+  tr: "Canlı temsilci: +971 52 728 8586",
+  en: "Live consultant: +971 52 728 8586",
+  ar: "مستشار مباشر: ‎+971 52 728 8586"
 };
 
-const chatbotDemo = {
-  tr: "AI chatbot demo ve fiyatlar:\nhttps://aichatbot.samchecompany.com/",
-  en: "AI chatbot demo & pricing:\nhttps://aichatbot.samchecompany.com/",
-  ar: "عرض تجريبي لروبوت الدردشة:\nhttps://aichatbot.samchecompany.com/",
-};
-
-const samcheProfile = `
-SamChe Company LLC is a UAE‑based consultancy focused on Private AI systems, digital growth strategy, and business setup clarity.
-We guide clients through UAE market entry, free zone selection, compliance clarity, launch planning, and AI‑powered digital growth.
-`;
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -201,7 +179,7 @@ app.post("/webhook", async (req, res) => {
       sessions[from] = {
         lang: null,
         history: [],
-        flow: { mode: "chat", sector: null, visas: null },
+        flow: { mode: "chat", sector: null, visas: null }
       };
 
       await sendMessage(
@@ -209,8 +187,7 @@ app.post("/webhook", async (req, res) => {
         "Welcome to SamChe Company LLC.\n" +
           "SamChe Company LLC'ye hoş geldiniz.\n" +
           "مرحبًا بكم.\n\n" +
-          "Please select your language:\n" +
-          "1️⃣ English\n2️⃣ Türkçe\n3️⃣ العربية"
+          "Please select your language:\n1️⃣ English\n2️⃣ Türkçe\n3️⃣ العربية"
       );
 
       return res.sendStatus(200);
@@ -236,30 +213,21 @@ app.post("/webhook", async (req, res) => {
 
     // CONTACT REQUEST
     if (
-      lower.includes("iletişim") ||
       lower.includes("contact") ||
-      lower.includes("call") ||
-      lower.includes("telefon") ||
-      lower.includes("whatsapp")
+      lower.includes("iletişim") ||
+      lower.includes("whatsapp") ||
+      lower.includes("call")
     ) {
       await sendMessage(from, contactText[lang]);
-      return res.sendStatus(200);
-    }
-
-    // CHATBOT DEMO
-    if (lower.includes("chatbot") || lower.includes("demo")) {
-      await sendMessage(from, chatbotDemo[lang]);
       return res.sendStatus(200);
     }
 
     // COMPANY SETUP FLOW
     if (
       session.flow.mode === "chat" &&
-      (lower.includes("şirket kur") ||
-        lower.includes("sirket kur") ||
-        lower.includes("company setup") ||
-        lower.includes("business setup") ||
-        lower.includes("company formation"))
+      (lower.includes("company") ||
+        lower.includes("şirket") ||
+        lower.includes("business setup"))
     ) {
       session.flow.mode = "setup_sector";
       await sendMessage(
@@ -280,10 +248,10 @@ app.post("/webhook", async (req, res) => {
       await sendMessage(
         from,
         lang === "tr"
-          ? "Yaklaşık kaç vize (ortak/çalışan) planlıyorsunuz?"
+          ? "Kaç vize planlıyorsunuz?"
           : lang === "en"
-          ? "Approximately how many visas (partners/employees) do you plan?"
-          : "تقريبًا كم عدد التأشيرات (شركاء/موظفين) التي تخطط لها؟"
+          ? "How many visas do you plan?"
+          : "كم عدد التأشيرات التي تخطط لها؟"
       );
       return res.sendStatus(200);
     }
@@ -296,10 +264,10 @@ app.post("/webhook", async (req, res) => {
 
       const msg =
         lang === "tr"
-          ? `Sektör: ${session.flow.sector}\nVize sayısı: ${text}\n\nGenel piyasa koşullarına göre yaklaşık şirket kuruluş maliyeti: ${min}–${max} AED aralığındadır.\nBu rakamlar serbest bölge seçimi, ofis modeli ve ek hizmetlere göre netleştirilebilir.`
+          ? `Sektör: ${session.flow.sector}\nVize: ${text}\nYaklaşık maliyet: ${min}–${max} AED`
           : lang === "en"
-          ? `Sector: ${session.flow.sector}\nVisas: ${text}\n\nBased on typical market ranges, the approximate company setup cost would be around: ${min}–${max} AED.\nThese figures can be refined based on free zone choice, office model and additional services.`
-          : `القطاع: ${session.flow.sector}\nعدد التأشيرات: ${text}\n\nاستنادًا إلى نطاقات السوق العامة، فإن التكلفة التقريبية لتأسيس الشركة تكون في حدود: ${min}–${max} درهم إماراتي.\nيمكن تعديل هذه الأرقام حسب المنطقة الحرة، نوع المكتب والخدمات الإضافية.`;
+          ? `Sector: ${session.flow.sector}\nVisas: ${text}\nEstimated cost: ${min}–${max} AED`
+          : `القطاع: ${session.flow.sector}\nالتأشيرات: ${text}\nالتكلفة التقريبية: ${min}–${max} درهم`;
 
       await sendMessage(from, msg);
       return res.sendStatus(200);
@@ -309,129 +277,22 @@ app.post("/webhook", async (req, res) => {
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
 
-    const historyText = session.history
-      .map((m) => `User: ${m.text}`)
-      .join("\n");
-        // HIGH‑LEVEL CONSULTANT PROMPT
+    const historyText = session.history.map(m => `User: ${m.text}`).join("\n");
+
+    // CONSULTANT PROMPT
     const prompt =
       lang === "tr"
-        ? `
-Sen SamChe Company LLC’nin resmi, kurumsal ve üst düzey danışmanlık diline sahip yapay zekâ asistanısın.
-
-Uzmanlık alanların:
-- Dubai ve BAE şirket kuruluşu
-- Serbest bölge seçimi, lisans türleri, uyum (compliance)
-- Vize planlaması, maliyet analizi, operasyonel yapı
-- Pazar girişi, iş modeli tasarımı, rekabet analizi
-- Dijital büyüme, marka stratejisi, içerik stratejisi
-- Yapay zekâ entegrasyonu, otomasyon, verimlilik optimizasyonu
-
-Cevaplama kuralların:
-1. Profesyonel, güven veren, danışman seviyesinde konuş.
-2. Gerektiğinde adım adım yol haritası çıkar.
-3. Kullanıcıya seçenekler sun, her seçeneğin avantaj–dezavantaj analizini yap.
-4. Kısa ve yüzeysel cevap verme; her yanıt bilgi açısından zengin ve yapılandırılmış olsun.
-5. Fiyat, süreç, zamanlama, riskler ve kritik noktaları net şekilde açıkla.
-6. Asla model, kaynak, teknik detay veya sistem içi bilgi paylaşma.
-7. Gerektiğinde canlı temsilciye yönlendirebileceğini nazikçe belirt.
-8. SamChe Company LLC’nin kurumsal imajına uygun, stratejik ve sakin bir ton kullan.
-
-Her cevabın şu yapıda olsun:
-- Kısa ve net giriş
-- Durum / bağlam analizi
-- Seçenekler ve değerlendirmeleri
-- Önerilen yol haritası (adım adım)
-- Riskler ve kritik noktalar
-- Son cümlede kullanıcıyı bir sonraki adıma taşıyan danışman sorusu
-
-Şirket profili:
-${samcheProfile}
-
-Sohbet geçmişi:
-${historyText}
-
-Kullanıcının son mesajı:
-${text}
-        `
+        ? `Sen SamChe Company LLC’nin üst düzey danışmanlık diline sahip yapay zekâ asistanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `
-You are the official corporate AI assistant of SamChe Company LLC, speaking with the tone and structure of a senior management consultant.
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
-Your expertise includes:
-- Dubai/UAE company formation and regulatory clarity
-- Free zone selection, licensing, compliance
-- Visa planning, cost modeling, operational structure
-- Market entry, business model design, competitive positioning
-- Digital growth, brand strategy, content strategy
-- AI integration, automation, workflow optimization
+    const reply = await callOpenAI(prompt);
 
-Response rules:
-1. Speak with a confident, advisory, executive tone.
-2. Provide structured, analytical, insight‑driven answers.
-3. Present options with pros/cons and strategic implications.
-4. Avoid short or shallow answers; deliver depth and clarity.
-5. Explain costs, timelines, risks, and decision factors clearly.
-6. Never mention models, sources, or internal system details.
-7. When appropriate, gently suggest speaking with a live consultant.
-8. Maintain a calm, strategic, and trustworthy voice aligned with SamChe’s brand.
-
-Each answer should follow this structure:
-- Brief, clear opening
-- Situation / context analysis
-- Options and evaluation
-- Recommended step‑by‑step roadmap
-- Risks and critical considerations
-- A closing question guiding the user to the next step
-
-Company profile:
-${samcheProfile}
-
-Conversation history:
-${historyText}
-
-User's latest message:
-${text}
-        `
-        : `
-أنت المساعد الذكي الرسمي لشركة SamChe Company LLC، وتتحدث بأسلوب مستشار إداري رفيع المستوى.
-
-مجالات خبرتك:
-- تأسيس الشركات في دبي والإمارات والوضوح التنظيمي
-- اختيار المناطق الحرة، التراخيص، والامتثال
-- تخطيط التأشيرات، نماذج التكاليف، الهيكلة التشغيلية
-- دخول السوق، تصميم نموذج العمل، تحليل المنافسة
-- النمو الرقمي، استراتيجية العلامة التجارية، استراتيجية المحتوى
-- دمج الذكاء الاصطناعي، الأتمتة، وتحسين الكفاءة
-
-قواعد الإجابة:
-1. استخدم نبرة مهنية واستشارية وموثوقة.
-2. قدم إجابات تحليلية ومنظمة تعتمد على الرؤية والخبرة.
-3. اعرض الخيارات مع مزايا وعيوب وآثار استراتيجية.
-4. تجنب الإجابات القصيرة أو السطحية.
-5. وضّح التكاليف والجداول الزمنية والمخاطر بوضوح.
-6. لا تذكر أي تفاصيل تقنية أو داخلية.
-7. عند الحاجة، اقترح التواصل مع مستشار مباشر.
-8. حافظ على نبرة هادئة واستراتيجية تتماشى مع هوية SamChe.
-
-هيكل الإجابة:
-- مقدمة قصيرة
-- تحليل الوضع
-- الخيارات وتقييمها
-- خارطة طريق خطوة بخطوة
-- المخاطر والنقاط الحرجة
-- سؤال ختامي يوجه المستخدم للخطوة التالية
-
-ملف الشركة:
-${samcheProfile}
-
-سياق المحادثة:
-${historyText}
-
-رسالة المستخدم الأخيرة:
-${text}
-        `;
-
-    const reply = await callGemini(prompt, lang);
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
+    }
 
     session.history.push({ role: "assistant", text: reply });
 
