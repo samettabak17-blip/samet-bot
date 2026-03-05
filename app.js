@@ -1,3 +1,5 @@
+// app.js – WhatsApp + Gemini 2.0 Flash (final)
+
 import express from "express";
 import bodyParser from "body-parser";
 import axios from "axios";
@@ -144,6 +146,7 @@ const contactText = {
   en: "Live consultant: +971 52 728 8586",
   ar: "مستشار مباشر: ‎+971 52 728 8586",
 };
+
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -225,31 +228,6 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    // PROMPT
-    const prompt =
-      lang === "tr"
-        ? `Sen SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
-        : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
-
-    const reply = await callGemini(prompt);
-
-    if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
-    }
-
-    session.history.push({ role: "assistant", text: reply });
-
-    await sendMessage(from, reply);
-
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err);
-    res.sendStatus(500);
-  }
-});
     // PROMPT
     const prompt =
       lang === "tr"
