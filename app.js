@@ -179,13 +179,22 @@ app.post("/webhook", async (req, res) => {
         history: [],
       };
 
-      await sendMessage(
-        from,
-        "Welcome to SamChe Company LLC.\n" +
-          "SamChe Company LLC'ye hoş geldiniz.\n" +
-          "مرحبًا بكم.\n\n" +
-          "Please select your language:\n1️⃣ English\n2️⃣ Türkçe\n3️⃣ العربية"
-      );
+     await sendMessage(
+  from,
+  "Welcome to SamChe Company LLC.\n" +
+    "SamChe Company LLC'ye hoş geldiniz.\n" +
+    "مرحبًا بكم.\n\n" +
+
+    "Please select your language:\n" +
+    "1️⃣ English\n" +
+    "2️⃣ Türkçe\n" +
+    "3️⃣ العربية\n\n" +
+
+    "Lütfen dil seçiminizi yapınız:\n" +
+    "1️⃣ İngilizce\n" +
+    "2️⃣ Türkçe\n" +
+    "3️⃣ Arapça"
+);
 
       return res.sendStatus(200);
     }
@@ -259,6 +268,7 @@ app.post("/webhook", async (req, res) => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
