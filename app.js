@@ -129,11 +129,11 @@ const servicesList = {
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "Dubai şirket kuruluşu, vizeler, maliyetler, iş planı, strateji ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.\n\n" +
+    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.Size nasıl yardımcı olabilirim? \n\n" +
     servicesList.tr,
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can assist with Dubai company setup, visas, costs, business planning, strategy, and AI solutions.\n\n" +
+    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you? \n\n" +
     servicesList.en,
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
@@ -259,3 +259,4 @@ app.post("/webhook", async (req, res) => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
