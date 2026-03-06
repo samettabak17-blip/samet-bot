@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (final, updated)
+// app.js – WhatsApp + Gemini 2.0 Flash (full, updated)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -18,25 +18,25 @@ const sessions = {};
 //  TOPIC DETECTION (KONU ALGILAMA)
 // -------------------------------
 function detectTopic(text) {
-  text = text.toLowerCase();
+  const t = text.toLowerCase();
 
   if (
-    text.includes("company") ||
-    text.includes("şirket") ||
-    text.includes("kurmak") ||
-    text.includes("business setup")
+    t.includes("company") ||
+    t.includes("şirket") ||
+    t.includes("kurmak") ||
+    t.includes("business setup")
   )
     return "company_setup";
 
   if (
-    text.includes("residency") ||
-    text.includes("oturum") ||
-    text.includes("visa") ||
-    text.includes("vize")
+    t.includes("residency") ||
+    t.includes("oturum") ||
+    t.includes("visa") ||
+    t.includes("vize")
   )
     return "residency";
 
-  if (text.includes("license") || text.includes("trade license"))
+  if (t.includes("license") || t.includes("trade license"))
     return "license";
 
   return null;
@@ -96,6 +96,17 @@ const sponsorResidencyText =
   "1. ödeme 4000 AED (iş teklifi ve kontrat için). Devlet onaylı evrak 10 gün içinde ulaşır, ardından 2. ödeme alınır.\n" +
   "2. ödeme 8000 AED (employment visa). E-visa maksimum 30 gün içinde ulaşır.\n" +
   "3. ödeme 1000 AED (ID kart ve damgalama) ülkeye giriş sonrası ödenir. Süre 30 gün.";
+
+// -------------------------------
+//  BANKA BİLGİLERİ (USD HESABI)
+// -------------------------------
+const companyBankInfoUSD =
+  "Ödemelerinizi aşağıdaki USD şirket hesabına EFT/Havale ile yapabilirsiniz:\n\n" +
+  "Account holder: SamChe Company LLC\n" +
+  "Account number: 9726414926\n" +
+  "IBAN: AE210860000009726414926\n" +
+  "BIC: WIOBAEADXXX\n" +
+  "Bank address:\nEtihad Airways Centre 5th Floor, Abu Dhabi, UAE.";
 
 // -------------------------------
 //  WHATSAPP SEND (4096 LIMIT SAFE)
@@ -268,7 +279,8 @@ app.post("/webhook", async (req, res) => {
         topic: null,
         lastMessageTime: Date.now(),
         followStartTime: null,
-        followStage: 0, // 0: hiç, 1: 1.gün, 2: 3.gün, 3: 7.gün
+        followStage: 0,
+        payment: null, // { type: 'residency' | 'other', stage: 'askCurrency' | 'done', currency: 'usd'|'tl' }
       };
 
       await sendMessage(
@@ -323,9 +335,41 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // ONLINE / KREDİ KARTI ÖDEME İSTEĞİ
+    if (
+      lower.includes("kredi kart") ||
+      lower.includes("online ödeme") ||
+      lower.includes("kartla ödeme") ||
+      lower.includes("credit card") ||
+      lower.includes("pay online")
+    ) {
+      await sendMessage(
+        from,
+        "Kredi kartı veya online ödeme için lütfen canlı temsilci ile iletişime geçin: +971 50 179 38 80"
+      );
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
     // SADECE SPONSORLU OTURUM İSTEĞİ
     if (isSponsorOnlyResidency(lower)) {
       await sendMessage(from, sponsorResidencyText);
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // EVRAKLAR NELER SORUSU
+    if (
+      lower.includes("evrak") ||
+      lower.includes("belge") ||
+      lower.includes("hangi evrak") ||
+      lower.includes("ne lazım") ||
+      lower.includes("ne gerekli")
+    ) {
+      await sendMessage(
+        from,
+        "İki yıllık oturum için en az 3 yıllık geçerli pasaportunuz ve biyometrik fotoğrafınızı PDF olarak göndermeniz yeterlidir."
+      );
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
@@ -340,6 +384,75 @@ app.post("/webhook", async (req, res) => {
       await sendMessage(
         from,
         "Webchat AI chatbot çözümleri, paketler ve fiyatlar için lütfen şu sayfayı ziyaret edin:\nhttps://aichatbot.samchecompany.com"
+      );
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // ÖDEME NEREYE / HESAP / ÜCRET GÖNDERME SORULARI
+    if (
+      lower.includes("ücreti nereye") ||
+      lower.includes("nereye göndereceğim") ||
+      lower.includes("nereye gonderecem") ||
+      lower.includes("ödeme nereye") ||
+      lower.includes("hesap numarası") ||
+      lower.includes("banka bilgisi") ||
+      lower.includes("banka bilgilerini") ||
+      lower.includes("ödeme yapmak istiyorum")
+    ) {
+      // Eğer residency ile ilgili ise özel akış
+      if (detectTopic(text) === "residency" || isSponsorOnlyResidency(lower)) {
+        session.payment = { type: "residency", stage: "askCurrency", currency: null };
+        await sendMessage(
+          from,
+          "İki yıllık oturum için ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
+        );
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      } else {
+        // Diğer hizmetler için genel banka bilgisi
+        await sendMessage(
+          from,
+          "Ödemelerinizi aşağıdaki USD şirket hesabına EFT/Havale ile yapabilirsiniz:\n\n" +
+            companyBankInfoUSD +
+            "\n\nÖdeme dekontunuzu ve ilgili evraklarınızı info@samchecompany.com adresine iletebilirsiniz."
+        );
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      }
+    }
+
+    // RESIDENCY ÖDEMESİ İÇİN PARA BİRİMİ CEVABI
+    if (session.payment && session.payment.type === "residency" && session.payment.stage === "askCurrency") {
+      if (lower.includes("usd") || lower.includes("dolar") || lower.includes("dollar")) {
+        session.payment.currency = "usd";
+        session.payment.stage = "done";
+
+        await sendMessage(
+          from,
+          "İki yıllık oturum için ödemenizi USD olarak yapabilirsiniz. Şirket banka bilgilerimiz:\n\n" +
+            companyBankInfoUSD +
+            "\n\nLütfen ödeme dekontunuzu ve pasaport + biyometrik fotoğrafınızı PDF olarak info@samchecompany.com adresine gönderin."
+        );
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      }
+
+      if (lower.includes("tl") || lower.includes("türk lirası") || lower.includes("turkish lira")) {
+        session.payment.currency = "tl";
+        session.payment.stage = "done";
+
+        await sendMessage(
+          from,
+          "İki yıllık oturum için TL ile ödeme yapmak isterseniz, lütfen evraklarınızı ve ödeme talebinizi doğrudan canlı temsilcimize iletin: +971 50 179 38 80"
+        );
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      }
+
+      await sendMessage(
+        from,
+        "Ödemeyi hangi para birimiyle yapmak istediğinizi anlayamadım. Lütfen 'USD' veya 'TL' olarak belirtin."
       );
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
