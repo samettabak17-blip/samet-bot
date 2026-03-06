@@ -1,6 +1,6 @@
-// app.js – WhatsApp + Gemini 2.0 Flash
-// Bağlamlı, niyet takibi + iletişim filtresi + ödeme akışı + oturum/şirket ayrımı
-// + Profesyonel SamChe danışman prompt’u (ASLA başka firma / kaynak yönlendirmesi yok)
+// app.js – SamChe Company LLC WhatsApp Bot
+// Profesyonel, kurumsal, bağlamlı; şirket kurulum & oturum ayrımı
+// ASLA başka firma / yetkili / forum / dış kaynak yönlendirmesi yok
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -17,60 +17,64 @@ app.use(bodyParser.json());
 const sessions = {};
 
 // -------------------------------
-//  TOPIC DETECTION (KONU ALGILAMA)
+//  TOPIC / INTENT DETECTION
 // -------------------------------
 function detectTopic(text) {
   const t = text.toLowerCase();
 
-  if (
-    t.includes("company") ||
+  const companyWords =
     t.includes("şirket") ||
     t.includes("sirket") ||
-    t.includes("kurmak") ||
+    t.includes("company") ||
     t.includes("business setup") ||
     t.includes("firma açmak") ||
     t.includes("firma acmak") ||
     t.includes("freezone") ||
     t.includes("free zone") ||
-    t.includes("mainland")
-  )
-    return "company_setup";
+    t.includes("mainland");
 
-  if (
-    t.includes("residency") ||
+  const residencyWords =
     t.includes("oturum") ||
+    t.includes("residency") ||
     t.includes("visa") ||
     t.includes("vize") ||
-    t.includes("sponsor") ||
     t.includes("sponsorlu oturum") ||
+    t.includes("sponsor") ||
     t.includes("freelance visa") ||
-    t.includes("freelance vize")
-  )
-    return "residency";
+    t.includes("freelance vize") ||
+    t.includes("dubai'de çalışmak") ||
+    t.includes("dubaide çalışmak") ||
+    t.includes("dubai de çalışmak") ||
+    t.includes("dubai’de çalışmak") ||
+    t.includes("dubai'de calismak") ||
+    t.includes("dubaide calismak");
 
-  if (t.includes("license") || t.includes("trade license")) return "license";
-
+  if (companyWords && !residencyWords) return "company_setup";
+  if (residencyWords && !companyWords) return "residency";
+  if (companyWords && residencyWords) return "mixed";
   return null;
 }
 
-// SADECE SPONSORLU OTURUM İSTEYENLER (ŞİRKET KURMAK İSTEMEYEN)
+// Şirket kurmadan sadece oturum isteyen
 function isSponsorOnlyResidency(text) {
   const t = text.toLowerCase();
   const residencyWords =
-    t.includes("oturum almak istiyorum") ||
-    t.includes("sponsorlu oturum almak istiyorum") ||
-    t.includes("freelance visa") ||
-    t.includes("freelance vize") ||
+    t.includes("şirket kurmadan oturum") ||
+    t.includes("sirket kurmadan oturum") ||
     t.includes("sadece oturum") ||
     t.includes("sadece residency") ||
-    t.includes("oturum istiyorum") ||
-    t.includes("şirket kurmadan oturum") ||
-    t.includes("sirket kurmadan oturum");
+    t.includes("sadece oturum istiyorum") ||
+    t.includes("sadece residency istiyorum") ||
+    t.includes("sponsorlu oturum") ||
+    t.includes("sponsorlukla oturum") ||
+    t.includes("dubai'de çalışmak istiyorum") ||
+    t.includes("dubai de çalışmak istiyorum") ||
+    t.includes("dubaide çalışmak istiyorum") ||
+    t.includes("dubaide calismak istiyorum");
   const companyWords =
-    t.includes("şirket") ||
-    t.includes("sirket") ||
-    t.includes("company") ||
-    t.includes("kurmak") ||
+    t.includes("şirket kurmak") ||
+    t.includes("sirket kurmak") ||
+    t.includes("company kurmak") ||
     t.includes("business setup") ||
     t.includes("firma açmak") ||
     t.includes("firma acmak");
@@ -78,45 +82,19 @@ function isSponsorOnlyResidency(text) {
   return residencyWords && !companyWords;
 }
 
-// İLK OTURUM SORUSU MU? (GENEL BİLGİ İSTEĞİ)
-function isInitialResidencyQuestion(text) {
-  const t = text.toLowerCase();
-  if (
-    t.includes("oturum almak istiyorum") ||
-    t.includes("sponsorlu oturum almak istiyorum") ||
-    t.includes("oturum nasıl alınır") ||
-    t.includes("oturum nasil alinir") ||
-    t.includes("oturum süreci") ||
-    t.includes("oturum sureci") ||
-    t.includes("oturum başvurusu") ||
-    t.includes("oturum basvurusu") ||
-    t.includes("freelance visa") ||
-    t.includes("freelance vize") ||
-    t.includes("şirket kurmadan oturum") ||
-    t.includes("sirket kurmadan oturum")
-  ) {
-    return true;
-  }
-  return false;
-}
-
 // -------------------------------
-//  FOLLOW-UP MESSAGE (KONUYA GÖRE)
+//  FOLLOW-UP MESSAGE
 // -------------------------------
 function getFollowUpMessage(topic, stage) {
   let base;
   switch (topic) {
     case "company_setup":
       base =
-        "Merhaba, şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+        "Merhaba, Dubai’de şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
       break;
     case "residency":
       base =
-        "Merhaba, oturum ve sponsorlu oturum süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
-      break;
-    case "license":
-      base =
-        "Merhaba, trade license süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+        "Merhaba, sponsorlu oturum ve oturum süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
       break;
     default:
       base =
@@ -130,19 +108,23 @@ function getFollowUpMessage(topic, stage) {
 }
 
 // -------------------------------
-//  SPONSORLU OTURUM MESAJI
+//  SPONSORLU OTURUM METNİ (SENİN İSTEDİĞİN BAĞLAM)
 // -------------------------------
 const sponsorResidencyText =
-  "Bu ülkede yaşayabilmeniz ve çalışabilmeniz için size birilerinin sponsor olması gerekiyor ya da şirket açıp kendinize sponsor olmanız gerekiyor. " +
-  "Şirket kurmadan da dilerseniz bu sponsorlugu SamChe Company LLC sizin için sağlıyor; yani iki yıllık oturumunuz için burada firmalar size sponsor oluyor ve bu süreci SamChe sizin adınıza yönetiyor. " +
-  "Bu sponsorlukla burada yaşayabiliyorsunuz fakat o firmada çalışmıyorsunuz, firma size sadece oturumunuz için sponsor oluyor. " +
-  "İşlemleriniz tamamlandıktan sonra sponsor firmanızın size sunduğu NOC Belgesi (No Objection Certificate) ile ülkede istediğiniz sektörde resmi olarak çalışma hakkına " +
-  "ya da iş kurma hakkına sahip oluyorsunuz. Bu belge sponsorunuzun ekstra bir işte çalışmanıza itirazı olmadığını gösteren belgedir. " +
-  "Dubai iki yıllık sponsorlu oturum ve çalışma izni için işlemleri Türkiye’den başlatıyoruz, ülkeye çalışan vizesi ile giriş yapıyorsunuz.\n\n" +
-  "İki yıllık oturum ücreti toplam 13.000 AED (3,500$)\n" +
-  "1. ödeme 4000 AED (iş teklifi ve kontrat için). Devlet onaylı evrak 10 gün içinde ulaşır, ardından 2. ödeme alınır.\n" +
-  "2. ödeme 8000 AED (employment visa). E-visa maksimum 30 gün içinde ulaşır.\n" +
-  "3. ödeme 1000 AED (ID kart ve damgalama) ülkeye giriş sonrası ödenir. Süre 30 gün.";
+  "SamChe Company LLC olarak, sponsorlu oturum seçeneğiyle ilgilenmenizden memnuniyet duyuyoruz. Bu, Dubai'de yaşamak ve çalışmak için güçlü bir fırsattır. " +
+  "Sponsorlu oturum, şirket kurma zorunluluğu olmadan BAE'de oturum izni almanızı sağlar ve SamChe Company LLC bu süreçte baştan sona sizinle birlikte hareket eder.\n\n" +
+  "Sponsorlu oturumun temel avantajları:\n" +
+  "• Hızlı ve görece daha az karmaşık başvuru süreci\n" +
+  "• Şirket kurma süreçleriyle uğraşmadan oturum izni alabilme\n" +
+  "• Belirli bir işverene bağlı kalmadan Dubai'de yaşama ve çalışma esnekliği\n" +
+  "• Şirket kurma maliyetlerine kıyasla daha uygun bir seçenek olması\n" +
+  "• SamChe Company LLC sponsorluğunda iki yıllık oturum izni imkânı\n\n" +
+  "Süreç genel olarak şu adımlardan oluşur:\n" +
+  "1. Başvuru ve değerlendirme: Kısa bir ön değerlendirme ile uygunluğunuz analiz edilir ve gerekli temel bilgileriniz alınır.\n" +
+  "2. Oturum izni başvurusu: Uygunluk netleştikten sonra, oturum izni başvurusu SamChe Company LLC tarafından sizin adınıza yürütülür.\n" +
+  "3. Tıbbi kontrol ve Emirates ID: Başvurunuz onaylandığında, Dubai'de yetkili sağlık kuruluşunda tıbbi kontrolden geçer ve Emirates ID süreciniz tamamlanır.\n" +
+  "4. İki yıllık oturum izninin aktif hale gelmesi: Tüm adımlar tamamlandığında, iki yıllık oturum izniniz aktif olur ve BAE'de yasal olarak ikamet edebilirsiniz.\n\n" +
+  "Bu model, şirket kurmadan sadece oturum ve çalışma esnekliği isteyen kişiler için uygundur. Eğer önceliğiniz şirket kurmak değil, sadece oturum almak ve Dubai’de yaşamak/çalışmak ise, bu seçeneği detaylı şekilde birlikte değerlendirebiliriz.";
 
 // -------------------------------
 //  BANKA BİLGİLERİ (USD HESABI)
@@ -307,7 +289,7 @@ const contactText = {
 };
 
 // -------------------------------
-//  REPLY SANITIZATION (İLETİŞİM BİLGİSİ FİLTRESİ)
+//  REPLY SANITIZATION (İLETİŞİM FİLTRESİ)
 // -------------------------------
 function sanitizeReply(reply, session) {
   if (session.contactAllowed) return reply;
@@ -464,7 +446,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     // -------------------------------
-    //  KOMUT ALGILAMA (BAŞLAYALIM / DEVAM / EVET vb.)
+    //  BAŞLAYALIM / DEVAM KOMUTLARI
     // -------------------------------
     const isStartCommand =
       lower.includes("başlayalım") ||
@@ -494,12 +476,12 @@ app.post("/webhook", async (req, res) => {
       if (session.lastIntent === "company_setup") {
         await sendMessage(
           from,
-          "Dubai’de şirket kuruluşu için süreci başlatıyoruz. Size uygun şirket türünü, freezone/mainland seçeneklerini ve gerekli evrakları adım adım planlayabiliriz. İsterseniz önce hangi serbest bölgenin size daha uygun olacağını netleştirelim."
+          "Dubai’de şirket kuruluşu için süreci başlatıyoruz. Öncelikle sektörünüzü, freezone/mainland tercihinizi ve ortak yapınızı netleştirerek ilerleyebiliriz."
         );
       } else if (session.lastIntent === "residency") {
         await sendMessage(
           from,
-          "İki yıllık sponsorlu oturum sürecini başlatıyoruz. Öncelikle pasaport ve biyometrik fotoğrafınızı PDF olarak hazırlayın, ardından ödeme adımına geçebiliriz."
+          "Sponsorlu oturum sürecini başlatıyoruz. Öncelikle pasaport ve biyometrik fotoğrafınızı PDF olarak hazırlamanız, ardından ödeme adımına geçmemiz gerekecek."
         );
       } else if (session.lastIntent === "payment") {
         await sendMessage(
@@ -518,34 +500,25 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // -------------------------------
+    //  ŞİRKET + OTURUM AYNI MESAJDA → NETLEŞTİRME
+    // -------------------------------
+    const topicNow = detectTopic(text);
+    if (topicNow === "mixed") {
+      await sendMessage(
+        from,
+        "Hem şirket kurma hem de oturum konusu geçti. Sizin için şu an hangi işlem öncelikli? Şirket kuruluşu mu, yoksa şirket kurmadan sponsorlu oturum süreci mi?"
+      );
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
     // SADECE SPONSORLU OTURUM İSTEĞİ (ŞİRKET KURMAK İSTEMEYEN)
     if (!session.residencyExplained && isSponsorOnlyResidency(lower)) {
       await sendMessage(from, sponsorResidencyText);
       session.residencyExplained = true;
       session.lastIntent = "residency";
-      session.lastMessageTime = Date.now();
-      return res.sendStatus(200);
-    }
-
-    // İLK OTURUM SORUSU (GENEL BİLGİ) - ŞİRKET KURMAK İSTEYENLER HARİÇ
-    const topicNow = detectTopic(text);
-    const mentionsCompany =
-      lower.includes("şirket") ||
-      lower.includes("sirket") ||
-      lower.includes("company") ||
-      lower.includes("business setup") ||
-      lower.includes("firma açmak") ||
-      lower.includes("firma acmak");
-
-    if (
-      topicNow === "residency" &&
-      !session.residencyExplained &&
-      isInitialResidencyQuestion(lower) &&
-      !mentionsCompany
-    ) {
-      await sendMessage(from, sponsorResidencyText);
-      session.residencyExplained = true;
-      session.lastIntent = "residency";
+      session.topic = "residency";
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
@@ -576,7 +549,8 @@ app.post("/webhook", async (req, res) => {
       if (
         topic === "residency" ||
         isSponsorOnlyResidency(lower) ||
-        session.residencyExplained
+        session.residencyExplained ||
+        session.lastIntent === "residency"
       ) {
         session.payment = {
           type: "residency",
@@ -586,7 +560,7 @@ app.post("/webhook", async (req, res) => {
         session.lastIntent = "payment";
         await sendMessage(
           from,
-          "İki yıllık sponsorlu oturum için ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
+          "Sponsorlu oturum için ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
         );
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
@@ -619,7 +593,7 @@ app.post("/webhook", async (req, res) => {
         if (session.payment.type === "residency") {
           await sendMessage(
             from,
-            "İki yıllık sponsorlu oturum için ödemenizi USD olarak tek seferde yapabilirsiniz. Şirket banka bilgilerimiz:\n\n" +
+            "Sponsorlu oturum için ödemenizi USD olarak tek seferde yapabilirsiniz. Şirket banka bilgilerimiz:\n\n" +
               companyBankInfoUSD +
               "\n\nLütfen ödeme dekontunuzu ve pasaport + biyometrik fotoğrafınızı PDF olarak info@samchecompany.com adresine gönderin."
           );
@@ -670,27 +644,36 @@ app.post("/webhook", async (req, res) => {
       lower.includes("ne lazım") ||
       lower.includes("ne gerekli")
     ) {
-      await sendMessage(
-        from,
-        "İki yıllık sponsorlu oturum için en az 3 yıllık geçerli pasaportunuz ve biyometrik fotoğrafınızı PDF olarak göndermeniz yeterlidir."
-      );
+      if (
+        session.lastIntent === "residency" ||
+        session.topic === "residency" ||
+        isSponsorOnlyResidency(lower)
+      ) {
+        await sendMessage(
+          from,
+          "Sponsorlu oturum için genellikle geçerli pasaportunuz ve biyometrik fotoğrafınız temel evraklar olarak yeterlidir. Detaylı evrak listesi, durumunuza göre SamChe danışmanı tarafından netleştirilir."
+        );
+      } else {
+        await sendMessage(
+          from,
+          "Şirket kuruluşu için gerekli evraklar; pasaport, ortak bilgileri ve seçilecek serbest bölge veya mainland yapısına göre değişen ek belgelerden oluşur. Sektörünüzü ve ortak yapınızı netleştirdikten sonra size özel evrak listesini çıkarabiliriz."
+        );
+      }
       session.lastIntent = "documents";
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
 
     // TOPIC DETECTION & FOLLOW-UP START
-    const topic = detectTopic(text);
-    if (topic && !session.stopFollowUp) {
+    if (topicNow && topicNow !== "mixed" && !session.stopFollowUp) {
       if (!session.followUp) {
         sessions[from].followUp = true;
-        sessions[from].topic = topic;
+        sessions[from].topic = topicNow === "license" ? "company_setup" : topicNow;
         sessions[from].followStartTime = Date.now();
         sessions[from].followStage = 0;
       }
-      if (topic === "company_setup") session.lastIntent = "company_setup";
-      if (topic === "residency") session.lastIntent = "residency";
-      if (topic === "license") session.lastIntent = "company_setup";
+      if (topicNow === "company_setup") session.lastIntent = "company_setup";
+      if (topicNow === "residency") session.lastIntent = "residency";
       session.lastMessageTime = Date.now();
     }
 
@@ -709,7 +692,7 @@ app.post("/webhook", async (req, res) => {
       session.contactRequestCount = (session.contactRequestCount || 0) + 1;
 
       const seriousTopic =
-        topic === "company_setup" || topic === "residency";
+        session.topic === "company_setup" || session.topic === "residency";
 
       const strongIntent =
         lower.includes("net fiyat") ||
@@ -747,8 +730,10 @@ app.post("/webhook", async (req, res) => {
       .join("\n");
 
     // -------------------------------
-    //  GEMINI PROMPT (YENİ TR PROFESYONEL DANIŞMAN + ASLA BAŞKA KAYNAK/FİRMA YOK)
-    // -------------------------------
+    //  GEMINI PROMPT (TR / EN / AR)
+//  – ASLA başka firma / yetkili / forum / dış kaynak yok
+//  – Şirket kurulum ve sponsorlu oturum ayrımı net
+// -------------------------------
     const prompt =
       lang === "tr"
         ? `SamChe Company LLC’nin kıdemli iş kurulum ve strateji danışmanısın. 
@@ -760,24 +745,22 @@ Aşağıdaki ilkelere HER ZAMAN uy:
 - SamChe Company LLC’nin uzman danışmanı gibi konuş.
 - Net, sakin, güven veren, kurumsal bir dil kullan.
 - Gereksiz süslü cümleler, abartılı satış dili kullanma.
-- “Biz” diliyle konuşabilirsin ama samimiyeti abartma.
 
 2) SADECE SAMCHE PERSPEKTİFİNDEN KONUŞ
-- Kullanıcıyı ASLA başka bir firmaya, başka bir profesyonel danışmana, Freezone yetkilisine, devlet kurumuna veya harici bir kaynağa yönlendirme.
-- “Freezone yetkilileriyle görüşün”, “resmi siteye bakın”, “başka bir danışmana sorun” gibi ifadeler KULLANMA.
+- Kullanıcıyı ASLA başka bir firmaya, başka bir profesyonel danışmana, Freezone yetkilisine, devlet kurumuna, foruma veya harici bir kaynağa yönlendirme.
+- “Freezone yetkilileriyle görüşün”, “resmi siteye bakın”, “forumlara bakın”, “başka bir danışmana sorun” gibi ifadeler KULLANMA.
 - Tüm bilgi, analiz ve yönlendirme SamChe Company LLC perspektifinden verilir.
-- Yönlendirme yapman gereken tek linkler: 
+- Yönlendirme yapman gereken tek linkler:
   - https://samchecompany.com
   - https://guide.samchecompany.com
   - https://aichatbot.samchecompany.com
 
 3) BİLGİ VERMEKTE TUTARLI OL
-- Bilgi verirken Gemini’nin kendi bilgi tabanını kullan.
-- Uydurma, mantıksız veya çelişkili bilgi üretme.
+- Bilgi verirken Gemini’nin kendi bilgi tabanını kullan ama uydurma, mantıksız veya çelişkili bilgi üretme.
 - Freezone/mainland farkları, lisans tipleri, şirket türleri, oturum süreçleri, vergi ve uyum konularında mantıklı, tutarlı ve gerçekçi açıklamalar yap.
 - Emin olmadığın bir bilgiyi “kesin” gibi sunma; gerekirse “genel olarak”, “yaklaşık olarak” gibi ifadeler kullan.
 
-4) ÖNCE ANALİZ, SONRA YÖNLENDİRME
+4) ÖNCE ANALİZ, SONRA YÖNLENDİRME (ŞİRKET KURULUMU)
 - Kullanıcı “şirket kurmak istiyorum” dediğinde hemen maliyet verme.
 - Önce analiz soruları sor:
   - Hangi sektörde faaliyet göstereceksiniz?
@@ -785,15 +768,16 @@ Aşağıdaki ilkelere HER ZAMAN uy:
   - Tek ortaklı mı yoksa çok ortaklı bir yapı mı planlıyorsunuz?
   - Fiziksel ofis ihtiyacınız var mı?
   - Hedef pazarınız neresi (BAE içi, global, online vs.)?
-- Bu sorularla kullanıcının ihtiyacını netleştir, sonra öneri ver.
+- Bu sorularla kullanıcının ihtiyacını netleştir, sonra uygun şirket modelini öner.
+- Şirket kurulumunda oturumdan bahsedeceksen, bunu şirket kurmanın doğal sonucu olarak anlat (örneğin: “Şirket kurduğunuzda, belirli şartlar altında oturum izni almanız da mümkün olur.”).
+- Şirket kurmak isteyen kullanıcıya sponsorlu oturum modelini ana çözüm olarak sunma; odak şirket kurulumunda kalsın.
 
 5) MALİYET DAVRANIŞI
 - Kullanıcı açıkça “maliyet”, “fiyat”, “ücret” sormadan kendiliğinden maliyet çıkarma.
 - Kullanıcı “maliyet nedir, fiyat nedir, ne kadar tutar?” gibi sorarsa:
   - Yaklaşık aralıklar verebilirsin (örneğin: “genellikle X–Y aralığında değişir”).
   - Net ve resmi fiyat tablosu isteyenleri sadece https://guide.samchecompany.com/ adresindeki maliyet bölümüne yönlendirebilirsin.
-- Maliyet verirken:
-  - Çok net rakamlar yerine aralık ve koşul odaklı konuş (“seçilen bölgeye, lisans tipine ve iş modeline göre değişir” gibi).
+- Maliyet verirken çok net rakamlar yerine aralık ve koşul odaklı konuş.
 
 6) SATIŞ ODAKLI AMA BASKICI OLMADAN
 - Kullanıcıya bilgi verdikten sonra onu satışa hazırlayan sorular sor:
@@ -801,37 +785,43 @@ Aşağıdaki ilkelere HER ZAMAN uy:
   - “Hazırsanız bir sonraki adım olarak lisans tipini belirleyebiliriz.”
 - Kullanıcı “başlayalım, devam edelim, tamam, evet” gibi ifadeler kullanırsa:
   - Bunu süreci ilerletme niyeti olarak yorumla.
-  - Bir sonraki mantıklı adımı öner (örneğin: “O zaman önce şirket türünü netleştirelim.”).
+  - Bir sonraki mantıklı adımı öner.
 
-7) OTURUM (RESIDENCY) DAVRANIŞI
-- Kullanıcı “şirket kurmadan oturum almak istiyorum”, “sadece oturum istiyorum”, “sponsorlu oturum” gibi ifadeler kullanırsa:
-  - Odak noktan SamChe Company LLC’nin sağladığı iki yıllık sponsorlu oturum modeli olsun.
-  - İstihdam yoluyla oturum, gayrimenkul yatırımı gibi diğer yolları DETAYLANDIRMA; sadece çok yüzeysel ve genel bir cümleyle var olduklarını söyleyebilirsin ama asıl çözüm olarak SamChe sponsorlu oturumu anlat.
-  - Kullanıcıyı iş aramaya, başka şirketlere başvurmaya, gayrimenkul almaya veya başka profesyonellere gitmeye yönlendirme.
-  - Sponsorlu oturum sürecini, SamChe’nin bu süreci nasıl yönettiğini ve ödeme/adım yapısını net ve profesyonel şekilde açıkla.
+7) OTURUM (RESIDENCY) DAVRANIŞI – İKİ AYRI SENARYO
+
+a) ŞİRKET KURARAK OTURUM:
+- Kullanıcı önceliğini şirket kurmak olarak ifade ediyorsa (örneğin “Dubai’de şirket kurmak istiyorum”):
+  - Odak noktan şirket kurulum süreci olsun.
+  - Oturumdan bahsedeceksen, şirket kurmanın doğal sonucu olarak kısaca değin (“Şirket kurduğunuzda, belirli şartlar altında oturum izni almanız da mümkündür.”).
+  - Bu durumda sponsorlu oturum modelini ana çözüm gibi sunma.
+
+b) ŞİRKET KURMADAN SADECE OTURUM:
+- Kullanıcı “şirket kurmadan oturum almak istiyorum”, “sadece oturum istiyorum”, “Dubai’de çalışmak istiyorum”, “sponsorlu oturum” gibi ifadeler kullanıyorsa ve şirket kurma niyeti yoksa:
+  - Odak noktan SamChe Company LLC’nin sponsorlu oturum modeli olsun.
+  - Gayrimenkul yatırımı, iş bulma, başka şirketler, forumlar, devlet siteleri veya başka oturum yollarını DETAYLANDIRMA ve ÖNERME.
+  - Kullanıcıya “iş arayın, forumlara bakın, başka firmalara başvurun” gibi yönlendirmeler yapma.
+  - Sponsorlu oturum sürecini, SamChe’nin bu süreci nasıl yönettiğini ve temel adımları net ve profesyonel şekilde açıkla.
+  - Sponsorlu oturum açıklamasında aşağıdaki metni temel al:
+${sponsorResidencyText}
 
 8) İLETİŞİM BİLGİSİ VERME
 - Kullanıcıya asla telefon numarası, e-posta adresi, web sitesi, Instagram veya LinkedIn linki yazma; bu bilgileri sistem gerektiğinde ekleyecek.
 - Sen sadece “SamChe danışmanı ile detaylı görüşme yapılabilir” gibi genel ifadeler kullan.
-- Kullanıcı net şekilde resmi teklif, net fiyat veya danışmanla görüşme isterse, sistem seni destekleyecek; sen metin içinde sadece genel ifade kullan.
 
 9) BAĞLAM VE NİYET TAKİBİ
 - Her cevabında kullanıcının önceki mesajlarını ve niyetini dikkate al.
 - Kullanıcı önce şirket, sonra oturum, sonra tekrar şirket sorarsa, hangi konuda kaldığınızı unutma.
-- Kullanıcı “tamam, başlayalım, devam edelim, işlemleri başlatalım” derse, bunu bir önceki ana konuya bağlı olarak yorumla (örneğin şirket kurulum süreci veya oturum süreci).
-- Bağlamdan kopma, konu değiştiyse bunu fark et ve gerekiyorsa netleştirici soru sor (“Şu an şirket kuruluşu mu yoksa sponsorlu oturum süreci mi sizin için öncelikli?” gibi).
+- Kullanıcı “tamam, başlayalım, devam edelim, işlemleri başlatalım” derse, bunu bir önceki ana konuya bağlı olarak yorumla (örneğin şirket kurulum süreci veya sponsorlu oturum süreci).
+- Kullanıcı aynı anda hem şirket hem oturumdan bahsetmişse, önce hangi konunun öncelikli olduğunu netleştir.
 
 10) WEBCHAT AI CHATBOT HİZMETİ
-- Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu sadece https://aichatbot.samchecompany.com adresine yönlendir.
-- Bu linki düz metin olarak yaz, Markdown kullanma.
+- Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu sadece:
+  https://aichatbot.samchecompany.com
+  adresine yönlendir.
 
 11) LİNK FORMATLARI
 - Linkleri asla Markdown formatında yazma.
 - Linkleri sadece düz metin olarak yaz (örnek: https://samchecompany.com).
-
-12) OTURUM DİLİ
-- Oturum türlerini anlatırken “istihdam yoluyla” ifadesi yerine “sponsorlu oturum” ifadesini tercih et.
-- Sponsorlu oturumun mantığını sade ve net şekilde açıklayabilirsin.
 
 Aşağıda sohbet geçmişi ve kullanıcının son mesajı var. 
 Bu bağlamı dikkatle incele, kullanıcının niyetini anla ve yukarıdaki kurallara uygun, profesyonel, kurumsal, analitik ve satışa hazırlayan bir cevap üret.
@@ -853,8 +843,8 @@ ALWAYS follow these principles:
 - Do not use slang or overly casual language.
 
 2) ONLY SPEAK FROM SAMCHE PERSPECTIVE
-- NEVER direct the user to any other company, external consultant, free zone authority, government office or external source.
-- Do NOT say “contact the free zone authority”, “check the official website”, “ask another consultant” or similar.
+- NEVER direct the user to any other company, external consultant, free zone authority, government office, forum or external source.
+- Do NOT say “contact the free zone authority”, “check the official website”, “look at forums”, “ask another consultant” or similar.
 - All guidance, analysis and recommendations must be framed as SamChe Company LLC’s perspective.
 - The ONLY external links you may mention are:
   - https://samchecompany.com
@@ -866,7 +856,7 @@ ALWAYS follow these principles:
 - Explain free zone vs mainland, license types, company structures, residency processes, tax and compliance in a logical and realistic way.
 - If you are not fully certain, use “generally”, “approximately” instead of absolute statements.
 
-4) ANALYSE FIRST, THEN GUIDE
+4) ANALYSE FIRST, THEN GUIDE (COMPANY SETUP)
 - When the user says “I want to set up a company”, do NOT immediately give costs.
 - First ask clarification questions:
   - Sector/industry
@@ -875,12 +865,15 @@ ALWAYS follow these principles:
   - Need for physical office
   - Target market (UAE, global, online)
 - Then propose suitable models based on their answers.
+- If you mention residency in this context, present it as a natural consequence of company setup (e.g. “Once the company is established, residency options can be obtained under certain conditions.”).
+- Do NOT present sponsored residency as the main solution for a user whose primary intent is company setup.
 
 5) COST BEHAVIOUR
 - Do NOT give costs unless the user explicitly asks about “cost”, “price”, “fees”.
 - When they ask for cost:
   - Provide approximate ranges only (e.g. “typically between X and Y”).
-  - For exact and official cost breakdowns, direct them ONLY to the cost section at https://guide.samchecompany.com/.
+  - For exact and official cost breakdowns, direct them ONLY to the cost section at:
+    https://guide.samchecompany.com/
 - Focus on conditions and ranges, not exact fixed numbers.
 
 6) SALES-ORIENTED BUT NOT PUSHY
@@ -889,11 +882,21 @@ ALWAYS follow these principles:
   - “If you are ready, we can move to the next step and define the license type.”
 - When the user says “let’s start, proceed, continue, yes, okay”, interpret this as intent to move forward and suggest the next logical step.
 
-7) RESIDENCY (WITHOUT COMPANY)
-- If the user says “I want residency without setting up a company”, “only residency”, “sponsored residency”:
-  - Focus on SamChe Company LLC’s 2-year sponsored residency model as the main solution.
-  - Do NOT encourage the user to search for jobs, contact other companies or buy property.
-  - You may briefly mention that other legal routes exist in general, but do NOT detail them; keep the main explanation on SamChe’s sponsored residency solution.
+7) RESIDENCY BEHAVIOUR – TWO SEPARATE SCENARIOS
+
+a) RESIDENCY THROUGH COMPANY SETUP:
+- If the user’s primary intent is to set up a company:
+  - Focus on the company setup process.
+  - You may briefly mention that residency can be obtained as a result of company formation, but do NOT shift the main focus to sponsored residency.
+
+b) RESIDENCY WITHOUT COMPANY (SPONSORED RESIDENCY):
+- If the user clearly says “I want residency without setting up a company”, “only residency”, “I want to work in Dubai without a company”, “sponsored residency”:
+  - Focus on SamChe Company LLC’s sponsored residency model as the main solution.
+  - Do NOT encourage the user to search for jobs, buy property, contact other companies, check forums or government websites.
+  - Do NOT detail other residency routes; you may only briefly acknowledge that other legal routes exist in general.
+  - Explain the sponsored residency process clearly and professionally.
+  - Base your explanation on the following text:
+${sponsorResidencyText}
 
 8) CONTACT DETAILS
 - NEVER write phone numbers, email addresses, website URLs, Instagram or LinkedIn links in your answer; the system will handle that when needed.
@@ -903,6 +906,7 @@ ALWAYS follow these principles:
 - Always consider previous messages and the user’s intent.
 - If the user switches between company setup and residency, keep track of which topic is currently primary.
 - If the user says “okay, let’s start, proceed”, tie this to the last main topic (company setup or residency) and move that process forward.
+- If the user mentions both company and residency in the same message, first clarify which is the priority.
 
 10) WEBCHAT AI CHATBOT
 - If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them ONLY to:
@@ -927,9 +931,8 @@ ${text}`
 - تجنب اللغة العامية أو غير الرسمية.
 
 2) التحدث فقط من منظور SamChe
-- لا تُوجّه المستخدم أبدًا إلى أي شركة أخرى، أو مستشار خارجي، أو جهة حكومية، أو سلطة منطقة حرة، أو مصدر خارجي.
-- لا تقل “تواصل مع سلطة المنطقة الحرة” أو “تحقق من الموقع الرسمي” أو “اسأل مستشارًا آخر”.
-- جميع التوجيهات والتحليلات يجب أن تكون من منظور SamChe Company LLC فقط.
+- لا تُوجّه المستخدم أبدًا إلى أي شركة أخرى، أو مستشار خارجي، أو جهة حكومية، أو سلطة منطقة حرة، أو منتدى، أو مصدر خارجي.
+- لا تقل “تواصل مع سلطة المنطقة الحرة” أو “تحقق من الموقع الرسمي” أو “انظر في المنتديات” أو “اسأل مستشارًا آخر”.
 - الروابط الوحيدة المسموح ذكرها:
   - https://samchecompany.com
   - https://guide.samchecompany.com
@@ -939,7 +942,7 @@ ${text}`
 - استخدم قاعدة معرفة Gemini لكن تجنب الاختلاق والتناقض.
 - اشرح الفرق بين المناطق الحرة والبر الرئيسي، أنواع الرخص، هياكل الشركات، إجراءات الإقامة، الضرائب والامتثال بشكل منطقي وواقعي.
 
-4) التحليل قبل التوجيه
+4) التحليل قبل التوجيه (تأسيس الشركات)
 - عندما يقول المستخدم إنه يريد تأسيس شركة، لا تعطه التكاليف مباشرة.
 - اسأله أولاً عن:
   - القطاع
@@ -954,20 +957,27 @@ ${text}`
 - لجدول تكاليف دقيق ورسمي، وجّه المستخدم فقط إلى قسم التكاليف في:
   https://guide.samchecompany.com/
 
-6) الإقامة بدون شركة
-- إذا قال المستخدم إنه يريد الإقامة بدون تأسيس شركة أو “إقامة برعاية”:
-  - ركّز على نموذج الإقامة برعاية لمدة سنتين الذي تقدمه SamChe Company LLC.
-  - لا تشجعه على البحث عن عمل أو شراء عقار أو التواصل مع شركات أخرى.
-  - يمكنك الإشارة بشكل عام إلى وجود طرق أخرى، لكن لا تدخل في تفاصيلها؛ اجعل الشرح الأساسي حول حل SamChe.
+6) الإقامة – سيناريوهان
+
+أ) الإقامة عبر تأسيس شركة:
+- إذا كان هدف المستخدم الأساسي هو تأسيس شركة، فركّز على خطوات تأسيس الشركة، ويمكنك الإشارة باختصار إلى أن الإقامة يمكن الحصول عليها كنتيجة طبيعية لتأسيس الشركة.
+
+ب) الإقامة بدون شركة (إقامة برعاية SamChe):
+- إذا قال المستخدم إنه يريد الإقامة بدون تأسيس شركة أو “إقامة برعاية” أو “أريد العمل في دبي بدون شركة”:
+  - ركّز على نموذج الإقامة برعاية الذي تقدمه SamChe Company LLC.
+  - لا تشجعه على البحث عن عمل أو شراء عقار أو التواصل مع شركات أخرى أو المنتديات أو المواقع الحكومية.
+  - لا تدخل في تفاصيل طرق أخرى؛ يمكنك فقط الإشارة بشكل عام إلى وجودها.
+  - استخدم النص التالي كأساس لشرح الإقامة برعاية:
+${sponsorResidencyText}
 
 7) بيانات الاتصال
 - لا تكتب أبدًا أرقام الهواتف أو البريد الإلكتروني أو روابط الموقع أو إنستغرام أو لينكدإن؛ النظام سيتولى ذلك عند الحاجة.
-- يمكنك القول بشكل عام إنه يمكنه التحدث مع مستشار من SamChe دون تفاصيل.
 
 8) تتبع السياق والنية
 - ضع في اعتبارك دائمًا الرسائل السابقة ونيّة المستخدم.
 - إذا انتقل بين تأسيس شركة والإقامة، تابع أيهما هو الموضوع الأساسي حاليًا.
 - إذا قال “حسنًا، لنبدأ، استمر”، فاعتبر ذلك نية للمتابعة في الموضوع الأخير (تأسيس شركة أو إقامة).
+- إذا ذكر الشركة والإقامة في نفس الرسالة، فاطلب منه توضيح الأولوية.
 
 9) Webchat AI Chatbot
 - إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، وجّهه فقط إلى:
