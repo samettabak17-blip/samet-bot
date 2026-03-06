@@ -249,15 +249,15 @@ const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
     "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n" +
-    servicesList.tr,
+    
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
     "I can answer your questions about UAE company formation, residency, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n" +
-    servicesList.en,
+    
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
     "أستطيع مساعدتك في تأسيس الشركات في الإمارات، الإقامة، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n" +
-    servicesList.ar,
+    
 };
 
 const contactText = {
@@ -1125,3 +1125,4 @@ setInterval(async () => {
     }
   }
 }, 60 * 60 * 1000);
+
