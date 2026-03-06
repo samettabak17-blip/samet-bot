@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (final minimal version with memory + reminders + AI bot + payment)
+// app.js – WhatsApp + Gemini 2.0 Flash (final)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -99,41 +99,17 @@ async function callGemini(prompt) {
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
-const servicesList = {
-  tr:
-    "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
-    "1. Şirketlere Özel Yapay Zekâ Sistemleri\n" +
-    "2. Dijital Büyüme & İçerik Stratejisi\n" +
-    "3. Marka Yönetimi & Sosyal Medya\n" +
-    "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
-    "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
-    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
-  en:
-    "SamChe Company LLC provides:\n" +
-    "1. Private AI Systems\n" +
-    "2. Digital Growth & Content Strategy\n" +
-    "3. Branding & Social Media\n" +
-    "4. Audience Growth & Performance Optimization\n" +
-    "5. UAE Business Setup & Market Entry\n" +
-    "6. Free Zone Selection & Compliance",
-  ar:
-    "تقدم SamChe Company LLC:\n" +
-    "1. أنظمة ذكاء اصطناعي خاصة\n" +
-    "2. استراتيجية النمو الرقمي والمحتوى\n" +
-    "3. إدارة العلامة التجارية ووسائل التواصل\n" +
-    "4. نمو الجمهور وتحسين الأداء\n" +
-    "5. تأسيس الأعمال في الإمارات\n" +
-    "6. اختيار المناطق الحرة والامتثال",
+
 };
 
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n" +
+    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.Size nasıl yardımcı olabilirim? \n\n" +
     servicesList.tr,
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you?\n\n" +
+    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you? \n\n" +
     servicesList.en,
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
@@ -146,50 +122,6 @@ const contactText = {
   en: "Live consultant: +971 52 728 8586",
   ar: "مستشار مباشر: ‎+971 52 728 8586",
 };
-
-// -------------------------------
-//  TOPIC DETECTION (company / residency / ai / other)
-// -------------------------------
-function detectTopic(text) {
-  const t = text.toLowerCase();
-
-  if (
-    t.includes("şirket") ||
-    t.includes("company") ||
-    t.includes("firma") ||
-    t.includes("business")
-  )
-    return "company";
-
-  if (
-    t.includes("oturum") ||
-    t.includes("residency") ||
-    t.includes("visa") ||
-    t.includes("vize")
-  )
-    return "residency";
-
-  if (
-    t.includes("ai") ||
-    t.includes("bot") ||
-    t.includes("chatbot") ||
-    t.includes("yapay zeka")
-  )
-    return "ai";
-
-  return "other";
-}
-
-// -------------------------------
-//  PAYMENT INFO (ONLY IF USER ASKS)
-// -------------------------------
-const usdBankInfo =
-  "Ödemeyi aşağıdaki USD şirket hesabına yapabilirsiniz:\n\n" +
-  "Account holder: SamChe Company LLC\n" +
-  "Account number: 9726414926\n" +
-  "IBAN: AE210860000009726414926\n" +
-  "BIC: WIOBAEADXXX\n" +
-  "Bank address: Etihad Airways Centre 5th Floor, Abu Dhabi, UAE.";
 
 // -------------------------------
 //  WEBHOOK VERIFY
@@ -221,26 +153,24 @@ app.post("/webhook", async (req, res) => {
       sessions[from] = {
         lang: null,
         history: [],
-        lastTopic: null,
-        lastMessageTime: Date.now(),
-        followUpStart: Date.now(),
-        followUpStage: 0,
       };
 
-      await sendMessage(
-        from,
-        "Welcome to SamChe Company LLC.\n" +
-          "SamChe Company LLC'ye hoş geldiniz.\n" +
-          "مرحبًا بكم.\n\n" +
-          "Please select your language:\n" +
-          "1️⃣ English\n" +
-          "2️⃣ Türkçe\n" +
-          "3️⃣ العربية\n\n" +
-          "Lütfen dil seçiminizi yapınız:\n" +
-          "1️⃣ İngilizce\n" +
-          "2️⃣ Türkçe\n" +
-          "3️⃣ Arapça"
-      );
+     await sendMessage(
+  from,
+  "Welcome to SamChe Company LLC.\n" +
+    "SamChe Company LLC'ye hoş geldiniz.\n" +
+    "مرحبًا بكم.\n\n" +
+
+    "Please select your language:\n" +
+    "1️⃣ English\n" +
+    "2️⃣ Türkçe\n" +
+    "3️⃣ العربية\n\n" +
+
+    "Lütfen dil seçiminizi yapınız:\n" +
+    "1️⃣ İngilizce\n" +
+    "2️⃣ Türkçe\n" +
+    "3️⃣ Arapça"
+);
 
       return res.sendStatus(200);
     }
@@ -258,20 +188,12 @@ app.post("/webhook", async (req, res) => {
       }
 
       await sendMessage(from, introAfterLang[session.lang]);
-      session.lastMessageTime = Date.now();
-      session.followUpStart = Date.now();
       return res.sendStatus(200);
     }
 
     const lang = session.lang;
 
-    // UPDATE MEMORY
-    session.history.push({ role: "user", text });
-    if (session.history.length > 10) session.history.shift();
-    session.lastMessageTime = Date.now();
-    session.lastTopic = detectTopic(text);
-
-    // CONTACT REQUEST
+    // CONTACT
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
@@ -283,36 +205,10 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // AI BOT PRICE / PLAN
-    if (
-      lower.includes("ai bot") ||
-      lower.includes("chatbot") ||
-      lower.includes("bot fiyat") ||
-      lower.includes("ai fiyat") ||
-      lower.includes("chatbot fiyat") ||
-      lower.includes("webchat")
-    ) {
-      await sendMessage(
-        from,
-        "AI bot çözümleri, fiyatlar ve paketler için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com/"
-      );
-      return res.sendStatus(200);
-    }
+    // MEMORY
+    session.history.push({ role: "user", text });
+    if (session.history.length > 10) session.history.shift();
 
-    // PAYMENT INFO REQUEST
-    if (
-      lower.includes("ödeme") ||
-      lower.includes("odeme") ||
-      lower.includes("hesap") ||
-      lower.includes("iban") ||
-      lower.includes("banka") ||
-      lower.includes("nereye")
-    ) {
-      await sendMessage(from, usdBankInfo);
-      return res.sendStatus(200);
-    }
-
-    // BUILD HISTORY TEXT
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
@@ -320,28 +216,10 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.
-
-Sohbet geçmişi:
-${historyText}
-
-Kullanıcının son mesajı:
-${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme.önce kullanıcının niyetini öğren,Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme.Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse,İletişim bilgisi verme,sadece bilgi ver.hiçbir mesaja iletişim bilgisi ekleme.kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa(3-4 kez iletişim bilgisi isterse) sadece 1 kere ver.iletişim bilgileri: mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC.
-
-Conversation history:
-${historyText}
-
-User message:
-${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC.
-
-سياق المحادثة:
-${historyText}
-
-رسالة المستخدم:
-${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
     const reply = await callGemini(prompt);
 
@@ -351,6 +229,7 @@ ${text}`;
     }
 
     session.history.push({ role: "assistant", text: reply });
+
     await sendMessage(from, reply);
 
     res.sendStatus(200);
@@ -361,59 +240,19 @@ ${text}`;
 });
 
 // -------------------------------
-//  FOLLOW-UP REMINDERS (24h & 72h)
-// -------------------------------
-setInterval(async () => {
-  const now = Date.now();
-
-  for (const user in sessions) {
-    const s = sessions[user];
-    if (!s.followUpStart) continue;
-
-    const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
-
-    // 24 HOURS
-    if (s.followUpStage === 0 && diffHours >= 24) {
-      let msg = "Konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-
-      if (s.lastTopic === "company")
-        msg =
-          "Dubai’de şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-      if (s.lastTopic === "residency")
-        msg =
-          "Oturum süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-      if (s.lastTopic === "ai")
-        msg =
-          "AI bot çözümleriyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-
-      await sendMessage(user, msg);
-      s.followUpStage = 1;
-      continue;
-    }
-
-    // 72 HOURS
-    if (s.followUpStage === 1 && diffHours >= 72) {
-      let msg = "Konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-
-      if (s.lastTopic === "company")
-        msg =
-          "Dubai’de şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-      if (s.lastTopic === "residency")
-        msg =
-          "Oturum süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-      if (s.lastTopic === "ai")
-        msg =
-          "AI bot çözümleriyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
-
-      await sendMessage(user, msg);
-      s.followUpStage = 2;
-      continue;
-    }
-  }
-}, 60 * 60 * 1000);
-
-// -------------------------------
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
+
+
+
+
+
+
+
+
+
+
+
