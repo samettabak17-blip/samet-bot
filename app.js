@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (final)
+// app.js – WhatsApp + Gemini 2.0 Flash (final, updated)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -20,10 +20,20 @@ const sessions = {};
 function detectTopic(text) {
   text = text.toLowerCase();
 
-  if (text.includes("company") || text.includes("şirket") || text.includes("kurmak"))
+  if (
+    text.includes("company") ||
+    text.includes("şirket") ||
+    text.includes("kurmak") ||
+    text.includes("business setup")
+  )
     return "company_setup";
 
-  if (text.includes("residency") || text.includes("oturum") || text.includes("visa"))
+  if (
+    text.includes("residency") ||
+    text.includes("oturum") ||
+    text.includes("visa") ||
+    text.includes("vize")
+  )
     return "residency";
 
   if (text.includes("license") || text.includes("trade license"))
@@ -32,21 +42,60 @@ function detectTopic(text) {
   return null;
 }
 
+// sadece sponsorlukla oturum isteyenleri yakala
+function isSponsorOnlyResidency(text) {
+  const t = text.toLowerCase();
+  const residencyWords =
+    t.includes("oturum") || t.includes("residency") || t.includes("visa") || t.includes("vize");
+  const companyWords =
+    t.includes("şirket") ||
+    t.includes("company") ||
+    t.includes("kurmak") ||
+    t.includes("business setup") ||
+    t.includes("firma açmak");
+
+  return residencyWords && !companyWords;
+}
+
 // -------------------------------
 //  FOLLOW-UP MESSAGE (KONUYA GÖRE)
 // -------------------------------
-function getFollowUpMessage(topic) {
+function getFollowUpMessage(topic, stage) {
+  let base;
   switch (topic) {
     case "company_setup":
-      return "Merhaba, şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      base = "Merhaba, şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      break;
     case "residency":
-      return "Merhaba, oturum ve residency süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
+      base = "Merhaba, oturum ve residency süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
+      break;
     case "license":
-      return "Merhaba, trade license süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      base = "Merhaba, trade license süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      break;
     default:
-      return "Merhaba, konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      base = "Merhaba, konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
   }
+
+  if (stage === 1) return base + " (1. hatırlatma)";
+  if (stage === 2) return base + " (2. hatırlatma)";
+  if (stage === 3) return base + " (son hatırlatma)";
+  return base;
 }
+
+// -------------------------------
+//  SPONSORLU OTURUM MESAJI
+// -------------------------------
+const sponsorResidencyText =
+  "Bu ülkede yaşayabilmeniz ve çalışabilmeniz için size birilerinin sponsor olması gerekiyor ya da şirket açıp kendinize sponsor olmanız gerekiyor. " +
+  "Şirket kurmadan da dilerseniz biz bu sponsorlugu sizin için sağlıyoruz yani iki yıllık oturumunuz için burada firmalar size sponsor oluyorlar, " +
+  "bu sponsorlukla burada yaşayabiliyorsunuz fakat o firmada çalışmıyorsunuz, firma size sadece oturumunuz için sponsor oluyor. " +
+  "İşlemleriniz tamamlandıktan sonra sponsor firmanızın size sunduğu NOC Belgesi ile (No Objection Certificate) ülkede istediğiniz sektörde resmi olarak çalışma hakkına " +
+  "ya da iş kurma hakkına sahip oluyorsunuz. Bu belge sponsorunuzun ekstra bir işte çalışmanıza itirazı olmadığını gösteren belgedir. " +
+  "Dubai iki yıllık oturum ve çalışma izni için işlemleri Türkiye’den başlatıyoruz, ülkeye çalışan vizesi ile giriş yapıyorsunuz.\n\n" +
+  "İki yıllık oturum ücreti toplam 13.000 AED (3,500$)\n" +
+  "1. ödeme 4000 AED (iş teklifi ve kontrat için). Devlet onaylı evrak 10 gün içinde ulaşır, ardından 2. ödeme alınır.\n" +
+  "2. ödeme 8000 AED (employment visa). E-visa maksimum 30 gün içinde ulaşır.\n" +
+  "3. ödeme 1000 AED (ID kart ve damgalama) ülkeye giriş sonrası ödenir. Süre 30 gün.";
 
 // -------------------------------
 //  WHATSAPP SEND (4096 LIMIT SAFE)
@@ -141,7 +190,8 @@ const servicesList = {
     "3. Marka Yönetimi & Sosyal Medya\n" +
     "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
     "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
-    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
+    "6. Serbest Bölge Seçimi & Uyum (Compliance)\n" +
+    "7. Webchat AI Chatbot Çözümleri",
   en:
     "SamChe Company LLC provides:\n" +
     "1. Private AI Systems\n" +
@@ -149,7 +199,8 @@ const servicesList = {
     "3. Branding & Social Media\n" +
     "4. Audience Growth & Performance Optimization\n" +
     "5. UAE Business Setup & Market Entry\n" +
-    "6. Free Zone Selection & Compliance",
+    "6. Free Zone Selection & Compliance\n" +
+    "7. Webchat AI Chatbot Solutions",
   ar:
     "تقدم SamChe Company LLC:\n" +
     "1. أنظمة ذكاء اصطناعي خاصة\n" +
@@ -157,21 +208,22 @@ const servicesList = {
     "3. إدارة العلامة التجارية ووسائل التواصل\n" +
     "4. نمو الجمهور وتحسين الأداء\n" +
     "5. تأسيس الأعمال في الإمارات\n" +
-    "6. اختيار المناطق الحرة والامتثال",
+    "6. اختيار المناطق الحرة والامتثال\n" +
+    "7. حلول روبوت الدردشة الذكي (Webchat AI Chatbot)",
 };
 
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.Size nasıl yardımcı olabilirim? \n\n" +
+    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n" +
     servicesList.tr,
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you? \n\n" +
+    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n" +
     servicesList.en,
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.\n\n" +
+    "أستطيع مساعدتك في تأسيس الشركات في الإمارات، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n" +
     servicesList.ar,
 };
 
@@ -215,6 +267,8 @@ app.post("/webhook", async (req, res) => {
         stopFollowUp: false,
         topic: null,
         lastMessageTime: Date.now(),
+        followStartTime: null,
+        followStage: 0, // 0: hiç, 1: 1.gün, 2: 3.gün, 3: 7.gün
       };
 
       await sendMessage(
@@ -269,11 +323,37 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // SADECE SPONSORLU OTURUM İSTEĞİ
+    if (isSponsorOnlyResidency(lower)) {
+      await sendMessage(from, sponsorResidencyText);
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // AI CHATBOT / WEBCHAT BOT FİYAT SORULARI
+    if (
+      lower.includes("webchat") ||
+      lower.includes("chatbot") ||
+      lower.includes("ai chatbot") ||
+      (lower.includes("bot") && lower.includes("fiyat"))
+    ) {
+      await sendMessage(
+        from,
+        "Webchat AI chatbot çözümleri, paketler ve fiyatlar için lütfen şu sayfayı ziyaret edin:\nhttps://aichatbot.samchecompany.com"
+      );
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
     // TOPIC DETECTION & FOLLOW-UP START
     const topic = detectTopic(text);
     if (topic && !session.stopFollowUp) {
-      session.followUp = true;
-      session.topic = topic;
+      if (!session.followUp) {
+        session.followUp = true;
+        session.topic = topic;
+        session.followStartTime = Date.now();
+        session.followStage = 0;
+      }
       session.lastMessageTime = Date.now();
     }
 
@@ -301,10 +381,10 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme.önce kullanıcının niyetini öğren,Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme.Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse,İletişim bilgisi verme,sadece bilgi ver.hiçbir mesaja iletişim bilgisi ekleme.kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa(3-4 kez iletişim bilgisi isterse) sadece 1 kere ver.iletişim bilgileri: mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme. Önce kullanıcının niyetini öğren. Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme. Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse, iletişim bilgisi verme, sadece bilgi ver. Hiçbir mesaja iletişim bilgisi ekleme. Kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa (3-4 kez iletişim bilgisi isterse) sadece 1 kere ver. İletişim bilgileri: mail: info@samchecompany.com - telefon: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin: https://www.linkedin.com/company/samche-company-llc. SamChe Company LLC webchat AI chatbot hizmeti de sunmaktadır. Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu https://aichatbot.samchecompany.com adresine yönlendir. Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. SamChe Company LLC also provides webchat AI chatbot solutions. If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them to https://aichatbot.samchecompany.com. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. تقدم SamChe Company LLC أيضًا حلول Webchat AI Chatbot. إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، فقم بتوجيهه إلى https://aichatbot.samchecompany.com. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
     const reply = await callGemini(prompt);
 
@@ -333,21 +413,46 @@ const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
 
 // -------------------------------
-//  DAILY FOLLOW-UP REMINDER
+//  DAILY / 3-DAY / 7-DAY FOLLOW-UP REMINDERS
 // -------------------------------
 setInterval(async () => {
+  const now = Date.now();
+  const oneDay = 24 * 60 * 60 * 1000;
+
   for (const user in sessions) {
     const s = sessions[user];
 
-    if (s.followUp && !s.stopFollowUp) {
-      const diff = Date.now() - (s.lastMessageTime || 0);
+    if (!s.followUp || s.stopFollowUp || !s.followStartTime) continue;
 
-      if (diff > 24 * 60 * 60 * 1000) {
-        const msg = getFollowUpMessage(s.topic);
-        await sendMessage(user, msg);
+    const diff = now - s.followStartTime;
+    const days = diff / oneDay;
 
-        s.lastMessageTime = Date.now();
-      }
+    // 1. hatırlatma (1 gün sonra)
+    if (s.followStage === 0 && days >= 1) {
+      const msg = getFollowUpMessage(s.topic, 1);
+      await sendMessage(user, msg);
+      s.followStage = 1;
+      s.lastMessageTime = now;
+      continue;
+    }
+
+    // 2. hatırlatma (3 gün sonra)
+    if (s.followStage === 1 && days >= 3) {
+      const msg = getFollowUpMessage(s.topic, 2);
+      await sendMessage(user, msg);
+      s.followStage = 2;
+      s.lastMessageTime = now;
+      continue;
+    }
+
+    // Son hatırlatma (7 gün sonra)
+    if (s.followStage === 2 && days >= 7) {
+      const msg = getFollowUpMessage(s.topic, 3);
+      await sendMessage(user, msg);
+      s.followStage = 3;
+      s.followUp = false; // takip biter
+      s.lastMessageTime = now;
+      continue;
     }
   }
 }, 60 * 60 * 1000); // her saat kontrol
