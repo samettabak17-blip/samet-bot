@@ -1,6 +1,6 @@
-// app.js – SamChe Company LLC WhatsApp Bot
-// Profesyonel, kurumsal, bağlamlı; şirket kurulum & oturum ayrımı
-// ASLA başka firma / yetkili / forum / dış kaynak yönlendirmesi yok
+// app.js – SamChe Company LLC WhatsApp Bot (FINAL)
+// Şirket kurulum + oturum (residency) + sponsorlu oturum + hatırlatmalar
+// Önceki tüm bağlamlara sadık, tek parça, kurumsal, mantıklı, niyet odaklı
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -55,7 +55,7 @@ function detectTopic(text) {
   return null;
 }
 
-// Şirket kurmadan sadece oturum isteyen
+// Şirket kurmadan sadece oturum isteyen (net residency niyeti)
 function isSponsorOnlyResidency(text) {
   const t = text.toLowerCase();
   const residencyWords =
@@ -94,7 +94,7 @@ function getFollowUpMessage(topic, stage) {
       break;
     case "residency":
       base =
-        "Merhaba, sponsorlu oturum ve oturum süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
+        "Merhaba, oturum ve sponsorlu oturum süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
       break;
     default:
       base =
@@ -108,23 +108,19 @@ function getFollowUpMessage(topic, stage) {
 }
 
 // -------------------------------
-//  SPONSORLU OTURUM METNİ (SENİN İSTEDİĞİN BAĞLAM)
+//  SPONSORLU OTURUM METNİ (KİLİTLİ METİN)
 // -------------------------------
 const sponsorResidencyText =
-  "SamChe Company LLC olarak, sponsorlu oturum seçeneğiyle ilgilenmenizden memnuniyet duyuyoruz. Bu, Dubai'de yaşamak ve çalışmak için güçlü bir fırsattır. " +
-  "Sponsorlu oturum, şirket kurma zorunluluğu olmadan BAE'de oturum izni almanızı sağlar ve SamChe Company LLC bu süreçte baştan sona sizinle birlikte hareket eder.\n\n" +
-  "Sponsorlu oturumun temel avantajları:\n" +
-  "• Hızlı ve görece daha az karmaşık başvuru süreci\n" +
-  "• Şirket kurma süreçleriyle uğraşmadan oturum izni alabilme\n" +
-  "• Belirli bir işverene bağlı kalmadan Dubai'de yaşama ve çalışma esnekliği\n" +
-  "• Şirket kurma maliyetlerine kıyasla daha uygun bir seçenek olması\n" +
-  "• SamChe Company LLC sponsorluğunda iki yıllık oturum izni imkânı\n\n" +
-  "Süreç genel olarak şu adımlardan oluşur:\n" +
-  "1. Başvuru ve değerlendirme: Kısa bir ön değerlendirme ile uygunluğunuz analiz edilir ve gerekli temel bilgileriniz alınır.\n" +
-  "2. Oturum izni başvurusu: Uygunluk netleştikten sonra, oturum izni başvurusu SamChe Company LLC tarafından sizin adınıza yürütülür.\n" +
-  "3. Tıbbi kontrol ve Emirates ID: Başvurunuz onaylandığında, Dubai'de yetkili sağlık kuruluşunda tıbbi kontrolden geçer ve Emirates ID süreciniz tamamlanır.\n" +
-  "4. İki yıllık oturum izninin aktif hale gelmesi: Tüm adımlar tamamlandığında, iki yıllık oturum izniniz aktif olur ve BAE'de yasal olarak ikamet edebilirsiniz.\n\n" +
-  "Bu model, şirket kurmadan sadece oturum ve çalışma esnekliği isteyen kişiler için uygundur. Eğer önceliğiniz şirket kurmak değil, sadece oturum almak ve Dubai’de yaşamak/çalışmak ise, bu seçeneği detaylı şekilde birlikte değerlendirebiliriz.";
+  "Bu ülkede yaşayabilmeniz ve çalışabilmeniz için size birilerinin sponsor olması gerekiyor ya da şirket açıp kendinize sponsor olmanız gerekiyor. " +
+  "Şirket kurmadan da dilerseniz biz bu sponsorlugu sizin için sağlıyoruz yani iki yıllık oturumunuz için burada firmalar size sponsor oluyorlar. " +
+  "Bu sponsorlukla burada yaşayabiliyorsunuz fakat o firmada çalışmıyorsunuz; firma size sadece oturumunuz için sponsor oluyor.\n\n" +
+  "İşlemleriniz tamamlandıktan sonra sponsor firmanızın size sunduğu NOC Belgesi (No Objection Certificate) ile ülkede istediğiniz sektörde resmi olarak çalışma hakkına ya da iş kurma hakkına sahip oluyorsunuz. " +
+  "Bu belge sponsorunuzun ekstra bir işte çalışmanıza itirazı olmadığını gösteren belgedir.\n\n" +
+  "Dubai iki yıllık oturum ve çalışma izni için işlemleri Türkiye’den başlatıyoruz, ülkeye çalışan vizesi ile giriş yapıyorsunuz.\n\n" +
+  "İki yıllık oturum ücreti toplam 13.000 AED (3,500$)\n" +
+  "1. ödeme 4000 AED (iş teklifi ve kontrat için). Devlet onaylı evrak 10 gün içinde ulaşır, ardından 2. ödeme alınır.\n" +
+  "2. ödeme 8000 AED (employment visa). E-visa maksimum 30 gün içinde ulaşır.\n" +
+  "3. ödeme 1000 AED (ID kart ve damgalama) ülkeye giriş sonrası ödenir. Süre 30 gün.";
 
 // -------------------------------
 //  BANKA BİLGİLERİ (USD HESABI)
@@ -282,7 +278,7 @@ const contactText = {
   ar:
     "للتحدث مع مستشار من SamChe والحصول على عرض رسمي، يمكنك استخدام بيانات الاتصال التالية:\n" +
     "البريد الإلكتروني: info@samchecompany.com\n" +
-    "الهاتف: ‎+971 50 179 38 80 - ‎+971 52 662 28 75\n" +
+    "الهاتف: ‎+971 50 179 38 80 - ‎971 52 662 28 75\n" +
     "الموقع: https://samchecompany.com\n" +
     "إنستغرام: https://www.instagram.com/samchecompany\n" +
     "لينكدإن: https://www.linkedin.com/company/samche-company-llc",
@@ -358,6 +354,7 @@ app.post("/webhook", async (req, res) => {
         contactAllowed: false,
         contactRequestCount: 0,
         lastIntent: null, // company_setup | residency | payment | documents | start_process
+        residencyMode: null, // "company" | "sponsor" | null
       };
 
       await sendMessage(
@@ -401,6 +398,7 @@ app.post("/webhook", async (req, res) => {
     if (
       lower.includes("istemiyorum") ||
       lower.includes("rahatsız etmeyin") ||
+      lower.includes("rahatsiz etmeyin") ||
       lower.includes("stop") ||
       lower.includes("no reminder")
     ) {
@@ -467,7 +465,7 @@ app.post("/webhook", async (req, res) => {
       if (!session.lastIntent) {
         await sendMessage(
           from,
-          "Hangi işlem için başlamak istersiniz? Şirket kuruluşu mu, yoksa sponsorlu oturum süreci mi?"
+          "Hangi işlem için başlamak istersiniz? Şirket kuruluşu mu, yoksa oturum süreci (şirket kurarak veya sponsorlu) mi?"
         );
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
@@ -479,10 +477,22 @@ app.post("/webhook", async (req, res) => {
           "Dubai’de şirket kuruluşu için süreci başlatıyoruz. Öncelikle sektörünüzü, freezone/mainland tercihinizi ve ortak yapınızı netleştirerek ilerleyebiliriz."
         );
       } else if (session.lastIntent === "residency") {
-        await sendMessage(
-          from,
-          "Sponsorlu oturum sürecini başlatıyoruz. Öncelikle pasaport ve biyometrik fotoğrafınızı PDF olarak hazırlamanız, ardından ödeme adımına geçmemiz gerekecek."
-        );
+        if (session.residencyMode === "sponsor") {
+          await sendMessage(
+            from,
+            "Sponsorlu oturum sürecini başlatıyoruz. Öncelikle pasaport ve biyometrik fotoğrafınızı PDF olarak hazırlamanız, ardından ödeme adımına geçmemiz gerekecek."
+          );
+        } else if (session.residencyMode === "company") {
+          await sendMessage(
+            from,
+            "Şirket kurarak oturum almak için önce şirket modelinizi netleştirelim. Sektör, freezone/mainland tercihi ve ortak yapısı üzerinden ilerleyebiliriz."
+          );
+        } else {
+          await sendMessage(
+            from,
+            "Oturumu hangi yolla almak istediğinizi netleştirelim: Şirket kurarak mı, yoksa şirket kurmadan sponsorlu oturum ile mi?"
+          );
+        }
       } else if (session.lastIntent === "payment") {
         await sendMessage(
           from,
@@ -507,7 +517,45 @@ app.post("/webhook", async (req, res) => {
     if (topicNow === "mixed") {
       await sendMessage(
         from,
-        "Hem şirket kurma hem de oturum konusu geçti. Sizin için şu an hangi işlem öncelikli? Şirket kuruluşu mu, yoksa şirket kurmadan sponsorlu oturum süreci mi?"
+        "Hem şirket kurma hem de oturum konusu geçti. Sizin için şu an hangi işlem öncelikli? Şirket kuruluşu mu, yoksa şirket kurmadan sponsorlu oturum mu?"
+      );
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // OTURUM İSTEYİP YÖNTEMİ BELİRTMEYEN KULLANICI
+    if (
+      topicNow === "residency" &&
+      !isSponsorOnlyResidency(lower) &&
+      !lower.includes("şirket kurarak") &&
+      !lower.includes("sirket kurarak") &&
+      !lower.includes("company üzerinden") &&
+      !lower.includes("company uzerinden") &&
+      !session.residencyMode
+    ) {
+      await sendMessage(
+        from,
+        "Oturumu hangi yolla almak istiyorsunuz? Şirket kurarak mı, yoksa şirket kurmadan sponsorlu oturum modeliyle mi düşünüyorsunuz?"
+      );
+      session.lastIntent = "residency";
+      session.topic = "residency";
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // KULLANICI AÇIKÇA "ŞİRKET KURARAK OTURUM" DERSE
+    if (
+      lower.includes("şirket kurarak oturum") ||
+      lower.includes("sirket kurarak oturum") ||
+      lower.includes("company üzerinden oturum") ||
+      lower.includes("company uzerinden oturum")
+    ) {
+      session.residencyMode = "company";
+      session.lastIntent = "residency";
+      session.topic = "residency";
+      await sendMessage(
+        from,
+        "Şirket kurarak oturum almak istiyorsunuz. Bu durumda önce şirket modelinizi netleştirmemiz gerekiyor. Sektörünüz, freezone/mainland tercihiniz, ortak sayınız ve ofis ihtiyacınız hakkında bilgi verebilir misiniz?"
       );
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
@@ -515,6 +563,7 @@ app.post("/webhook", async (req, res) => {
 
     // SADECE SPONSORLU OTURUM İSTEĞİ (ŞİRKET KURMAK İSTEMEYEN)
     if (!session.residencyExplained && isSponsorOnlyResidency(lower)) {
+      session.residencyMode = "sponsor";
       await sendMessage(from, sponsorResidencyText);
       session.residencyExplained = true;
       session.lastIntent = "residency";
@@ -668,7 +717,8 @@ app.post("/webhook", async (req, res) => {
     if (topicNow && topicNow !== "mixed" && !session.stopFollowUp) {
       if (!session.followUp) {
         sessions[from].followUp = true;
-        sessions[from].topic = topicNow === "license" ? "company_setup" : topicNow;
+        sessions[from].topic =
+          topicNow === "license" ? "company_setup" : topicNow;
         sessions[from].followStartTime = Date.now();
         sessions[from].followStage = 0;
       }
@@ -731,13 +781,11 @@ app.post("/webhook", async (req, res) => {
 
     // -------------------------------
     //  GEMINI PROMPT (TR / EN / AR)
-//  – ASLA başka firma / yetkili / forum / dış kaynak yok
-//  – Şirket kurulum ve sponsorlu oturum ayrımı net
-// -------------------------------
+    // -------------------------------
     const prompt =
       lang === "tr"
         ? `SamChe Company LLC’nin kıdemli iş kurulum ve strateji danışmanısın. 
-Görevin, Dubai ve BAE’de şirket kurmak, oturum almak, lisans süreçleri, serbest bölge/mainland seçimi, iş modeli ve büyüme stratejileri konusunda profesyonel, kurumsal ve analitik cevaplar vermek.
+Görevin, Dubai ve BAE'de şirket kurmak, oturum almak, lisans süreçleri, serbest bölge/mainland seçimi, iş modeli ve büyüme stratejileri konusunda profesyonel, kurumsal ve analitik cevaplar vermek.
 
 Aşağıdaki ilkelere HER ZAMAN uy:
 
@@ -787,22 +835,27 @@ Aşağıdaki ilkelere HER ZAMAN uy:
   - Bunu süreci ilerletme niyeti olarak yorumla.
   - Bir sonraki mantıklı adımı öner.
 
-7) OTURUM (RESIDENCY) DAVRANIŞI – İKİ AYRI SENARYO
+7) OTURUM (RESIDENCY) DAVRANIŞI – İKİ MODELİ DE BİL
 
 a) ŞİRKET KURARAK OTURUM:
-- Kullanıcı önceliğini şirket kurmak olarak ifade ediyorsa (örneğin “Dubai’de şirket kurmak istiyorum”):
+- Kullanıcı önceliğini şirket kurmak olarak ifade ediyorsa (örneğin “Dubai’de şirket kurmak istiyorum” veya “şirket kurarak oturum almak istiyorum”):
   - Odak noktan şirket kurulum süreci olsun.
-  - Oturumdan bahsedeceksen, şirket kurmanın doğal sonucu olarak kısaca değin (“Şirket kurduğunuzda, belirli şartlar altında oturum izni almanız da mümkündür.”).
+  - Oturumdan bahsederken, şirket kurmanın doğal sonucu olarak anlat (“Şirket kurduğunuzda, belirli şartlar altında oturum izni almanız da mümkündür.”).
   - Bu durumda sponsorlu oturum modelini ana çözüm gibi sunma.
 
-b) ŞİRKET KURMADAN SADECE OTURUM:
+b) ŞİRKET KURMADAN SADECE OTURUM (SPONSORLU OTURUM):
 - Kullanıcı “şirket kurmadan oturum almak istiyorum”, “sadece oturum istiyorum”, “Dubai’de çalışmak istiyorum”, “sponsorlu oturum” gibi ifadeler kullanıyorsa ve şirket kurma niyeti yoksa:
   - Odak noktan SamChe Company LLC’nin sponsorlu oturum modeli olsun.
   - Gayrimenkul yatırımı, iş bulma, başka şirketler, forumlar, devlet siteleri veya başka oturum yollarını DETAYLANDIRMA ve ÖNERME.
   - Kullanıcıya “iş arayın, forumlara bakın, başka firmalara başvurun” gibi yönlendirmeler yapma.
   - Sponsorlu oturum sürecini, SamChe’nin bu süreci nasıl yönettiğini ve temel adımları net ve profesyonel şekilde açıkla.
-  - Sponsorlu oturum açıklamasında aşağıdaki metni temel al:
+  - Sponsorlu oturum açıklamasında AŞAĞIDAKİ METNİ KULLANMAK ZORUNDASIN (metni değiştirme, anlamını bozma, eksiltme yapma):
 ${sponsorResidencyText}
+
+c) KULLANICI KARARSIZSA:
+- Kullanıcı hem şirket hem oturumdan bahsediyor veya “oturum istiyorum” deyip yöntemi belirtmiyorsa:
+  - Önce şu soruyu sor: “Oturumu hangi yolla almak istiyorsunuz? Şirket kurarak mı, yoksa şirket kurmadan sponsorlu oturum modeliyle mi?”
+  - Ardından kullanıcının cevabına göre ya şirket kurulum akışına ya da sponsorlu oturum akışına geç.
 
 8) İLETİŞİM BİLGİSİ VERME
 - Kullanıcıya asla telefon numarası, e-posta adresi, web sitesi, Instagram veya LinkedIn linki yazma; bu bilgileri sistem gerektiğinde ekleyecek.
@@ -811,7 +864,7 @@ ${sponsorResidencyText}
 9) BAĞLAM VE NİYET TAKİBİ
 - Her cevabında kullanıcının önceki mesajlarını ve niyetini dikkate al.
 - Kullanıcı önce şirket, sonra oturum, sonra tekrar şirket sorarsa, hangi konuda kaldığınızı unutma.
-- Kullanıcı “tamam, başlayalım, devam edelim, işlemleri başlatalım” derse, bunu bir önceki ana konuya bağlı olarak yorumla (örneğin şirket kurulum süreci veya sponsorlu oturum süreci).
+- Kullanıcı “tamam, başlayalım, devam edelim, işlemleri başlatalım” derse, bunu bir önceki ana konuya bağlı olarak yorumla (örneğin şirket kurulum süreci veya oturum süreci).
 - Kullanıcı aynı anda hem şirket hem oturumdan bahsetmişse, önce hangi konunun öncelikli olduğunu netleştir.
 
 10) WEBCHAT AI CHATBOT HİZMETİ
@@ -882,12 +935,12 @@ ALWAYS follow these principles:
   - “If you are ready, we can move to the next step and define the license type.”
 - When the user says “let’s start, proceed, continue, yes, okay”, interpret this as intent to move forward and suggest the next logical step.
 
-7) RESIDENCY BEHAVIOUR – TWO SEPARATE SCENARIOS
+7) RESIDENCY BEHAVIOUR – KNOW BOTH MODELS
 
 a) RESIDENCY THROUGH COMPANY SETUP:
-- If the user’s primary intent is to set up a company:
+- If the user’s primary intent is to set up a company or explicitly says “residency through company”:
   - Focus on the company setup process.
-  - You may briefly mention that residency can be obtained as a result of company formation, but do NOT shift the main focus to sponsored residency.
+  - You may mention that residency can be obtained as a result of company formation, but do NOT shift the main focus to sponsored residency.
 
 b) RESIDENCY WITHOUT COMPANY (SPONSORED RESIDENCY):
 - If the user clearly says “I want residency without setting up a company”, “only residency”, “I want to work in Dubai without a company”, “sponsored residency”:
@@ -895,8 +948,13 @@ b) RESIDENCY WITHOUT COMPANY (SPONSORED RESIDENCY):
   - Do NOT encourage the user to search for jobs, buy property, contact other companies, check forums or government websites.
   - Do NOT detail other residency routes; you may only briefly acknowledge that other legal routes exist in general.
   - Explain the sponsored residency process clearly and professionally.
-  - Base your explanation on the following text:
+  - You MUST use the following text as the core explanation (do not change, shorten or distort it):
 ${sponsorResidencyText}
+
+c) IF THE USER IS UNDECIDED:
+- If the user mentions residency but does not specify the route, or mentions both company and residency:
+  - Ask: “Do you prefer to obtain residency through setting up a company, or through a sponsored residency model without a company?”
+  - Then continue based on their answer.
 
 8) CONTACT DETAILS
 - NEVER write phone numbers, email addresses, website URLs, Instagram or LinkedIn links in your answer; the system will handle that when needed.
@@ -932,7 +990,6 @@ ${text}`
 
 2) التحدث فقط من منظور SamChe
 - لا تُوجّه المستخدم أبدًا إلى أي شركة أخرى، أو مستشار خارجي، أو جهة حكومية، أو سلطة منطقة حرة، أو منتدى، أو مصدر خارجي.
-- لا تقل “تواصل مع سلطة المنطقة الحرة” أو “تحقق من الموقع الرسمي” أو “انظر في المنتديات” أو “اسأل مستشارًا آخر”.
 - الروابط الوحيدة المسموح ذكرها:
   - https://samchecompany.com
   - https://guide.samchecompany.com
@@ -957,18 +1014,23 @@ ${text}`
 - لجدول تكاليف دقيق ورسمي، وجّه المستخدم فقط إلى قسم التكاليف في:
   https://guide.samchecompany.com/
 
-6) الإقامة – سيناريوهان
+6) الإقامة – نموذجين
 
 أ) الإقامة عبر تأسيس شركة:
-- إذا كان هدف المستخدم الأساسي هو تأسيس شركة، فركّز على خطوات تأسيس الشركة، ويمكنك الإشارة باختصار إلى أن الإقامة يمكن الحصول عليها كنتيجة طبيعية لتأسيس الشركة.
+- إذا كان هدف المستخدم الأساسي هو تأسيس شركة أو ذكر الإقامة عبر الشركة، فركّز على خطوات تأسيس الشركة، ويمكنك الإشارة باختصار إلى أن الإقامة يمكن الحصول عليها كنتيجة طبيعية لتأسيس الشركة.
 
 ب) الإقامة بدون شركة (إقامة برعاية SamChe):
 - إذا قال المستخدم إنه يريد الإقامة بدون تأسيس شركة أو “إقامة برعاية” أو “أريد العمل في دبي بدون شركة”:
   - ركّز على نموذج الإقامة برعاية الذي تقدمه SamChe Company LLC.
   - لا تشجعه على البحث عن عمل أو شراء عقار أو التواصل مع شركات أخرى أو المنتديات أو المواقع الحكومية.
   - لا تدخل في تفاصيل طرق أخرى؛ يمكنك فقط الإشارة بشكل عام إلى وجودها.
-  - استخدم النص التالي كأساس لشرح الإقامة برعاية:
+  - استخدم النص التالي كأساس لشرح الإقامة برعاية (دون تغيير أو اختصار):
 ${sponsorResidencyText}
+
+ج) إذا كان المستخدم مترددًا:
+- إذا ذكر الإقامة دون تحديد الطريقة، أو ذكر الشركة والإقامة معًا:
+  - اسأله: “هل تفضّل الحصول على الإقامة عبر تأسيس شركة أم عبر نموذج الإقامة برعاية بدون شركة؟”
+  - ثم تابع بناءً على إجابته.
 
 7) بيانات الاتصال
 - لا تكتب أبدًا أرقام الهواتف أو البريد الإلكتروني أو روابط الموقع أو إنستغرام أو لينكدإن؛ النظام سيتولى ذلك عند الحاجة.
@@ -977,7 +1039,6 @@ ${sponsorResidencyText}
 - ضع في اعتبارك دائمًا الرسائل السابقة ونيّة المستخدم.
 - إذا انتقل بين تأسيس شركة والإقامة، تابع أيهما هو الموضوع الأساسي حاليًا.
 - إذا قال “حسنًا، لنبدأ، استمر”، فاعتبر ذلك نية للمتابعة في الموضوع الأخير (تأسيس شركة أو إقامة).
-- إذا ذكر الشركة والإقامة في نفس الرسالة، فاطلب منه توضيح الأولوية.
 
 9) Webchat AI Chatbot
 - إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، وجّهه فقط إلى:
