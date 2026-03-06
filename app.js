@@ -99,20 +99,43 @@ async function callGemini(prompt) {
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
+const servicesList = {
+  tr:
+    "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
+    "1. Şirketlere Özel Yapay Zekâ Sistemleri\n" +
+    "2. Dijital Büyüme & İçerik Stratejisi\n" +
+    "3. Marka Yönetimi & Sosyal Medya\n" +
+    "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
+    "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
+    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
+  en:
+    "SamChe Company LLC provides:\n" +
+    "1. Private AI Systems\n" +
+    "2. Digital Growth & Content Strategy\n" +
+    "3. Branding & Social Media\n" +
+    "4. Audience Growth & Performance Optimization\n" +
+    "5. UAE Business Setup & Market Entry\n" +
+    "6. Free Zone Selection & Compliance",
+  ar:
+    "تقدم SamChe Company LLC:\n" +
+    "1. أنظمة ذكاء اصطناعي خاصة\n" +
+    "2. استراتيجية النمو الرقمي والمحتوى\n" +
+    "3. إدارة العلامة التجارية ووسائل التواصل\n" +
+    "4. نمو الجمهور وتحسين الأداء\n" +
+    "5. تأسيس الأعمال في الإمارات\n" +
+    "6. اختيار المناطق الحرة والامتثال",
+};
 
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.Size nasıl yardımcı olabilirim? \n\n" +
-    servicesList.tr,
+    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you? \n\n" +
-    servicesList.en,
+    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, and artificial intelligence solutions. How can I assist you?\n\n",
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.\n\n" +
-    servicesList.ar,
+    "أساعدك في تأسيس الشركات في دبي، التأشيرات، التكاليف، الخطط والاستراتيجيات.\n\n",
 };
 
 const contactText = {
@@ -153,22 +176,20 @@ app.post("/webhook", async (req, res) => {
         history: [],
       };
 
-     await sendMessage(
-  from,
-  "Welcome to SamChe Company LLC.\n" +
-    "SamChe Company LLC'ye hoş geldiniz.\n" +
-    "مرحبًا بكم.\n\n" +
-
-    "Please select your language:\n" +
-    "1️⃣ English\n" +
-    "2️⃣ Türkçe\n" +
-    "3️⃣ العربية\n\n" +
-
-    "Lütfen dil seçiminizi yapınız:\n" +
-    "1️⃣ İngilizce\n" +
-    "2️⃣ Türkçe\n" +
-    "3️⃣ Arapça"
-);
+      await sendMessage(
+        from,
+        "Welcome to SamChe Company LLC.\n" +
+          "SamChe Company LLC'ye hoş geldiniz.\n" +
+          "مرحبًا بكم.\n\n" +
+          "Please select your language:\n" +
+          "1️⃣ English\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ العربية\n\n" +
+          "Lütfen dil seçiminizi yapınız:\n" +
+          "1️⃣ İngilizce\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ Arapça"
+      );
 
       return res.sendStatus(200);
     }
@@ -214,10 +235,28 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme.önce kullanıcının niyetini öğren,Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme.Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse,İletişim bilgisi verme,sadece bilgi ver.hiçbir mesaja iletişim bilgisi ekleme.kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa(3-4 kez iletişim bilgisi isterse) sadece 1 kere ver.iletişim bilgileri: mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.
+
+Sohbet geçmişi:
+${historyText}
+
+Kullanıcının son mesajı:
+${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC.
+
+Conversation history:
+${historyText}
+
+User message:
+${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC.
+
+سياق المحادثة:
+${historyText}
+
+رسالة المستخدم:
+${text}`;
 
     const reply = await callGemini(prompt);
 
@@ -242,16 +281,3 @@ app.post("/webhook", async (req, res) => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
-
-
-
-
-
-
-
-
-
-
-
-
-
