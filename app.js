@@ -15,6 +15,40 @@ app.use(bodyParser.json());
 const sessions = {};
 
 // -------------------------------
+//  TOPIC DETECTION (KONU ALGILAMA)
+// -------------------------------
+function detectTopic(text) {
+  text = text.toLowerCase();
+
+  if (text.includes("company") || text.includes("şirket") || text.includes("kurmak"))
+    return "company_setup";
+
+  if (text.includes("residency") || text.includes("oturum") || text.includes("visa"))
+    return "residency";
+
+  if (text.includes("license") || text.includes("trade license"))
+    return "license";
+
+  return null;
+}
+
+// -------------------------------
+//  FOLLOW-UP MESSAGE (KONUYA GÖRE)
+// -------------------------------
+function getFollowUpMessage(topic) {
+  switch (topic) {
+    case "company_setup":
+      return "Merhaba, şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+    case "residency":
+      return "Merhaba, oturum ve residency süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
+    case "license":
+      return "Merhaba, trade license süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+    default:
+      return "Merhaba, konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+  }
+}
+
+// -------------------------------
 //  WHATSAPP SEND (4096 LIMIT SAFE)
 // -------------------------------
 async function sendMessage(to, body) {
@@ -177,24 +211,26 @@ app.post("/webhook", async (req, res) => {
       sessions[from] = {
         lang: null,
         history: [],
+        followUp: false,
+        stopFollowUp: false,
+        topic: null,
+        lastMessageTime: Date.now(),
       };
 
-     await sendMessage(
-  from,
-  "Welcome to SamChe Company LLC.\n" +
-    "SamChe Company LLC'ye hoş geldiniz.\n" +
-    "مرحبًا بكم.\n\n" +
-
-    "Please select your language:\n" +
-    "1️⃣ English\n" +
-    "2️⃣ Türkçe\n" +
-    "3️⃣ العربية\n\n" +
-
-    "Lütfen dil seçiminizi yapınız:\n" +
-    "1️⃣ İngilizce\n" +
-    "2️⃣ Türkçe\n" +
-    "3️⃣ Arapça"
-);
+      await sendMessage(
+        from,
+        "Welcome to SamChe Company LLC.\n" +
+          "SamChe Company LLC'ye hoş geldiniz.\n" +
+          "مرحبًا بكم.\n\n" +
+          "Please select your language:\n" +
+          "1️⃣ English\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ العربية\n\n" +
+          "Lütfen dil seçiminizi yapınız:\n" +
+          "1️⃣ İngilizce\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ Arapça"
+      );
 
       return res.sendStatus(200);
     }
@@ -212,10 +248,34 @@ app.post("/webhook", async (req, res) => {
       }
 
       await sendMessage(from, introAfterLang[session.lang]);
+      session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
 
     const lang = session.lang;
+
+    // STOP FOLLOW-UP COMMANDS
+    if (
+      lower.includes("istemiyorum") ||
+      lower.includes("rahatsız etmeyin") ||
+      lower.includes("stop") ||
+      lower.includes("no reminder")
+    ) {
+      session.stopFollowUp = true;
+      session.followUp = false;
+
+      await sendMessage(from, "Tamamdır, sizi bir daha rahatsız etmeyeceğim.");
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // TOPIC DETECTION & FOLLOW-UP START
+    const topic = detectTopic(text);
+    if (topic && !session.stopFollowUp) {
+      session.followUp = true;
+      session.topic = topic;
+      session.lastMessageTime = Date.now();
+    }
 
     // CONTACT
     if (
@@ -226,6 +286,7 @@ app.post("/webhook", async (req, res) => {
       lower.includes("telefon")
     ) {
       await sendMessage(from, contactText[lang]);
+      session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
 
@@ -249,12 +310,14 @@ app.post("/webhook", async (req, res) => {
 
     if (!reply) {
       await sendMessage(from, corporateFallback(lang));
+      session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
 
     session.history.push({ role: "assistant", text: reply });
 
     await sendMessage(from, reply);
+    session.lastMessageTime = Date.now();
 
     res.sendStatus(200);
   } catch (err) {
@@ -269,13 +332,22 @@ app.post("/webhook", async (req, res) => {
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
 
+// -------------------------------
+//  DAILY FOLLOW-UP REMINDER
+// -------------------------------
+setInterval(async () => {
+  for (const user in sessions) {
+    const s = sessions[user];
 
+    if (s.followUp && !s.stopFollowUp) {
+      const diff = Date.now() - (s.lastMessageTime || 0);
 
+      if (diff > 24 * 60 * 60 * 1000) {
+        const msg = getFollowUpMessage(s.topic);
+        await sendMessage(user, msg);
 
-
-
-
-
-
-
-
+        s.lastMessageTime = Date.now();
+      }
+    }
+  }
+}, 60 * 60 * 1000); // her saat kontrol
