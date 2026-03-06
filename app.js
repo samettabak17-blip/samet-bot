@@ -23,9 +23,14 @@ function detectTopic(text) {
   if (
     t.includes("company") ||
     t.includes("şirket") ||
+    t.includes("sirket") ||
     t.includes("kurmak") ||
     t.includes("business setup") ||
-    t.includes("firma açmak")
+    t.includes("firma açmak") ||
+    t.includes("firma acmak") ||
+    t.includes("freezone") ||
+    t.includes("free zone") ||
+    t.includes("mainland")
   )
     return "company_setup";
 
@@ -36,9 +41,8 @@ function detectTopic(text) {
     t.includes("vize") ||
     t.includes("sponsor") ||
     t.includes("sponsorlu oturum") ||
-    t.includes("çalışma izni") ||
-    t.includes("work visa") ||
-    t.includes("employment visa")
+    t.includes("freelance visa") ||
+    t.includes("freelance vize")
   )
     return "residency";
 
@@ -48,24 +52,47 @@ function detectTopic(text) {
   return null;
 }
 
-// sadece sponsorlukla oturum isteyenleri yakala
+// SADECE SPONSORLU OTURUM İSTEYENLER (ŞİRKET KURMAK İSTEMEYEN)
 function isSponsorOnlyResidency(text) {
   const t = text.toLowerCase();
   const residencyWords =
-    t.includes("oturum") ||
-    t.includes("residency") ||
-    t.includes("visa") ||
-    t.includes("vize") ||
-    t.includes("sponsor") ||
-    t.includes("sponsorlu oturum");
+    t.includes("oturum almak istiyorum") ||
+    t.includes("sponsorlu oturum almak istiyorum") ||
+    t.includes("freelance visa") ||
+    t.includes("freelance vize") ||
+    t.includes("sadece oturum") ||
+    t.includes("sadece residency") ||
+    t.includes("oturum istiyorum");
   const companyWords =
     t.includes("şirket") ||
+    t.includes("sirket") ||
     t.includes("company") ||
     t.includes("kurmak") ||
     t.includes("business setup") ||
-    t.includes("firma açmak");
+    t.includes("firma açmak") ||
+    t.includes("firma acmak");
 
   return residencyWords && !companyWords;
+}
+
+// İLK OTURUM SORUSU MU? (GENEL BİLGİ İSTEĞİ)
+function isInitialResidencyQuestion(text) {
+  const t = text.toLowerCase();
+  if (
+    t.includes("oturum almak istiyorum") ||
+    t.includes("sponsorlu oturum almak istiyorum") ||
+    t.includes("oturum nasıl alınır") ||
+    t.includes("oturum nasil alinir") ||
+    t.includes("oturum süreci") ||
+    t.includes("oturum sureci") ||
+    t.includes("oturum başvurusu") ||
+    t.includes("oturum basvurusu") ||
+    t.includes("freelance visa") ||
+    t.includes("freelance vize")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 // -------------------------------
@@ -75,16 +102,20 @@ function getFollowUpMessage(topic, stage) {
   let base;
   switch (topic) {
     case "company_setup":
-      base = "Merhaba, şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      base =
+        "Merhaba, şirket kurma süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
       break;
     case "residency":
-      base = "Merhaba, oturum ve sponsorlu oturum süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
+      base =
+        "Merhaba, oturum ve sponsorlu oturum süreciyle ilgili konuşmamız yarım kalmıştı. İsterseniz devam edebiliriz.";
       break;
     case "license":
-      base = "Merhaba, trade license süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      base =
+        "Merhaba, trade license süreciyle ilgili konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
       break;
     default:
-      base = "Merhaba, konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
+      base =
+        "Merhaba, konuşmamız yarım kalmıştı. Hazırsanız devam edebiliriz.";
   }
 
   if (stage === 1) return base + " (1. hatırlatma)";
@@ -98,7 +129,7 @@ function getFollowUpMessage(topic, stage) {
 // -------------------------------
 const sponsorResidencyText =
   "Bu ülkede yaşayabilmeniz ve çalışabilmeniz için size birilerinin sponsor olması gerekiyor ya da şirket açıp kendinize sponsor olmanız gerekiyor. " +
-  "Şirket kurmadan da dilerseniz biz bu sponsorlugu sizin için sağlıyoruz; yani iki yıllık oturumunuz için burada firmalar size sponsor oluyorlar. " +
+  "Şirket kurmadan da dilerseniz biz bu sponsorlugu sizin için sağlıyoruz; yani iki yıllık oturumunuz için burada firmalar size sponsor oluyor. " +
   "Bu sponsorlukla burada yaşayabiliyorsunuz fakat o firmada çalışmıyorsunuz, firma size sadece oturumunuz için sponsor oluyor. " +
   "İşlemleriniz tamamlandıktan sonra sponsor firmanızın size sunduğu NOC Belgesi (No Objection Certificate) ile ülkede istediğiniz sektörde resmi olarak çalışma hakkına " +
   "ya da iş kurma hakkına sahip oluyorsunuz. Bu belge sponsorunuzun ekstra bir işte çalışmanıza itirazı olmadığını gösteren belgedir. " +
@@ -292,6 +323,7 @@ app.post("/webhook", async (req, res) => {
         followStartTime: null,
         followStage: 0,
         payment: null, // { type: 'residency' | 'other', stage: 'askCurrency' | 'done', currency: 'usd'|'tl' }
+        residencyExplained: false,
       };
 
       await sendMessage(
@@ -350,7 +382,9 @@ app.post("/webhook", async (req, res) => {
     if (
       lower.includes("kredi kart") ||
       lower.includes("online ödeme") ||
+      lower.includes("online odeme") ||
       lower.includes("kartla ödeme") ||
+      lower.includes("kartla odeme") ||
       lower.includes("credit card") ||
       lower.includes("pay online")
     ) {
@@ -358,13 +392,6 @@ app.post("/webhook", async (req, res) => {
         from,
         "Kredi kartı veya online ödeme için lütfen canlı temsilci ile iletişime geçin: +971 50 179 38 80"
       );
-      session.lastMessageTime = Date.now();
-      return res.sendStatus(200);
-    }
-
-    // SADECE SPONSORLU OTURUM İSTEĞİ
-    if (isSponsorOnlyResidency(lower)) {
-      await sendMessage(from, sponsorResidencyText);
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
@@ -384,6 +411,36 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // SADECE SPONSORLU OTURUM İSTEĞİ (ŞİRKET KURMAK İSTEMEYEN)
+    if (!session.residencyExplained && isSponsorOnlyResidency(lower)) {
+      await sendMessage(from, sponsorResidencyText);
+      session.residencyExplained = true;
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // İLK OTURUM SORUSU (GENEL BİLGİ) - ŞİRKET KURMAK İSTEYENLER HARİÇ
+    const topicNow = detectTopic(text);
+    const mentionsCompany =
+      lower.includes("şirket") ||
+      lower.includes("sirket") ||
+      lower.includes("company") ||
+      lower.includes("business setup") ||
+      lower.includes("firma açmak") ||
+      lower.includes("firma acmak");
+
+    if (
+      topicNow === "residency" &&
+      !session.residencyExplained &&
+      isInitialResidencyQuestion(lower) &&
+      !mentionsCompany
+    ) {
+      await sendMessage(from, sponsorResidencyText);
+      session.residencyExplained = true;
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
     // ÖDEME NEREYE / HESAP / ÜCRET / EVRAKLAR NEREYE SORULARI
     if (
       lower.includes("ödeme nereye") ||
@@ -394,21 +451,26 @@ app.post("/webhook", async (req, res) => {
       lower.includes("nereye gonderecem") ||
       lower.includes("ödeme?") ||
       lower.includes("odeme?") ||
-      lower.includes("ödeme") ||
-      lower.includes("odeme") ||
+      (lower.includes("ödeme") && !lower.includes("plan")) ||
+      (lower.includes("odeme") && !lower.includes("plan")) ||
       lower.includes("hesap numarası") ||
       lower.includes("hesap numarasi") ||
       lower.includes("banka bilgisi") ||
       lower.includes("banka bilgilerini") ||
       lower.includes("ödeme yapmak istiyorum") ||
+      lower.includes("odeme yapmak istiyorum") ||
       lower.includes("evraklar nereye") ||
       lower.includes("belgeler nereye")
     ) {
       const topic = detectTopic(text);
 
-      // Residency / sponsorlu oturum için özel akış
-      if (topic === "residency" || isSponsorOnlyResidency(lower)) {
-        session.payment = { type: "residency", stage: "askCurrency", currency: null };
+      // Residency / sponsorlu oturum için özel akış (öncelik)
+      if (topic === "residency" || isSponsorOnlyResidency(lower) || session.residencyExplained) {
+        session.payment = {
+          type: "residency",
+          stage: "askCurrency",
+          currency: null,
+        };
         await sendMessage(
           from,
           "İki yıllık sponsorlu oturum için ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
@@ -417,29 +479,42 @@ app.post("/webhook", async (req, res) => {
         return res.sendStatus(200);
       } else {
         // Diğer hizmetler için genel banka bilgisi
+        session.payment = {
+          type: "other",
+          stage: "askCurrency",
+          currency: null,
+        };
         await sendMessage(
           from,
-          "Ödemelerinizi aşağıdaki USD şirket hesabına EFT/Havale ile tek seferde yapabilirsiniz:\n\n" +
-            companyBankInfoUSD +
-            "\n\nÖdeme dekontunuzu ve ilgili evraklarınızı info@samchecompany.com adresine iletebilirsiniz."
+          "Ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
         );
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
       }
     }
 
-    // RESIDENCY ÖDEMESİ İÇİN PARA BİRİMİ CEVABI
-    if (session.payment && session.payment.type === "residency" && session.payment.stage === "askCurrency") {
+    // ÖDEME İÇİN PARA BİRİMİ CEVABI
+    if (session.payment && session.payment.stage === "askCurrency") {
       if (lower.includes("usd") || lower.includes("dolar") || lower.includes("dollar")) {
         session.payment.currency = "usd";
         session.payment.stage = "done";
 
-        await sendMessage(
-          from,
-          "İki yıllık sponsorlu oturum için ödemenizi USD olarak tek seferde yapabilirsiniz. Şirket banka bilgilerimiz:\n\n" +
-            companyBankInfoUSD +
-            "\n\nLütfen ödeme dekontunuzu ve pasaport + biyometrik fotoğrafınızı PDF olarak info@samchecompany.com adresine gönderin."
-        );
+        if (session.payment.type === "residency") {
+          await sendMessage(
+            from,
+            "İki yıllık sponsorlu oturum için ödemenizi USD olarak tek seferde yapabilirsiniz. Şirket banka bilgilerimiz:\n\n" +
+              companyBankInfoUSD +
+              "\n\nLütfen ödeme dekontunuzu ve pasaport + biyometrik fotoğrafınızı PDF olarak info@samchecompany.com adresine gönderin."
+          );
+        } else {
+          await sendMessage(
+            from,
+            "Ödemenizi USD olarak tek seferde aşağıdaki şirket hesabına EFT/Havale ile yapabilirsiniz:\n\n" +
+              companyBankInfoUSD +
+              "\n\nÖdeme dekontunuzu ve ilgili evraklarınızı info@samchecompany.com adresine iletebilirsiniz."
+          );
+        }
+
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
       }
@@ -450,7 +525,7 @@ app.post("/webhook", async (req, res) => {
 
         await sendMessage(
           from,
-          "İki yıllık sponsorlu oturum için TL ile ödeme yapmak isterseniz, lütfen evraklarınızı ve ödeme talebinizi doğrudan canlı temsilcimize iletin: +971 50 179 38 80"
+          "TL ile ödeme yapmak isterseniz, lütfen evraklarınızı ve ödeme talebinizi doğrudan canlı temsilcimize iletin: +971 50 179 38 80"
         );
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
@@ -496,6 +571,7 @@ app.post("/webhook", async (req, res) => {
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
+      lower.includes("iletisim") ||
       lower.includes("whatsapp") ||
       lower.includes("call") ||
       lower.includes("telefon")
@@ -516,10 +592,10 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme. Önce kullanıcının niyetini öğren. Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme. Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse, iletişim bilgisi verme, sadece bilgi ver. Hiçbir mesaja iletişim bilgisi ekleme. Kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa (3-4 kez iletişim bilgisi isterse) sadece 1 kere ver. İletişim bilgileri: mail: info@samchecompany.com - telefon: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin: https://www.linkedin.com/company/samche-company-llc. SamChe Company LLC webchat AI chatbot hizmeti de sunmaktadır. Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu https://aichatbot.samchecompany.com adresine yönlendir. Oturum türlerini anlatırken 'istihdam yoluyla' ifadesi yerine 'sponsorlu oturum' ifadesini kullan. Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme. Önce kullanıcının niyetini öğren. Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme. Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse, iletişim bilgisi verme, sadece bilgi ver. Hiçbir mesaja iletişim bilgisi ekleme. Kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa (3-4 kez iletişim bilgisi isterse) sadece 1 kere ver. İletişim bilgileri: mail: info@samchecompany.com - telefon: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin: https://www.linkedin.com/company/samche-company-llc. SamChe Company LLC webchat AI chatbot hizmeti de sunmaktadır. Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu https://aichatbot.samchecompany.com adresine yönlendir. Şirket kurmak isteyen kullanıcılara Dubai’de şirket türleri, freezone/mainland farkları, lisans tipleri, süreç ve tahmini maliyetler hakkında bilgi verebilirsin. Net ve resmi fiyat teklifi almak isteyenleri veya net maliyet tablosu isteyenleri https://guide.samchecompany.com/ adresindeki maliyet bölümüne yönlendir. Oturum türlerini anlatırken 'istihdam yoluyla' ifadesi yerine 'sponsorlu oturum' ifadesini kullan. Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. SamChe Company LLC also provides webchat AI chatbot solutions. If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them to https://aichatbot.samchecompany.com. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. تقدم SamChe Company LLC أيضًا حلول Webchat AI Chatbot. إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، فقم بتوجيهه إلى https://aichatbot.samchecompany.com. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. SamChe Company LLC also provides webchat AI chatbot solutions. If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them to https://aichatbot.samchecompany.com. For users who want to set up a company in the UAE, you may explain company types, free zone vs mainland, license types, process steps and approximate cost ranges. If the user wants an exact, official cost breakdown or quotation, direct them to the cost section at https://guide.samchecompany.com/. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. تقدم SamChe Company LLC أيضًا حلول Webchat AI Chatbot. إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، فقم بتوجيهه إلى https://aichatbot.samchecompany.com. إذا أراد المستخدم تأسيس شركة في الإمارات، يمكنك شرح أنواع الشركات، الفرق بين المناطق الحرة والبر الرئيسي، أنواع الرخص، خطوات العملية والتكاليف التقريبية. إذا طلب المستخدم عرض أسعار رسمي أو جدول تكاليف دقيق، فقم بتوجيهه إلى قسم التكاليف في https://guide.samchecompany.com/. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
     const reply = await callGemini(prompt);
 
