@@ -100,8 +100,6 @@ async function callGemini(prompt) {
 //  STATIC TEXTS
 // -------------------------------
 
-};
-
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
@@ -244,6 +242,7 @@ app.post("/webhook", async (req, res) => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
