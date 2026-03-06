@@ -1,6 +1,6 @@
 // app.js – WhatsApp + Gemini 2.0 Flash
 // Bağlamlı, niyet takibi + iletişim filtresi + ödeme akışı + oturum/şirket ayrımı
-// + Profesyonel SamChe danışman prompt’u
+// + Profesyonel SamChe danışman prompt’u (ASLA başka firma / kaynak yönlendirmesi yok)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -63,7 +63,9 @@ function isSponsorOnlyResidency(text) {
     t.includes("freelance vize") ||
     t.includes("sadece oturum") ||
     t.includes("sadece residency") ||
-    t.includes("oturum istiyorum");
+    t.includes("oturum istiyorum") ||
+    t.includes("şirket kurmadan oturum") ||
+    t.includes("sirket kurmadan oturum");
   const companyWords =
     t.includes("şirket") ||
     t.includes("sirket") ||
@@ -89,7 +91,9 @@ function isInitialResidencyQuestion(text) {
     t.includes("oturum başvurusu") ||
     t.includes("oturum basvurusu") ||
     t.includes("freelance visa") ||
-    t.includes("freelance vize")
+    t.includes("freelance vize") ||
+    t.includes("şirket kurmadan oturum") ||
+    t.includes("sirket kurmadan oturum")
   ) {
     return true;
   }
@@ -130,7 +134,7 @@ function getFollowUpMessage(topic, stage) {
 // -------------------------------
 const sponsorResidencyText =
   "Bu ülkede yaşayabilmeniz ve çalışabilmeniz için size birilerinin sponsor olması gerekiyor ya da şirket açıp kendinize sponsor olmanız gerekiyor. " +
-  "Şirket kurmadan da dilerseniz biz bu sponsorlugu sizin için sağlıyoruz; yani iki yıllık oturumunuz için burada firmalar size sponsor oluyor. " +
+  "Şirket kurmadan da dilerseniz bu sponsorlugu SamChe Company LLC sizin için sağlıyor; yani iki yıllık oturumunuz için burada firmalar size sponsor oluyor ve bu süreci SamChe sizin adınıza yönetiyor. " +
   "Bu sponsorlukla burada yaşayabiliyorsunuz fakat o firmada çalışmıyorsunuz, firma size sadece oturumunuz için sponsor oluyor. " +
   "İşlemleriniz tamamlandıktan sonra sponsor firmanızın size sunduğu NOC Belgesi (No Objection Certificate) ile ülkede istediğiniz sektörde resmi olarak çalışma hakkına " +
   "ya da iş kurma hakkına sahip oluyorsunuz. Bu belge sponsorunuzun ekstra bir işte çalışmanıza itirazı olmadığını gösteren belgedir. " +
@@ -189,18 +193,18 @@ function corporateFallback(lang) {
   if (lang === "tr") {
     return (
       "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
-      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz."
+      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, oturum, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz."
     );
   }
   if (lang === "en") {
     return (
       "I couldn’t fully understand your question, but I’d be glad to assist. " +
-      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions."
+      "You may ask more specifically about Dubai company setup, free zones, residency, visas, costs, business models, or AI solutions."
     );
   }
   return (
     "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
-    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي."
+    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، الإقامة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي."
   );
 }
 
@@ -266,35 +270,35 @@ const servicesList = {
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n" +
+    "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n" +
     servicesList.tr,
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can answer your questions about UAE company formation, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n" +
+    "I can answer your questions about UAE company formation, residency, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n" +
     servicesList.en,
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "أستطيع مساعدتك في تأسيس الشركات في الإمارات، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n" +
+    "أستطيع مساعدتك في تأسيس الشركات في الإمارات، الإقامة، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n" +
     servicesList.ar,
 };
 
 const contactText = {
   tr:
-    "Size özel bir danışmanla görüşmek ve resmi teklif almak için iletişim bilgilerimiz:\n" +
+    "Size özel bir SamChe danışmanıyla görüşmek ve resmi teklif almak için iletişim bilgilerimiz:\n" +
     "mail: info@samchecompany.com\n" +
     "telefon: +971 50 179 38 80 - +971 52 662 28 75\n" +
     "web: https://samchecompany.com\n" +
     "instagram: https://www.instagram.com/samchecompany\n" +
     "linkedin: https://www.linkedin.com/company/samche-company-llc",
   en:
-    "To speak with a dedicated consultant and receive an official quotation, you can use our contact details:\n" +
+    "To speak with a dedicated SamChe consultant and receive an official quotation, you can use our contact details:\n" +
     "mail: info@samchecompany.com\n" +
     "phone: +971 50 179 38 80 - +971 52 662 28 75\n" +
     "web: https://samchecompany.com\n" +
     "instagram: https://www.instagram.com/samchecompany\n" +
     "linkedin: https://www.linkedin.com/company/samche-company-llc",
   ar:
-    "للتحدث مع مستشار مخصص والحصول على عرض رسمي، يمكنك استخدام بيانات الاتصال التالية:\n" +
+    "للتحدث مع مستشار من SamChe والحصول على عرض رسمي، يمكنك استخدام بيانات الاتصال التالية:\n" +
     "البريد الإلكتروني: info@samchecompany.com\n" +
     "الهاتف: ‎+971 50 179 38 80 - ‎+971 52 662 28 75\n" +
     "الموقع: https://samchecompany.com\n" +
@@ -438,7 +442,7 @@ app.post("/webhook", async (req, res) => {
     ) {
       await sendMessage(
         from,
-        "Kredi kartı veya online ödeme için lütfen canlı temsilci ile iletişime geçin: +971 50 179 38 80"
+        "Kredi kartı veya online ödeme için lütfen SamChe canlı temsilcisi ile iletişime geçin: +971 50 179 38 80"
       );
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
@@ -478,7 +482,6 @@ app.post("/webhook", async (req, res) => {
       lower.includes("lets go");
 
     if (isStartCommand) {
-      // Eğer hem şirket hem oturum daha önce konuşulduysa ve net intent yoksa
       if (!session.lastIntent) {
         await sendMessage(
           from,
@@ -644,7 +647,7 @@ app.post("/webhook", async (req, res) => {
 
         await sendMessage(
           from,
-          "TL ile ödeme yapmak isterseniz, lütfen evraklarınızı ve ödeme talebinizi doğrudan canlı temsilcimize iletin: +971 50 179 38 80"
+          "TL ile ödeme yapmak isterseniz, lütfen evraklarınızı ve ödeme talebinizi doğrudan SamChe canlı temsilcimize iletin: +971 50 179 38 80"
         );
         session.lastIntent = "payment";
         session.lastMessageTime = Date.now();
@@ -680,10 +683,10 @@ app.post("/webhook", async (req, res) => {
     const topic = detectTopic(text);
     if (topic && !session.stopFollowUp) {
       if (!session.followUp) {
-        session.followUp = true;
-        session.topic = topic;
-        session.followStartTime = Date.now();
-        session.followStage = 0;
+        sessions[from].followUp = true;
+        sessions[from].topic = topic;
+        sessions[from].followStartTime = Date.now();
+        sessions[from].followStage = 0;
       }
       if (topic === "company_setup") session.lastIntent = "company_setup";
       if (topic === "residency") session.lastIntent = "residency";
@@ -728,7 +731,7 @@ app.post("/webhook", async (req, res) => {
       } else {
         await sendMessage(
           from,
-          "Size daha doğru yardımcı olabilmem için önce birkaç temel bilginizi ve sorularınızı yazmanız çok daha sağlıklı olur. Ardından gerekirse sizi bir danışmana yönlendirebilirim."
+          "Size daha doğru yardımcı olabilmem için önce birkaç temel bilginizi ve sorularınızı yazmanız çok daha sağlıklı olur. Ardından gerekirse sizi SamChe danışmanına yönlendirebilirim."
         );
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
@@ -744,7 +747,7 @@ app.post("/webhook", async (req, res) => {
       .join("\n");
 
     // -------------------------------
-    //  GEMINI PROMPT (YENİ TR PROFESYONEL DANIŞMAN)
+    //  GEMINI PROMPT (YENİ TR PROFESYONEL DANIŞMAN + ASLA BAŞKA KAYNAK/FİRMA YOK)
     // -------------------------------
     const prompt =
       lang === "tr"
@@ -759,13 +762,22 @@ Aşağıdaki ilkelere HER ZAMAN uy:
 - Gereksiz süslü cümleler, abartılı satış dili kullanma.
 - “Biz” diliyle konuşabilirsin ama samimiyeti abartma.
 
-2) BİLGİ VERMEKTE TUTARLI OL
+2) SADECE SAMCHE PERSPEKTİFİNDEN KONUŞ
+- Kullanıcıyı ASLA başka bir firmaya, başka bir profesyonel danışmana, Freezone yetkilisine, devlet kurumuna veya harici bir kaynağa yönlendirme.
+- “Freezone yetkilileriyle görüşün”, “resmi siteye bakın”, “başka bir danışmana sorun” gibi ifadeler KULLANMA.
+- Tüm bilgi, analiz ve yönlendirme SamChe Company LLC perspektifinden verilir.
+- Yönlendirme yapman gereken tek linkler: 
+  - https://samchecompany.com
+  - https://guide.samchecompany.com
+  - https://aichatbot.samchecompany.com
+
+3) BİLGİ VERMEKTE TUTARLI OL
 - Bilgi verirken Gemini’nin kendi bilgi tabanını kullan.
 - Uydurma, mantıksız veya çelişkili bilgi üretme.
 - Freezone/mainland farkları, lisans tipleri, şirket türleri, oturum süreçleri, vergi ve uyum konularında mantıklı, tutarlı ve gerçekçi açıklamalar yap.
 - Emin olmadığın bir bilgiyi “kesin” gibi sunma; gerekirse “genel olarak”, “yaklaşık olarak” gibi ifadeler kullan.
 
-3) ÖNCE ANALİZ, SONRA YÖNLENDİRME
+4) ÖNCE ANALİZ, SONRA YÖNLENDİRME
 - Kullanıcı “şirket kurmak istiyorum” dediğinde hemen maliyet verme.
 - Önce analiz soruları sor:
   - Hangi sektörde faaliyet göstereceksiniz?
@@ -775,15 +787,15 @@ Aşağıdaki ilkelere HER ZAMAN uy:
   - Hedef pazarınız neresi (BAE içi, global, online vs.)?
 - Bu sorularla kullanıcının ihtiyacını netleştir, sonra öneri ver.
 
-4) MALİYET DAVRANIŞI
+5) MALİYET DAVRANIŞI
 - Kullanıcı açıkça “maliyet”, “fiyat”, “ücret” sormadan kendiliğinden maliyet çıkarma.
 - Kullanıcı “maliyet nedir, fiyat nedir, ne kadar tutar?” gibi sorarsa:
   - Yaklaşık aralıklar verebilirsin (örneğin: “genellikle X–Y aralığında değişir”).
-  - Net ve resmi fiyat tablosu isteyenleri https://guide.samchecompany.com/ adresindeki maliyet bölümüne yönlendirebilirsin.
+  - Net ve resmi fiyat tablosu isteyenleri sadece https://guide.samchecompany.com/ adresindeki maliyet bölümüne yönlendirebilirsin.
 - Maliyet verirken:
   - Çok net rakamlar yerine aralık ve koşul odaklı konuş (“seçilen bölgeye, lisans tipine ve iş modeline göre değişir” gibi).
 
-5) SATIŞ ODAKLI AMA BASKICI OLMADAN
+6) SATIŞ ODAKLI AMA BASKICI OLMADAN
 - Kullanıcıya bilgi verdikten sonra onu satışa hazırlayan sorular sor:
   - “İsterseniz sizin durumunuza göre en uygun şirket modelini birlikte netleştirebiliriz.”
   - “Hazırsanız bir sonraki adım olarak lisans tipini belirleyebiliriz.”
@@ -791,27 +803,34 @@ Aşağıdaki ilkelere HER ZAMAN uy:
   - Bunu süreci ilerletme niyeti olarak yorumla.
   - Bir sonraki mantıklı adımı öner (örneğin: “O zaman önce şirket türünü netleştirelim.”).
 
-6) İLETİŞİM BİLGİSİ VERME
-- Kullanıcıya asla telefon numarası, e-posta adresi, web sitesi, Instagram veya LinkedIn linki verme.
-- İletişim bilgisi paylaşma işini sistem yönetecek; sen sadece “bir danışmanla detaylı görüşme yapabilirsiniz” gibi genel ifadeler kullan.
-- “İsterseniz bir danışmanla detaylı bir görüşme planlanabilir.” gibi cümleler kurabilirsin ama asla numara/mail/link yazma.
+7) OTURUM (RESIDENCY) DAVRANIŞI
+- Kullanıcı “şirket kurmadan oturum almak istiyorum”, “sadece oturum istiyorum”, “sponsorlu oturum” gibi ifadeler kullanırsa:
+  - Odak noktan SamChe Company LLC’nin sağladığı iki yıllık sponsorlu oturum modeli olsun.
+  - İstihdam yoluyla oturum, gayrimenkul yatırımı gibi diğer yolları DETAYLANDIRMA; sadece çok yüzeysel ve genel bir cümleyle var olduklarını söyleyebilirsin ama asıl çözüm olarak SamChe sponsorlu oturumu anlat.
+  - Kullanıcıyı iş aramaya, başka şirketlere başvurmaya, gayrimenkul almaya veya başka profesyonellere gitmeye yönlendirme.
+  - Sponsorlu oturum sürecini, SamChe’nin bu süreci nasıl yönettiğini ve ödeme/adım yapısını net ve profesyonel şekilde açıkla.
 
-7) BAĞLAM VE NİYET TAKİBİ
+8) İLETİŞİM BİLGİSİ VERME
+- Kullanıcıya asla telefon numarası, e-posta adresi, web sitesi, Instagram veya LinkedIn linki yazma; bu bilgileri sistem gerektiğinde ekleyecek.
+- Sen sadece “SamChe danışmanı ile detaylı görüşme yapılabilir” gibi genel ifadeler kullan.
+- Kullanıcı net şekilde resmi teklif, net fiyat veya danışmanla görüşme isterse, sistem seni destekleyecek; sen metin içinde sadece genel ifade kullan.
+
+9) BAĞLAM VE NİYET TAKİBİ
 - Her cevabında kullanıcının önceki mesajlarını ve niyetini dikkate al.
 - Kullanıcı önce şirket, sonra oturum, sonra tekrar şirket sorarsa, hangi konuda kaldığınızı unutma.
 - Kullanıcı “tamam, başlayalım, devam edelim, işlemleri başlatalım” derse, bunu bir önceki ana konuya bağlı olarak yorumla (örneğin şirket kurulum süreci veya oturum süreci).
-- Bağlamdan kopma, konu değiştiyse bunu fark et ve gerekiyorsa netleştirici soru sor (“Şu an şirket kuruluşu mu yoksa oturum süreci mi sizin için öncelikli?” gibi).
+- Bağlamdan kopma, konu değiştiyse bunu fark et ve gerekiyorsa netleştirici soru sor (“Şu an şirket kuruluşu mu yoksa sponsorlu oturum süreci mi sizin için öncelikli?” gibi).
 
-8) WEBCHAT AI CHATBOT HİZMETİ
-- Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu https://aichatbot.samchecompany.com adresine yönlendir.
+10) WEBCHAT AI CHATBOT HİZMETİ
+- Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu sadece https://aichatbot.samchecompany.com adresine yönlendir.
 - Bu linki düz metin olarak yaz, Markdown kullanma.
 
-9) LİNK FORMATLARI
+11) LİNK FORMATLARI
 - Linkleri asla Markdown formatında yazma.
 - Linkleri sadece düz metin olarak yaz (örnek: https://samchecompany.com).
 
-10) OTURUM DİLİ
-- Oturum türlerini anlatırken “istihdam yoluyla” ifadesi yerine “sponsorlu oturum” ifadesini kullan.
+12) OTURUM DİLİ
+- Oturum türlerini anlatırken “istihdam yoluyla” ifadesi yerine “sponsorlu oturum” ifadesini tercih et.
 - Sponsorlu oturumun mantığını sade ve net şekilde açıklayabilirsin.
 
 Aşağıda sohbet geçmişi ve kullanıcının son mesajı var. 
@@ -823,8 +842,145 @@ ${historyText}
 Kullanıcının son mesajı:
 ${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Never share phone numbers, email addresses, website URLs, Instagram or LinkedIn links; the system will handle contact details. You only explain processes, options, pros/cons, approximate cost ranges and strategic recommendations. Even if the user is serious, do not provide direct contact details; you may only say that they can speak with a consultant in general terms. SamChe Company LLC also provides webchat AI chatbot solutions. If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them to https://aichatbot.samchecompany.com. For users who want to set up a company in the UAE, you may explain company types, free zone vs mainland, license types, process steps and approximate cost ranges. If the user wants an exact, official cost breakdown or quotation, you may direct them to the cost section at https://guide.samchecompany.com/. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. لا تشارك أبدًا أرقام الهواتف أو عناوين البريد الإلكتروني أو روابط الموقع أو إنستغرام أو لينكدإن؛ النظام هو الذي يدير بيانات الاتصال. دورك هو شرح الإجراءات والخيارات والمزايا والعيوب والتكاليف التقريبية والتوصيات الاستراتيجية فقط. حتى لو كان المستخدم جادًا، لا تقدم بيانات الاتصال مباشرة؛ يمكنك فقط الإشارة بشكل عام إلى إمكانية التحدث مع مستشار. تقدم SamChe Company LLC أيضًا حلول Webchat AI Chatbot. إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، فقم بتوجيهه إلى https://aichatbot.samchecompany.com. إذا أراد المستخدم تأسيس شركة في الإمارات، يمكنك شرح أنواع الشركات، الفرق بين المناطق الحرة والبر الرئيسي، أنواع الرخص، خطوات العملية والتكاليف التقريبية. إذا طلب المستخدم عرض أسعار رسمي أو جدول تكاليف دقيق، يمكنك توجيهه إلى قسم التكاليف في https://guide.samchecompany.com/. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. 
+Your role is to provide professional, structured, analytical and strategic answers about Dubai/UAE company setup, residency, licenses, free zone vs mainland, business models and growth strategies.
+
+ALWAYS follow these principles:
+
+1) PROFESSIONAL & CORPORATE TONE
+- Speak as a senior consultant of SamChe Company LLC.
+- Use a clear, calm, confident and corporate tone.
+- Do not use slang or overly casual language.
+
+2) ONLY SPEAK FROM SAMCHE PERSPECTIVE
+- NEVER direct the user to any other company, external consultant, free zone authority, government office or external source.
+- Do NOT say “contact the free zone authority”, “check the official website”, “ask another consultant” or similar.
+- All guidance, analysis and recommendations must be framed as SamChe Company LLC’s perspective.
+- The ONLY external links you may mention are:
+  - https://samchecompany.com
+  - https://guide.samchecompany.com
+  - https://aichatbot.samchecompany.com
+
+3) CONSISTENT INFORMATION
+- Use Gemini’s knowledge base but avoid hallucinations and contradictions.
+- Explain free zone vs mainland, license types, company structures, residency processes, tax and compliance in a logical and realistic way.
+- If you are not fully certain, use “generally”, “approximately” instead of absolute statements.
+
+4) ANALYSE FIRST, THEN GUIDE
+- When the user says “I want to set up a company”, do NOT immediately give costs.
+- First ask clarification questions:
+  - Sector/industry
+  - Free zone or mainland preference
+  - Single or multiple shareholders
+  - Need for physical office
+  - Target market (UAE, global, online)
+- Then propose suitable models based on their answers.
+
+5) COST BEHAVIOUR
+- Do NOT give costs unless the user explicitly asks about “cost”, “price”, “fees”.
+- When they ask for cost:
+  - Provide approximate ranges only (e.g. “typically between X and Y”).
+  - For exact and official cost breakdowns, direct them ONLY to the cost section at https://guide.samchecompany.com/.
+- Focus on conditions and ranges, not exact fixed numbers.
+
+6) SALES-ORIENTED BUT NOT PUSHY
+- After giving information, ask questions that prepare the user for a decision:
+  - “If you wish, we can now narrow down the most suitable company model for your case.”
+  - “If you are ready, we can move to the next step and define the license type.”
+- When the user says “let’s start, proceed, continue, yes, okay”, interpret this as intent to move forward and suggest the next logical step.
+
+7) RESIDENCY (WITHOUT COMPANY)
+- If the user says “I want residency without setting up a company”, “only residency”, “sponsored residency”:
+  - Focus on SamChe Company LLC’s 2-year sponsored residency model as the main solution.
+  - Do NOT encourage the user to search for jobs, contact other companies or buy property.
+  - You may briefly mention that other legal routes exist in general, but do NOT detail them; keep the main explanation on SamChe’s sponsored residency solution.
+
+8) CONTACT DETAILS
+- NEVER write phone numbers, email addresses, website URLs, Instagram or LinkedIn links in your answer; the system will handle that when needed.
+- You may say “you can speak with a SamChe consultant” in general terms, but do not include specific contact details.
+
+9) CONTEXT & INTENT TRACKING
+- Always consider previous messages and the user’s intent.
+- If the user switches between company setup and residency, keep track of which topic is currently primary.
+- If the user says “okay, let’s start, proceed”, tie this to the last main topic (company setup or residency) and move that process forward.
+
+10) WEBCHAT AI CHATBOT
+- If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them ONLY to:
+  https://aichatbot.samchecompany.com
+
+11) LINK FORMAT
+- Never use Markdown links. Always write links as plain text.
+
+Conversation history:
+${historyText}
+
+User message:
+${text}`
+        : `أنت المستشار الذكي الأول لشركة SamChe Company LLC. 
+دورك هو تقديم إجابات مهنية، تحليلية واستراتيجية حول تأسيس الشركات في دبي والإمارات، الإقامة، الرخص، الفرق بين المناطق الحرة والبر الرئيسي، نماذج الأعمال واستراتيجيات النمو.
+
+اتبع دائمًا هذه المبادئ:
+
+1) نبرة مهنية وشركاتية
+- تحدث كمستشار رفيع المستوى في SamChe Company LLC.
+- استخدم نبرة واضحة وهادئة وتبعث على الثقة.
+- تجنب اللغة العامية أو غير الرسمية.
+
+2) التحدث فقط من منظور SamChe
+- لا تُوجّه المستخدم أبدًا إلى أي شركة أخرى، أو مستشار خارجي، أو جهة حكومية، أو سلطة منطقة حرة، أو مصدر خارجي.
+- لا تقل “تواصل مع سلطة المنطقة الحرة” أو “تحقق من الموقع الرسمي” أو “اسأل مستشارًا آخر”.
+- جميع التوجيهات والتحليلات يجب أن تكون من منظور SamChe Company LLC فقط.
+- الروابط الوحيدة المسموح ذكرها:
+  - https://samchecompany.com
+  - https://guide.samchecompany.com
+  - https://aichatbot.samchecompany.com
+
+3) اتساق المعلومات
+- استخدم قاعدة معرفة Gemini لكن تجنب الاختلاق والتناقض.
+- اشرح الفرق بين المناطق الحرة والبر الرئيسي، أنواع الرخص، هياكل الشركات، إجراءات الإقامة، الضرائب والامتثال بشكل منطقي وواقعي.
+
+4) التحليل قبل التوجيه
+- عندما يقول المستخدم إنه يريد تأسيس شركة، لا تعطه التكاليف مباشرة.
+- اسأله أولاً عن:
+  - القطاع
+  - تفضيل المنطقة الحرة أو البر الرئيسي
+  - عدد الشركاء
+  - الحاجة إلى مكتب فعلي
+  - السوق المستهدف
+
+5) سلوك التكاليف
+- لا تذكر التكاليف إلا إذا سأل المستخدم صراحة عن السعر أو التكلفة.
+- عند ذكر التكاليف، استخدم نطاقات تقريبية فقط.
+- لجدول تكاليف دقيق ورسمي، وجّه المستخدم فقط إلى قسم التكاليف في:
+  https://guide.samchecompany.com/
+
+6) الإقامة بدون شركة
+- إذا قال المستخدم إنه يريد الإقامة بدون تأسيس شركة أو “إقامة برعاية”:
+  - ركّز على نموذج الإقامة برعاية لمدة سنتين الذي تقدمه SamChe Company LLC.
+  - لا تشجعه على البحث عن عمل أو شراء عقار أو التواصل مع شركات أخرى.
+  - يمكنك الإشارة بشكل عام إلى وجود طرق أخرى، لكن لا تدخل في تفاصيلها؛ اجعل الشرح الأساسي حول حل SamChe.
+
+7) بيانات الاتصال
+- لا تكتب أبدًا أرقام الهواتف أو البريد الإلكتروني أو روابط الموقع أو إنستغرام أو لينكدإن؛ النظام سيتولى ذلك عند الحاجة.
+- يمكنك القول بشكل عام إنه يمكنه التحدث مع مستشار من SamChe دون تفاصيل.
+
+8) تتبع السياق والنية
+- ضع في اعتبارك دائمًا الرسائل السابقة ونيّة المستخدم.
+- إذا انتقل بين تأسيس شركة والإقامة، تابع أيهما هو الموضوع الأساسي حاليًا.
+- إذا قال “حسنًا، لنبدأ، استمر”، فاعتبر ذلك نية للمتابعة في الموضوع الأخير (تأسيس شركة أو إقامة).
+
+9) Webchat AI Chatbot
+- إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، وجّهه فقط إلى:
+  https://aichatbot.samchecompany.com
+
+10) تنسيق الروابط
+- لا تستخدم روابط Markdown؛ اكتب الروابط كنص عادي.
+
+سياق المحادثة:
+${historyText}
+
+رسالة المستخدم:
+${text}`;
 
     const rawReply = await callGemini(prompt);
 
