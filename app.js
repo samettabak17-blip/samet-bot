@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (final)
+// app.js – WhatsApp + Gemini 2.0 Flash (final, iletişim filtresiyle)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -46,8 +46,7 @@ function detectTopic(text) {
   )
     return "residency";
 
-  if (t.includes("license") || t.includes("trade license"))
-    return "license";
+  if (t.includes("license") || t.includes("trade license")) return "license";
 
   return null;
 }
@@ -188,21 +187,18 @@ function corporateFallback(lang) {
   if (lang === "tr") {
     return (
       "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
-      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz.\n\n" +
-      "Canlı temsilci: +971 52 728 8586"
+      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz."
     );
   }
   if (lang === "en") {
     return (
       "I couldn’t fully understand your question, but I’d be glad to assist. " +
-      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
-      "Live consultant: +971 52 728 8586"
+      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions."
     );
   }
   return (
     "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
-    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي.\n\n" +
-    "المستشار المباشر: ‎+971 52 728 8586"
+    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي."
   );
 }
 
@@ -281,10 +277,58 @@ const introAfterLang = {
 };
 
 const contactText = {
-  tr: "Canlı temsilci: +971 52 728 8586",
-  en: "Live consultant: +971 52 728 8586",
-  ar: "مستشار مباشر: ‎+971 52 728 8586",
+  tr:
+    "Size özel bir danışmanla görüşmek ve resmi teklif almak için iletişim bilgilerimiz:\n" +
+    "mail: info@samchecompany.com\n" +
+    "telefon: +971 50 179 38 80 - +971 52 662 28 75\n" +
+    "web: https://samchecompany.com\n" +
+    "instagram: https://www.instagram.com/samchecompany\n" +
+    "linkedin: https://www.linkedin.com/company/samche-company-llc",
+  en:
+    "To speak with a dedicated consultant and receive an official quotation, you can use our contact details:\n" +
+    "mail: info@samchecompany.com\n" +
+    "phone: +971 50 179 38 80 - +971 52 662 28 75\n" +
+    "web: https://samchecompany.com\n" +
+    "instagram: https://www.instagram.com/samchecompany\n" +
+    "linkedin: https://www.linkedin.com/company/samche-company-llc",
+  ar:
+    "للتحدث مع مستشار مخصص والحصول على عرض رسمي، يمكنك استخدام بيانات الاتصال التالية:\n" +
+    "البريد الإلكتروني: info@samchecompany.com\n" +
+    "الهاتف: ‎+971 50 179 38 80 - ‎+971 52 662 28 75\n" +
+    "الموقع: https://samchecompany.com\n" +
+    "إنستغرام: https://www.instagram.com/samchecompany\n" +
+    "لينكدإن: https://www.linkedin.com/company/samche-company-llc",
 };
+
+// -------------------------------
+//  REPLY SANITIZATION (İLETİŞİM BİLGİSİ FİLTRESİ)
+// -------------------------------
+function sanitizeReply(reply, session) {
+  if (session.contactAllowed) return reply;
+
+  let r = reply;
+  const patterns = [
+    /info@samchecompany\.com/gi,
+    /\+971\s?50\s?179\s?38\s?80/gi,
+    /\+971\s?52\s?662\s?28\s?75/gi,
+    /https?:\/\/samchecompany\.com/gi,
+    /https?:\/\/www\.samchecompany\.com/gi,
+    /https?:\/\/www\.instagram\.com\/samchecompany/gi,
+    /https?:\/\/www\.linkedin\.com\/company\/samche-company-llc/gi,
+  ];
+
+  patterns.forEach((p) => {
+    r = r.replace(p, "");
+  });
+
+  // Boş kalan satırları temizle
+  r = r
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .join("\n");
+
+  return r.trim();
+}
 
 // -------------------------------
 //  WEBHOOK VERIFY
@@ -324,6 +368,8 @@ app.post("/webhook", async (req, res) => {
         followStage: 0,
         payment: null, // { type: 'residency' | 'other', stage: 'askCurrency' | 'done', currency: 'usd'|'tl' }
         residencyExplained: false,
+        contactAllowed: false,
+        contactRequestCount: 0,
       };
 
       await sendMessage(
@@ -478,7 +524,7 @@ app.post("/webhook", async (req, res) => {
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
       } else {
-        // Diğer hizmetler için genel banka bilgisi
+        // Diğer hizmetler için genel banka bilgisi – yine USD/TL sorarak
         session.payment = {
           type: "other",
           stage: "askCurrency",
@@ -567,18 +613,48 @@ app.post("/webhook", async (req, res) => {
       session.lastMessageTime = Date.now();
     }
 
-    // CONTACT
+    // CONTACT İSTEKLERİ – FİLTRELİ
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
       lower.includes("iletisim") ||
       lower.includes("whatsapp") ||
       lower.includes("call") ||
-      lower.includes("telefon")
+      lower.includes("telefon") ||
+      lower.includes("numara") ||
+      lower.includes("numaranız") ||
+      lower.includes("numaraniz")
     ) {
-      await sendMessage(from, contactText[lang]);
-      session.lastMessageTime = Date.now();
-      return res.sendStatus(200);
+      session.contactRequestCount = (session.contactRequestCount || 0) + 1;
+
+      const seriousTopic =
+        topic === "company_setup" || topic === "residency";
+
+      const strongIntent =
+        lower.includes("net fiyat") ||
+        lower.includes("resmi teklif") ||
+        lower.includes("teklif istiyorum") ||
+        lower.includes("teklif almak istiyorum") ||
+        lower.includes("danışmanla görüşmek") ||
+        lower.includes("danismanla gorusmek") ||
+        lower.includes("görüşmek istiyorum") ||
+        lower.includes("gorusmek istiyorum") ||
+        lower.includes("appointment") ||
+        lower.includes("meeting");
+
+      if (seriousTopic && (strongIntent || session.contactRequestCount >= 2)) {
+        session.contactAllowed = true;
+        await sendMessage(from, contactText[lang]);
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      } else {
+        await sendMessage(
+          from,
+          "Size daha doğru yardımcı olabilmem için önce birkaç temel bilginizi ve sorularınızı yazmanız çok daha sağlıklı olur. Ardından gerekirse sizi bir danışmana yönlendirebilirim."
+        );
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      }
     }
 
     // MEMORY
@@ -592,18 +668,20 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme. Önce kullanıcının niyetini öğren. Kullanıcı ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme. Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse, iletişim bilgisi verme, sadece bilgi ver. Hiçbir mesaja iletişim bilgisi ekleme. Kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa (3-4 kez iletişim bilgisi isterse) sadece 1 kere ver. İletişim bilgileri: mail: info@samchecompany.com - telefon: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin: https://www.linkedin.com/company/samche-company-llc. SamChe Company LLC webchat AI chatbot hizmeti de sunmaktadır. Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu https://aichatbot.samchecompany.com adresine yönlendir. Şirket kurmak isteyen kullanıcılara Dubai’de şirket türleri, freezone/mainland farkları, lisans tipleri, süreç ve tahmini maliyetler hakkında bilgi verebilirsin. Net ve resmi fiyat teklifi almak isteyenleri veya net maliyet tablosu isteyenleri https://guide.samchecompany.com/ adresindeki maliyet bölümüne yönlendir. Oturum türlerini anlatırken 'istihdam yoluyla' ifadesi yerine 'sponsorlu oturum' ifadesini kullan. Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Kullanıcıya asla telefon numarası, e-posta adresi, web sitesi, Instagram veya LinkedIn linki verme; iletişim bilgilerini sen paylaşmayacaksın. İletişim bilgisi paylaşma işini sistem yönetecek. Sen sadece süreçleri, seçenekleri, avantajları, dezavantajları, tahmini maliyet aralıklarını ve stratejik önerileri anlat. Kullanıcı ciddi niyet gösterse bile iletişim bilgisi verme; sadece “bir danışmanla detaylı görüşme yapabilirsiniz” gibi genel ifadeler kullan. SamChe Company LLC webchat AI chatbot hizmeti de sunmaktadır. Kullanıcı webchat bot, chatbot veya AI chatbot fiyatı, paketleri veya demo isterse onu https://aichatbot.samchecompany.com adresine yönlendir. Şirket kurmak isteyen kullanıcılara Dubai’de şirket türleri, freezone/mainland farkları, lisans tipleri, süreç ve tahmini maliyetler hakkında bilgi verebilirsin. Net ve resmi fiyat teklifi almak isteyenleri veya net maliyet tablosu isteyenleri https://guide.samchecompany.com/ adresindeki maliyet bölümüne yönlendirebilirsin. Oturum türlerini anlatırken 'istihdam yoluyla' ifadesi yerine 'sponsorlu oturum' ifadesini kullan. Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. SamChe Company LLC also provides webchat AI chatbot solutions. If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them to https://aichatbot.samchecompany.com. For users who want to set up a company in the UAE, you may explain company types, free zone vs mainland, license types, process steps and approximate cost ranges. If the user wants an exact, official cost breakdown or quotation, direct them to the cost section at https://guide.samchecompany.com/. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. تقدم SamChe Company LLC أيضًا حلول Webchat AI Chatbot. إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، فقم بتوجيهه إلى https://aichatbot.samchecompany.com. إذا أراد المستخدم تأسيس شركة في الإمارات، يمكنك شرح أنواع الشركات، الفرق بين المناطق الحرة والبر الرئيسي، أنواع الرخص، خطوات العملية والتكاليف التقريبية. إذا طلب المستخدم عرض أسعار رسمي أو جدول تكاليف دقيق، فقم بتوجيهه إلى قسم التكاليف في https://guide.samchecompany.com/. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Never share phone numbers, email addresses, website URLs, Instagram or LinkedIn links; the system will handle contact details. You only explain processes, options, pros/cons, approximate cost ranges and strategic recommendations. Even if the user is serious, do not provide direct contact details; you may only say that they can speak with a consultant in general terms. SamChe Company LLC also provides webchat AI chatbot solutions. If the user asks about webchat bot, chatbot or AI chatbot pricing, packages or demo, direct them to https://aichatbot.samchecompany.com. For users who want to set up a company in the UAE, you may explain company types, free zone vs mainland, license types, process steps and approximate cost ranges. If the user wants an exact, official cost breakdown or quotation, you may direct them to the cost section at https://guide.samchecompany.com/. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. لا تشارك أبدًا أرقام الهواتف أو عناوين البريد الإلكتروني أو روابط الموقع أو إنستغرام أو لينكدإن؛ النظام هو الذي يدير بيانات الاتصال. دورك هو شرح الإجراءات والخيارات والمزايا والعيوب والتكاليف التقريبية والتوصيات الاستراتيجية فقط. حتى لو كان المستخدم جادًا، لا تقدم بيانات الاتصال مباشرة؛ يمكنك فقط الإشارة بشكل عام إلى إمكانية التحدث مع مستشار. تقدم SamChe Company LLC أيضًا حلول Webchat AI Chatbot. إذا سأل المستخدم عن أسعار أو باقات أو تجربة روبوت الدردشة، فقم بتوجيهه إلى https://aichatbot.samchecompany.com. إذا أراد المستخدم تأسيس شركة في الإمارات، يمكنك شرح أنواع الشركات، الفرق بين المناطق الحرة والبر الرئيسي، أنواع الرخص، خطوات العملية والتكاليف التقريبية. إذا طلب المستخدم عرض أسعار رسمي أو جدول تكاليف دقيق، يمكنك توجيهه إلى قسم التكاليف في https://guide.samchecompany.com/. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
-    const reply = await callGemini(prompt);
+    const rawReply = await callGemini(prompt);
 
-    if (!reply) {
+    if (!rawReply) {
       await sendMessage(from, corporateFallback(lang));
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
+
+    const reply = sanitizeReply(rawReply, session);
 
     session.history.push({ role: "assistant", text: reply });
 
