@@ -1,4 +1,5 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (final, iletişim filtresiyle)
+// app.js – WhatsApp + Gemini 2.0 Flash
+// Bağlamlı, niyet takibi + iletişim filtresi + ödeme akışı + oturum/şirket ayrımı
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -321,7 +322,6 @@ function sanitizeReply(reply, session) {
     r = r.replace(p, "");
   });
 
-  // Boş kalan satırları temizle
   r = r
     .split("\n")
     .filter((line) => line.trim() !== "")
@@ -366,10 +366,11 @@ app.post("/webhook", async (req, res) => {
         lastMessageTime: Date.now(),
         followStartTime: null,
         followStage: 0,
-        payment: null, // { type: 'residency' | 'other', stage: 'askCurrency' | 'done', currency: 'usd'|'tl' }
+        payment: null,
         residencyExplained: false,
         contactAllowed: false,
         contactRequestCount: 0,
+        lastIntent: null, // company_setup | residency | payment | documents | start_process
       };
 
       await sendMessage(
@@ -457,10 +458,67 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // -------------------------------
+    //  KOMUT ALGILAMA (BAŞLAYALIM / DEVAM / EVET vb.)
+    // -------------------------------
+    const isStartCommand =
+      lower.includes("başlayalım") ||
+      lower.includes("baslayalim") ||
+      lower.includes("işlemleri başlat") ||
+      lower.includes("islemleri baslat") ||
+      lower.includes("devam edelim") ||
+      lower.includes("yapalım") ||
+      lower.includes("yapalim") ||
+      lower === "evet" ||
+      lower === "tamam" ||
+      lower.includes("proceed") ||
+      lower.includes("start") ||
+      lower.includes("let's go") ||
+      lower.includes("lets go");
+
+    if (isStartCommand) {
+      // Eğer hem şirket hem oturum daha önce konuşulduysa ve net intent yoksa
+      if (!session.lastIntent) {
+        await sendMessage(
+          from,
+          "Hangi işlem için başlamak istersiniz? Şirket kuruluşu mu, yoksa sponsorlu oturum süreci mi?"
+        );
+        session.lastMessageTime = Date.now();
+        return res.sendStatus(200);
+      }
+
+      if (session.lastIntent === "company_setup") {
+        await sendMessage(
+          from,
+          "Dubai’de şirket kuruluşu için süreci başlatıyoruz. Size uygun şirket türünü, freezone/mainland seçeneklerini ve gerekli evrakları adım adım planlayabiliriz. İsterseniz önce hangi serbest bölgenin size daha uygun olacağını netleştirelim."
+        );
+      } else if (session.lastIntent === "residency") {
+        await sendMessage(
+          from,
+          "İki yıllık sponsorlu oturum sürecini başlatıyoruz. Öncelikle pasaport ve biyometrik fotoğrafınızı PDF olarak hazırlayın, ardından ödeme adımına geçebiliriz."
+        );
+      } else if (session.lastIntent === "payment") {
+        await sendMessage(
+          from,
+          "Ödeme adımlarını netleştirelim. Ödemeyi USD mi yoksa TL olarak mı yapmak istersiniz?"
+        );
+      } else if (session.lastIntent === "documents") {
+        await sendMessage(
+          from,
+          "Evrak sürecini başlatıyoruz. Lütfen pasaport ve biyometrik fotoğrafınızı PDF formatında hazırlayın ve e-posta ile iletmeye hazır olun."
+        );
+      }
+
+      session.lastIntent = "start_process";
+      session.lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
     // SADECE SPONSORLU OTURUM İSTEĞİ (ŞİRKET KURMAK İSTEMEYEN)
     if (!session.residencyExplained && isSponsorOnlyResidency(lower)) {
       await sendMessage(from, sponsorResidencyText);
       session.residencyExplained = true;
+      session.lastIntent = "residency";
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
@@ -483,6 +541,7 @@ app.post("/webhook", async (req, res) => {
     ) {
       await sendMessage(from, sponsorResidencyText);
       session.residencyExplained = true;
+      session.lastIntent = "residency";
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
@@ -510,13 +569,13 @@ app.post("/webhook", async (req, res) => {
     ) {
       const topic = detectTopic(text);
 
-      // Residency / sponsorlu oturum için özel akış (öncelik)
       if (topic === "residency" || isSponsorOnlyResidency(lower) || session.residencyExplained) {
         session.payment = {
           type: "residency",
           stage: "askCurrency",
           currency: null,
         };
+        session.lastIntent = "payment";
         await sendMessage(
           from,
           "İki yıllık sponsorlu oturum için ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
@@ -524,12 +583,12 @@ app.post("/webhook", async (req, res) => {
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
       } else {
-        // Diğer hizmetler için genel banka bilgisi – yine USD/TL sorarak
         session.payment = {
           type: "other",
           stage: "askCurrency",
           currency: null,
         };
+        session.lastIntent = "payment";
         await sendMessage(
           from,
           "Ödemenizi hangi para birimiyle yapmak istersiniz? USD olarak mı yoksa TL olarak mı ödemek istersiniz?"
@@ -561,6 +620,7 @@ app.post("/webhook", async (req, res) => {
           );
         }
 
+        session.lastIntent = "payment";
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
       }
@@ -573,6 +633,7 @@ app.post("/webhook", async (req, res) => {
           from,
           "TL ile ödeme yapmak isterseniz, lütfen evraklarınızı ve ödeme talebinizi doğrudan canlı temsilcimize iletin: +971 50 179 38 80"
         );
+        session.lastIntent = "payment";
         session.lastMessageTime = Date.now();
         return res.sendStatus(200);
       }
@@ -597,6 +658,7 @@ app.post("/webhook", async (req, res) => {
         from,
         "İki yıllık sponsorlu oturum için en az 3 yıllık geçerli pasaportunuz ve biyometrik fotoğrafınızı PDF olarak göndermeniz yeterlidir."
       );
+      session.lastIntent = "documents";
       session.lastMessageTime = Date.now();
       return res.sendStatus(200);
     }
@@ -610,6 +672,9 @@ app.post("/webhook", async (req, res) => {
         session.followStartTime = Date.now();
         session.followStage = 0;
       }
+      if (topic === "company_setup") session.lastIntent = "company_setup";
+      if (topic === "residency") session.lastIntent = "residency";
+      if (topic === "license") session.lastIntent = "company_setup";
       session.lastMessageTime = Date.now();
     }
 
@@ -739,9 +804,9 @@ setInterval(async () => {
       const msg = getFollowUpMessage(s.topic, 3);
       await sendMessage(user, msg);
       s.followStage = 3;
-      s.followUp = false; // takip biter
+      s.followUp = false;
       s.lastMessageTime = now;
       continue;
     }
   }
-}, 60 * 60 * 1000); // her saat kontrol
+}, 60 * 60 * 1000);
