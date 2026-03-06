@@ -864,6 +864,7 @@ c) KULLANICI KARARSIZSA:
 8) İLETİŞİM BİLGİSİ VERME
 - Kullanıcıya asla telefon numarası, e-posta adresi, web sitesi, Instagram veya LinkedIn linki yazma; Kullanıcı sadece kendisi iletişim bilgisi ve canlı kişiyle görüşmek istediğinde iletişim bilgisi ver.
 - Sen sadece “SamChe danışmanı ile detaylı görüşme yapılabilir” gibi genel ifadeler kullan.
+-Kullanıcı canlı temsilci ile görüşücem beni temsilciye bağla canlı insan yok mu iletişim bilgisi ver gibi ifadeler kullandığında iletişim bilgisi ver
 
 9) BAĞLAM VE NİYET TAKİBİ
 - Her cevabında kullanıcının önceki mesajlarını ve niyetini dikkate al.
@@ -1129,4 +1130,5 @@ setInterval(async () => {
     }
   }
 }, 60 * 60 * 1000);
+
 
