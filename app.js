@@ -176,24 +176,24 @@ app.post("/webhook", async (req, res) => {
       sessions[from] = {
         lang: null,
         history: [],
+        lastMessageTime: Date.now(),
+        followUpSent: false,
       };
 
-     await sendMessage(
-  from,
-  "Welcome to SamChe Company LLC.\n" +
-    "SamChe Company LLC'ye hoş geldiniz.\n" +
-    "مرحبًا بكم.\n\n" +
-
-    "Please select your language:\n" +
-    "1️⃣ English\n" +
-    "2️⃣ Türkçe\n" +
-    "3️⃣ العربية\n\n" +
-
-    "Lütfen dil seçiminizi yapınız:\n" +
-    "1️⃣ İngilizce\n" +
-    "2️⃣ Türkçe\n" +
-    "3️⃣ Arapça"
-);
+      await sendMessage(
+        from,
+        "Welcome to SamChe Company LLC.\n" +
+          "SamChe Company LLC'ye hoş geldiniz.\n" +
+          "مرحبًا بكم.\n\n" +
+          "Please select your language:\n" +
+          "1️⃣ English\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ العربية\n\n" +
+          "Lütfen dil seçiminizi yapınız:\n" +
+          "1️⃣ İngilizce\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ Arapça"
+      );
 
       return res.sendStatus(200);
     }
@@ -228,9 +228,29 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // MEMORY
+    // AI CHATBOT PRICE / PLAN REDIRECT
+    if (
+      lower.includes("ai bot") ||
+      lower.includes("chatbot") ||
+      lower.includes("bot fiyat") ||
+      lower.includes("ai fiyat") ||
+      lower.includes("chatbot fiyat") ||
+      lower.includes("webchat") ||
+      lower.includes("ai plan") ||
+      lower.includes("bot plan")
+    ) {
+      await sendMessage(
+        from,
+        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
+      );
+      return res.sendStatus(200);
+    }
+
+    // MEMORY UPDATE
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
+    session.lastMessageTime = Date.now();
+    session.followUpSent = false;
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
@@ -239,10 +259,28 @@ app.post("/webhook", async (req, res) => {
     // PROMPT
     const prompt =
       lang === "tr"
-        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme.önce kullanıcının niyetini öğren,Kullanıcı bilgi aldıktan sonra kullanıcıyı bilgilendirdikten sonra ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme.Kullanıcıya detaylı bilgi vermeden uzman bir danışmanla sizi görüştüreceğiz gibi söylemler kullanma.Öncelikli amacın kullanıcının niyetini anlamak ve detaylı bilgi vermek olsun. Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse,İletişim bilgisi asla verme,sadece bilgi ver.hiçbir mesaja iletişim bilgisi ekleme.kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa(3-4 kez iletişim bilgisi isterse) sadece 1 kere ver.iletişim bilgileri: mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
+        ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.
+
+Sohbet geçmişi:
+${historyText}
+
+Kullanıcının son mesajı:
+${text}`
         : lang === "en"
-        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدم إجابات تحليلية واستراتيجية وواضحة. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC.
+
+Conversation history:
+${historyText}
+
+User message:
+${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC.
+
+سياق المحادثة:
+${historyText}
+
+رسالة المستخدم:
+${text}`;
 
     const reply = await callGemini(prompt);
 
@@ -263,19 +301,30 @@ app.post("/webhook", async (req, res) => {
 });
 
 // -------------------------------
+//  24 SAAT HATIRLATMA SİSTEMİ
+// -------------------------------
+setInterval(async () => {
+  const now = Date.now();
+
+  for (const user in sessions) {
+    const s = sessions[user];
+    if (!s.lastMessageTime) continue;
+
+    const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
+
+    if (!s.followUpSent && diffHours >= 24) {
+      const reminderMessage =
+        "Merhaba, SamChe Company LLC olarak önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Dubai’de şirket kurma, oturum alma gibi konularda son kararınız nedir? Hazır olduğunuzda süreci birlikte netleştirip bir sonraki adıma geçebiliriz.";
+
+      await sendMessage(user, reminderMessage);
+
+      s.followUpSent = true;
+    }
+  }
+}, 60 * 60 * 1000);
+
+// -------------------------------
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
-
-
-
-
-
-
-
-
-
-
-
-
