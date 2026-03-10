@@ -1,9 +1,10 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (final)
+// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON’LU)
 
 import express from "express";
 import bodyParser from "body-parser";
 import axios from "axios";
 import dotenv from "dotenv";
+import cron from "node-cron";
 dotenv.config();
 
 const app = express();
@@ -281,9 +282,9 @@ app.post("/webhook", async (req, res) => {
 });
 
 // -------------------------------
-//  24 SAAT HATIRLATMA SİSTEMİ
+//  CRON TABANLI 24 SAAT HATIRLATMA
 // -------------------------------
-setInterval(async () => {
+cron.schedule("0 * * * *", async () => {
   const now = Date.now();
 
   for (const user in sessions) {
@@ -301,7 +302,7 @@ setInterval(async () => {
       s.followUpSent = true;
     }
   }
-}, 60 * 60 * 1000);
+});
 
 // -------------------------------
 //  SERVER
