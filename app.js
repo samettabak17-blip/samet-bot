@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON’LU)
+// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON, NİYET SKORU, PROFİL, KONU TESPİTİ, GÖRÜNTÜ + SES ANALİZİ)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -72,7 +72,7 @@ function corporateFallback(lang) {
 }
 
 // -------------------------------
-//  GEMINI 2.0 FLASH CALL
+//  GEMINI 2.0 FLASH CALL (TEXT)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
@@ -94,6 +94,92 @@ async function callGemini(prompt) {
   } catch (err) {
     console.error("Gemini API error:", err.response?.data || err.message);
     return null;
+  }
+}
+
+// -------------------------------
+//  GEMINI VISION (IMAGE ANALYSIS)
+// -------------------------------
+async function callGeminiVision(imageBuffer) {
+  const base64 = Buffer.from(imageBuffer).toString("base64");
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
+
+  try {
+    const response = await axios.post(
+      url,
+      {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inline_data: {
+                  mime_type: "image/jpeg",
+                  data: base64,
+                },
+              },
+              {
+                text:
+                  "Bu görüntüyü analiz et. İçeriği profesyonel ve açıklayıcı şekilde özetle. Eğer iş, şirket, oturum, Dubai, maliyet veya yapay zekâ ile ilgili bir bağlam varsa bunu da belirt.",
+              },
+            ],
+          },
+        ],
+      },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    const reply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    return reply.trim() || "Görüntü analiz edilemedi.";
+  } catch (err) {
+    console.error("Gemini Vision API error:", err.response?.data || err.message);
+    return "Görüntü analizi sırasında bir hata oluştu.";
+  }
+}
+
+// -------------------------------
+//  GEMINI SPEECH-TO-TEXT (AUDIO)
+// -------------------------------
+async function callGeminiSpeechToText(audioBuffer) {
+  const base64 = Buffer.from(audioBuffer).toString("base64");
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
+
+  try {
+    const response = await axios.post(
+      url,
+      {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                inline_data: {
+                  mime_type: "audio/ogg",
+                  data: base64,
+                },
+              },
+              {
+                text:
+                  "Bu ses kaydını metne çevir. Sadece kullanıcının söylediği içeriği, anlaşılır ve noktalama işaretleriyle birlikte yaz.",
+              },
+            ],
+          },
+        ],
+      },
+      { headers: { "Content-Type": "application/json" } }
+    );
+
+    const reply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    return reply.trim() || "Ses kaydı çözümlenemedi.";
+  } catch (err) {
+    console.error("Gemini STT API error:", err.response?.data || err.message);
+    return "Ses kaydı metne çevrilirken bir hata oluştu.";
   }
 }
 
@@ -146,6 +232,95 @@ const contactText = {
 };
 
 // -------------------------------
+//  TOPIC DETECTION & INTENT SCORE
+// -------------------------------
+function detectTopic(text) {
+  const t = text.toLowerCase();
+
+  if (
+    t.includes("şirket") ||
+    t.includes("company") ||
+    t.includes("business setup") ||
+    t.includes("company setup")
+  )
+    return "company";
+
+  if (
+    t.includes("oturum") ||
+    t.includes("residency") ||
+    t.includes("visa") ||
+    t.includes("ikamet")
+  )
+    return "residency";
+
+  if (
+    t.includes("ai") ||
+    t.includes("bot") ||
+    t.includes("chatbot") ||
+    t.includes("webchat")
+  )
+    return "ai";
+
+  if (
+    t.includes("maliyet") ||
+    t.includes("cost") ||
+    t.includes("price") ||
+    t.includes("ücret") ||
+    t.includes("bütçe") ||
+    t.includes("budget")
+  )
+    return "cost";
+
+  return "other";
+}
+
+function calculateIntentScore(text, currentScore = 0) {
+  const t = text.toLowerCase();
+  let score = currentScore;
+
+  if (
+    t.includes("şirket kurmak istiyorum") ||
+    t.includes("company setup") ||
+    t.includes("i want to open a company")
+  )
+    score += 30;
+
+  if (
+    t.includes("oturum almak istiyorum") ||
+    t.includes("residency") ||
+    t.includes("visa application")
+  )
+    score += 25;
+
+  if (
+    t.includes("bütçe") ||
+    t.includes("budget") ||
+    t.includes("fiyat") ||
+    t.includes("price")
+  )
+    score += 15;
+
+  if (
+    t.includes("ne kadar sürer") ||
+    t.includes("timeline") ||
+    t.includes("kaç günde")
+  )
+    score += 10;
+
+  if (
+    t.includes("merak ettim") ||
+    t.includes("sadece soruyorum") ||
+    t.includes("just curious")
+  )
+    score -= 10;
+
+  if (score < 0) score = 0;
+  if (score > 100) score = 100;
+
+  return score;
+}
+
+// -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
 app.get("/webhook", (req, res) => {
@@ -167,8 +342,6 @@ app.post("/webhook", async (req, res) => {
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
-    const text = message.text?.body || "";
-    const lower = text.toLowerCase();
 
     // FIRST MESSAGE
     if (!sessions[from]) {
@@ -176,7 +349,15 @@ app.post("/webhook", async (req, res) => {
         lang: null,
         history: [],
         lastMessageTime: Date.now(),
-        followUpSent: false,
+        followUpStage: 0,
+        intentScore: 0,
+        topics: [],
+        profile: {
+          name: null,
+          country: null,
+          budget: null,
+          interest: null,
+        },
       };
 
       await sendMessage(
@@ -201,9 +382,10 @@ app.post("/webhook", async (req, res) => {
 
     // LANGUAGE SELECTION
     if (!session.lang) {
-      if (text === "1") session.lang = "en";
-      else if (text === "2") session.lang = "tr";
-      else if (text === "3") session.lang = "ar";
+      const textRaw = message.text?.body || "";
+      if (textRaw === "1") session.lang = "en";
+      else if (textRaw === "2") session.lang = "tr";
+      else if (textRaw === "3") session.lang = "ar";
       else {
         await sendMessage(from, "Please choose 1, 2 or 3.");
         return res.sendStatus(200);
@@ -214,6 +396,100 @@ app.post("/webhook", async (req, res) => {
     }
 
     const lang = session.lang;
+
+    // ---------------------------
+    //  IMAGE HANDLING
+    // ---------------------------
+    if (message.type === "image" && message.image?.id) {
+      try {
+        const mediaId = message.image.id;
+
+        const mediaMeta = await axios.get(
+          `https://graph.facebook.com/v20.0/${mediaId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+            },
+          }
+        );
+
+        const mediaUrl = mediaMeta.data.url;
+
+        const file = await axios.get(mediaUrl, {
+          responseType: "arraybuffer",
+          headers: {
+            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          },
+        });
+
+        const analysis = await callGeminiVision(file.data);
+
+        session.history.push({ role: "user", text: "[GÖRÜNTÜ GÖNDERİLDİ]" });
+        if (session.history.length > 10) session.history.shift();
+        session.lastMessageTime = Date.now();
+        session.followUpStage = 0;
+
+        await sendMessage(
+          from,
+          "Gönderdiğiniz görüntüyü inceledim. Analiz sonucu:\n" + analysis
+        );
+
+        return res.sendStatus(200);
+      } catch (err) {
+        console.error("Image handling error:", err.response?.data || err.message);
+        await sendMessage(
+          from,
+          "Görüntü analizi sırasında bir sorun oluştu. Metin olarak sorarsanız detaylı yardımcı olabilirim."
+        );
+        return res.sendStatus(200);
+      }
+    }
+
+    // ---------------------------
+    //  AUDIO HANDLING
+    // ---------------------------
+    let text = message.text?.body || "";
+    if (message.type === "audio" && message.audio?.id) {
+      try {
+        const mediaId = message.audio.id;
+
+        const mediaMeta = await axios.get(
+          `https://graph.facebook.com/v20.0/${mediaId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+            },
+          }
+        );
+
+        const mediaUrl = mediaMeta.data.url;
+
+        const file = await axios.get(mediaUrl, {
+          responseType: "arraybuffer",
+          headers: {
+            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+          },
+        });
+
+        const transcript = await callGeminiSpeechToText(file.data);
+
+        await sendMessage(
+          from,
+          "Ses kaydınızı metne çevirdim:\n" + transcript
+        );
+
+        text = transcript;
+      } catch (err) {
+        console.error("Audio handling error:", err.response?.data || err.message);
+        await sendMessage(
+          from,
+          "Ses kaydı metne çevrilirken bir sorun oluştu. Metin olarak yazarsanız detaylı yardımcı olabilirim."
+        );
+        return res.sendStatus(200);
+      }
+    }
+
+    let lower = text.toLowerCase();
 
     // CONTACT
     if (
@@ -249,7 +525,15 @@ app.post("/webhook", async (req, res) => {
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
-    session.followUpSent = false;
+    session.followUpStage = 0;
+
+    // TOPIC & INTENT
+    const topic = detectTopic(text);
+    if (!session.topics) session.topics = [];
+    if (topic !== "other" && !session.topics.includes(topic)) {
+      session.topics.push(topic);
+    }
+    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
@@ -282,7 +566,7 @@ app.post("/webhook", async (req, res) => {
 });
 
 // -------------------------------
-//  CRON TABANLI 24 SAAT HATIRLATMA
+//  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
 // -------------------------------
 cron.schedule("0 * * * *", async () => {
   const now = Date.now();
@@ -292,14 +576,81 @@ cron.schedule("0 * * * *", async () => {
     if (!s.lastMessageTime) continue;
 
     const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
+    const topics = s.topics || [];
+    const lastTopic = topics.length ? topics[topics.length - 1] : "general";
 
-    if (!s.followUpSent && diffHours >= 24) {
-      const reminderMessage =
-        "Merhaba, SamChe Company LLC olarak önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Dubai’de şirket kurma, oturum alma gibi konularda son kararınız nedir? Hazır olduğunuzda süreci birlikte netleştirip bir sonraki adıma geçebiliriz.";
+    let message = null;
 
-      await sendMessage(user, reminderMessage);
+    // 1. HATIRLATMA – 24 SAAT
+    if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
+      if (lastTopic === "company") {
+        message =
+          "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
+      } else if (lastTopic === "residency") {
+        message =
+          "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
+      } else if (lastTopic === "ai") {
+        message =
+          "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
+      } else if (lastTopic === "cost") {
+        message =
+          "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
+      } else {
+        message =
+          "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
+      }
 
-      s.followUpSent = true;
+      await sendMessage(user, message);
+      s.followUpStage = 1;
+      continue;
+    }
+
+    // 2. HATIRLATMA – 72 SAAT
+    if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
+      if (lastTopic === "company") {
+        message =
+          "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
+      } else if (lastTopic === "residency") {
+        message =
+          "Tekrar merhaba. Dubai oturum süreciyle ilgili konuşmuştuk. Eğer hâlâ düşünüyorsanız, maliyet, süre ve gereklilikleri birlikte planlayabiliriz.";
+      } else if (lastTopic === "ai") {
+        message =
+          "Tekrar merhaba. AI chatbot ve otomasyon süreçleriyle ilgili konuşmuştuk. Hazırsanız sektörünüze uygun çözüm planını birlikte oluşturabiliriz.";
+      } else if (lastTopic === "cost") {
+        message =
+          "Tekrar merhaba. Maliyet ve süreç planlamasıyla ilgili konuşmuştuk. Hazırsanız size özel bir maliyet analizi oluşturabiliriz.";
+      } else {
+        message =
+          "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
+      }
+
+      await sendMessage(user, message);
+      s.followUpStage = 2;
+      continue;
+    }
+
+    // 3. HATIRLATMA – 7 GÜN
+    if (s.followUpStage === 2 && diffHours >= 24 * 7) {
+      if (lastTopic === "company") {
+        message =
+          "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
+      } else if (lastTopic === "residency") {
+        message =
+          "Merhaba, oturum süreciyle ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz.";
+      } else if (lastTopic === "ai") {
+        message =
+          "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
+      } else if (lastTopic === "cost") {
+        message =
+          "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır.  Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz";
+      } else {
+        message =
+          "Merhaba, bu son bilgilendirme mesajımızdır.  Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz";
+      }
+
+      await sendMessage(user, message);
+      s.followUpStage = 3;
+      continue;
     }
   }
 });
