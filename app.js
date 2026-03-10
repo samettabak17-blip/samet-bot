@@ -1,10 +1,11 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON, NİYET SKORU, PROFİL, KONU TESPİTİ, GÖRÜNTÜ + SES ANALİZİ)
+// app.js – WhatsApp + Gemini (STABLE FINAL – CRON, NİYET SKORU, PROFİL, KONU TESPİTİ, GÖRÜNTÜ + SES)
 
 import express from "express";
 import bodyParser from "body-parser";
 import axios from "axios";
 import dotenv from "dotenv";
 import cron from "node-cron";
+
 dotenv.config();
 
 const app = express();
@@ -72,7 +73,7 @@ function corporateFallback(lang) {
 }
 
 // -------------------------------
-//  GEMINI 2.0 FLASH CALL (TEXT)
+//  GEMINI TEXT (GEMINI 2.0 FLASH)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
@@ -338,7 +339,8 @@ app.get("/webhook", (req, res) => {
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
-    const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const message =
+      req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
@@ -405,7 +407,7 @@ app.post("/webhook", async (req, res) => {
         const mediaId = message.image.id;
 
         const mediaMeta = await axios.get(
-          `https://graph.facebook.com/v20.0/${mediaId}`,
+          `https://graph.facebook.com/v20.0/${mediaId}?fields=url`,
           {
             headers: {
               Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
@@ -436,7 +438,10 @@ app.post("/webhook", async (req, res) => {
 
         return res.sendStatus(200);
       } catch (err) {
-        console.error("Image handling error:", err.response?.data || err.message);
+        console.error(
+          "Image handling error:",
+          err.response?.data || err.message
+        );
         await sendMessage(
           from,
           "Görüntü analizi sırasında bir sorun oluştu. Metin olarak sorarsanız detaylı yardımcı olabilirim."
@@ -454,7 +459,7 @@ app.post("/webhook", async (req, res) => {
         const mediaId = message.audio.id;
 
         const mediaMeta = await axios.get(
-          `https://graph.facebook.com/v20.0/${mediaId}`,
+          `https://graph.facebook.com/v20.0/${mediaId}?fields=url`,
           {
             headers: {
               Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
@@ -480,7 +485,10 @@ app.post("/webhook", async (req, res) => {
 
         text = transcript;
       } catch (err) {
-        console.error("Audio handling error:", err.response?.data || err.message);
+        console.error(
+          "Audio handling error:",
+          err.response?.data || err.message
+        );
         await sendMessage(
           from,
           "Ses kaydı metne çevrilirken bir sorun oluştu. Metin olarak yazarsanız detaylı yardımcı olabilirim."
@@ -489,7 +497,7 @@ app.post("/webhook", async (req, res) => {
       }
     }
 
-    let lower = text.toLowerCase();
+    const lower = text.toLowerCase();
 
     // CONTACT
     if (
@@ -533,7 +541,10 @@ app.post("/webhook", async (req, res) => {
     if (topic !== "other" && !session.topics.includes(topic)) {
       session.topics.push(topic);
     }
-    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
+    session.intentScore = calculateIntentScore(
+      text,
+      session.intentScore || 0
+    );
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
@@ -642,10 +653,10 @@ cron.schedule("0 * * * *", async () => {
           "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
       } else if (lastTopic === "cost") {
         message =
-          "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır.  Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz";
+          "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız yeniden yardımcı olabiliriz.";
       } else {
         message =
-          "Merhaba, bu son bilgilendirme mesajımızdır.  Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz";
+          "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
       }
 
       await sendMessage(user, message);
@@ -659,4 +670,6 @@ cron.schedule("0 * * * *", async () => {
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("SamChe Bot running on port " + port));
+app.listen(port, () => {
+  console.log("SamChe Bot running on port " + port);
+});
