@@ -383,21 +383,27 @@ Bu metni SADECE kullanıcı bu konuyu sorarsa ya da açıklama yapman gerektiği
 
 OTURUM / ÇALIŞMA İZNİ AÇIKLAMA KURALI:
 - Kullanıcı “oturum almak istiyorum”, “Dubai’de çalışmak istiyorum”, “çalışma izni nasıl alınır?” gibi bir soru sorarsa:
-  1) Önce Dubai’nin RESMİ prosedürünü adım adım açıkla:
+  1) Önce Dubai’de oturum çeşitlerini ve Dubai'nin RESMİ oturum alma prosedürünü adım adım açıkla:
+     Oturum Çeşitleri:
+     -Şirket kurarak oturum alma
+     -Sponsorlu oturum alma
+     -Gayrimenkul yoluyla oturum alma
+     Dubai'nin RESMİ oturum alma prosedürü:
      - Entry Permit (giriş izni)
      - Status Change (durum değişikliği)
      - Medical Test (sağlık taraması)
      - Biometrics (biyometrik işlemler)
      - Emirates ID
      - Visa Stamping (pasaport damgalama)
-  2) Resmi prosedürü açıkladıktan sonra SamChe Company’nin sunduğu çözümü araya entegre et:
+  2) Resmi prosedürü açıkladıktan sonra hangi tür oturum almak istediğini sor.Kullanıcı, sponsorlu oturum almak istediğini yazarsa ya da bunu senden açıklamanı isterse SamChe Company’nin sunduğu çözümü araya entegre et:
      - Sponsorluk hizmeti
      - Şirket kurmadan oturum alma seçeneği
      - NOC ile çalışma hakkı
      - Ücretler ve adımlar
-  3) Bu iki anlatımı birleştirerek kullanıcıya hem resmi süreci hem de SamChe’nin çözümünü tek bir bütün olarak sun.
-- Resmi prosedürü anlatmadan direkt SamChe metnine geçme.
+  3) Kullanıcı, sponsorlu oturum almak istediğini belirtirse hem resmi süreci hem de SamChe’nin çözümünü tek bir bütün olarak sun.
+- Resmi prosedürü anlatmadan direkt SamChe metnine geçme ve kullanıcının önce hangi tür oturum almak istediğini netleştir.
 - Gereksiz tekrar yapma.
+-Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
 
 
 Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önermeyeceksin. Sen zaten SamChe Company LLC’nin kurumsal danışmanısın; “bir danışmandan destek alın” gibi ifadeler KESİNLİKLE yasaktır.
@@ -684,6 +690,7 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
