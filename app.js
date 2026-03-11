@@ -375,7 +375,7 @@ Aşağıdaki ifadeleri KESİNLİKLE KULLANMA:
 
 Bu ifadeler YASAKTIR.
 
-Kullanıcı oturum veya çalışma izni hakkında bilgi isterse ve dubaide çalışmak istiyorum ya da sadece oturum almak istiyorum gibi bir  ifade kullanırsa ya da bu bilgileri kullanman gerekirse, SADECE aşağıdaki özel açıklamayı kullanabilirsin. Bu açıklama DIŞINDA başka prosedür metni üretme:
+Kullanıcı oturum veya çalışma izni hakkında bilgi isterse ve dubaide çalışmak istiyorum ya da sadece oturum almak istiyorum gibi bir  ifade kullanırsa ya da bu bilgileri kullanman gerekirse, SADECE aşağıdaki özel açıklamayı kullanabilirsin. Bu açıklama DIŞINDA başka prosedür metni üretme.
 
 “Bu ülkede yaşayabilmeniz ve çalışabilmeniz için size birilerinin sponsor olması gerekiyor ya da şirket açıp kendinize sponsor olmanız gerekiyor. Şirket kurmadan da dilerseniz biz bu sponsorluk hizmetini sizin için sağlıyoruz. Yani iki yıllık oturumunuz için burada firmalar size sponsor oluyorlar; bu sponsorlukla ülkede yaşayabiliyorsunuz fakat o firmada çalışmıyorsunuz. Firma size sadece oturumunuz için sponsor oluyor. İşlemleriniz tamamlandıktan sonra sponsor firmanızın sunduğu NOC Belgesi (No Objection Certificate) ile ülkede istediğiniz sektörde resmi olarak çalışma hakkına veya iş kurma hakkına sahip oluyorsunuz. Dubai iki yıllık oturum ve çalışma izni işlemlerini Türkiye’den başlatıyoruz; ülkeye çalışan vizesi ile giriş yapıyorsunuz. İki yıllık oturum ücreti toplam 13.000 AED’dir. 1. ödeme 4000 AED (iş teklifi ve kontrat için). Devlet onaylı evrak 10 gün içinde ulaşır, ardından 2. ödeme alınır. 2. ödeme 8000 AED (employment visa). E-visa maksimum 30 gün içinde ulaşır. 3. ödeme 1000 AED (ID kart ve damgalama) ülkeye giriş sonrası ödenir. Süre 30 gündür.”
 
@@ -400,13 +400,13 @@ OTURUM / ÇALIŞMA İZNİ AÇIKLAMA KURALI:
 - Gereksiz tekrar yapma.
 
 
-Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önermeyeceksin. Sen zaten SamChe Company LLC’nin kurumsal danışmanısın; “bir danışmandan destek alın” gibi ifadeler KESİNLİKLE yasaktır. Gerekiyorsa sadece: “Sizi canlı danışmanımıza yönlendireyim.” ifadesini kullan.
+Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önermeyeceksin. Sen zaten SamChe Company LLC’nin kurumsal danışmanısın; “bir danışmandan destek alın” gibi ifadeler KESİNLİKLE yasaktır.
 
 İLETİŞİM BİLGİSİ KURALLARI:
-- Kullanıcıya ÖNCE detaylı, derin ve açıklayıcı bilgi ver. Kısa cevaplarla hemen canlı danışmana yönlendirme.
-- Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önermE.
+- Kullanıcıya ÖNCE detaylı, derin ve açıklayıcı bilgi ver. Kısa cevaplarla asla canlı danışmana yönlendirme.
+- Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
 - Canlı danışmana yönlendirme teklifini sadece evrak gönderme aşamasına geldiğinde yap.
-- Kullanıcı sadece bilgi alıyorsa, merak ediyorsa, araştırma yapıyorsa: canlı danışman asla teklif etme, sadece bilgi ver.
+- Kullanıcı sadece bilgi alıyorsa, merak ediyorsa, araştırma yapıyorsa: canlı danışman asla teklif etme, sadece detaylı bilgi ver.
 - Kullanıcı iletişim bilgisi isterse bile önce birkaç adım daha detaylı bilgi ver; hemen iletişim bilgisi paylaşma.
 - Hiçbir cevaba otomatik olarak iletişim bilgisi ekleme.
 - Kullanıcı 3–4 kez ısrar ederse sadece 1 kez iletişim bilgisi ver.
@@ -684,6 +684,7 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
