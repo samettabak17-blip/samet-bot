@@ -1,12 +1,10 @@
-// app.js – WhatsApp + Gemini
-// FINAL – KURUMSAL PROMPT (3 DİL), GÖRÜNTÜ + SES ANALİZİ, CRON, NİYET SKORU
+// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON, NİYET SKORU, PROFİL, KONU TESPİTİ)
 
-const express = require("express");
-const bodyParser = require("body-parser");
-const axios = require("axios");
-const dotenv = require("dotenv");
-const cron = require("node-cron");
-
+import express from "express";
+import bodyParser from "body-parser";
+import axios from "axios";
+import dotenv from "dotenv";
+import cron from "node-cron";
 dotenv.config();
 
 const app = express();
@@ -22,8 +20,6 @@ const sessions = {};
 // -------------------------------
 async function sendMessage(to, body) {
   try {
-    if (!body || typeof body !== "string") return;
-
     const chunks = [];
     for (let i = 0; i < body.length; i += 4000) {
       chunks.push(body.substring(i, i + 4000));
@@ -31,36 +27,56 @@ async function sendMessage(to, body) {
 
     for (const chunk of chunks) {
       await axios.post(
-        "https://graph.facebook.com/v20.0/" +
-          process.env.WHATSAPP_PHONE_ID +
-          "/messages",
+        `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
         {
           messaging_product: "whatsapp",
-          to: to,
+          to,
           text: { body: chunk },
         },
         {
           headers: {
-            Authorization: "Bearer " + process.env.WHATSAPP_TOKEN,
+            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
             "Content-Type": "application/json",
           },
         }
       );
     }
   } catch (err) {
-    console.error(
-      "WhatsApp send error:",
-      err.response && err.response.data ? err.response.data : err.message
-    );
+    console.error("WhatsApp send error:", err.response?.data || err.message);
   }
 }
 
 // -------------------------------
-//  GEMINI TEXT (GEMINI 2.0 FLASH)
+//  CORPORATE FALLBACK
+// -------------------------------
+function corporateFallback(lang) {
+  if (lang === "tr") {
+    return (
+      "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
+      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz.\n\n" +
+      "Canlı temsilci: +971 52 728 8586"
+    );
+  }
+  if (lang === "en") {
+    return (
+      "I couldn’t fully understand your question, but I’d be glad to assist. " +
+      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
+      "Live consultant: +971 52 728 8586"
+    );
+  }
+  return (
+    "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
+    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي.\n\n" +
+    "المستشار المباشر: ‎+971 52 728 8586"
+  );
+}
+
+// -------------------------------
+//  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -72,148 +88,55 @@ async function callGemini(prompt) {
       { headers: { "Content-Type": "application/json" } }
     );
 
-    const data = response.data;
     const reply =
-      data &&
-      data.candidates &&
-      data.candidates[0] &&
-      data.candidates[0].content &&
-      data.candidates[0].content.parts &&
-      data.candidates[0].content.parts[0] &&
-      data.candidates[0].content.parts[0].text
-        ? data.candidates[0].content.parts[0].text
-        : "";
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     return reply.trim() || null;
   } catch (err) {
-    console.error(
-      "Gemini API error:",
-      err.response && err.response.data ? err.response.data : err.message
-    );
+    console.error("Gemini API error:", err.response?.data || err.message);
     return null;
-  }
-}
-
-// -------------------------------
-//  GEMINI VISION (IMAGE ANALYSIS)
-// -------------------------------
-async function callGeminiVision(imageBuffer, mimeType) {
-  const base64 = Buffer.from(imageBuffer).toString("base64");
-  const url =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
-
-  try {
-    const response = await axios.post(
-      url,
-      {
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inline_data: {
-                  mime_type: mimeType || "image/jpeg",
-                  data: base64,
-                },
-              },
-              {
-                text:
-                  "Bu görüntüyü analiz et. İçeriği profesyonel, kurumsal ve açıklayıcı şekilde özetle. Eğer iş, şirket, Dubai, oturum, maliyet veya yapay zekâ ile ilgili bir bağlam varsa bunu özellikle vurgula.",
-              },
-            ],
-          },
-        ],
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    const reply =
-      response.data &&
-      response.data.candidates &&
-      response.data.candidates[0] &&
-      response.data.candidates[0].content &&
-      response.data.candidates[0].content.parts &&
-      response.data.candidates[0].content.parts[0] &&
-      response.data.candidates[0].content.parts[0].text
-        ? response.data.candidates[0].content.parts[0].text
-        : "";
-    return reply.trim() || "Görüntü analiz edilemedi.";
-  } catch (err) {
-    console.error(
-      "Gemini Vision API error:",
-      err.response && err.response.data ? err.response.data : err.message
-    );
-    return "Görüntü analizi sırasında bir hata oluştu.";
-  }
-}
-
-// -------------------------------
-//  GEMINI SPEECH-TO-TEXT (AUDIO)
-// -------------------------------
-async function callGeminiSpeechToText(audioBuffer, mimeType) {
-  const base64 = Buffer.from(audioBuffer).toString("base64");
-  const url =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
-
-  try {
-    const response = await axios.post(
-      url,
-      {
-        contents: [
-          {
-            role: "user",
-            parts: [
-              {
-                inline_data: {
-                  mime_type: mimeType || "audio/ogg",
-                  data: base64,
-                },
-              },
-              {
-                text:
-                  "Bu ses kaydını metne çevir. Sadece kullanıcının söylediği içeriği, anlaşılır ve noktalama işaretleriyle birlikte yaz.",
-              },
-            ],
-          },
-        ],
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
-
-    const reply =
-      response.data &&
-      response.data.candidates &&
-      response.data.candidates[0] &&
-      response.data.candidates[0].content &&
-      response.data.candidates[0].content.parts &&
-      response.data.candidates[0].content.parts[0] &&
-      response.data.candidates[0].content.parts[0].text
-        ? response.data.candidates[0].content.parts[0].text
-        : "";
-    return reply.trim() || "Ses kaydı çözümlenemedi.";
-  } catch (err) {
-    console.error(
-      "Gemini STT API error:",
-      err.response && err.response.data ? err.response.data : err.message
-    );
-    return "Ses kaydı metne çevrilirken bir hata oluştu.";
   }
 }
 
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
+const servicesList = {
+  tr:
+    "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
+    "1. Şirketlere Özel Yapay Zekâ Sistemleri\n" +
+    "2. Dijital Büyüme & İçerik Stratejisi\n" +
+    "3. Marka Yönetimi & Sosyal Medya\n" +
+    "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
+    "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
+    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
+  en:
+    "SamChe Company LLC provides:\n" +
+    "1. Private AI Systems\n" +
+    "2. Digital Growth & Content Strategy\n" +
+    "3. Branding & Social Media\n" +
+    "4. Audience Growth & Performance Optimization\n" +
+    "5. UAE Business Setup & Market Entry\n" +
+    "6. Free Zone Selection & Compliance",
+  ar:
+    "تقدم SamChe Company LLC:\n" +
+    "1. أنظمة ذكاء اصطناعي خاصة\n" +
+    "2. استراتيجية النمو الرقمي والمحتوى\n" +
+    "3. إدارة العلامة التجارية ووسائل التواصل\n" +
+    "4. نمو الجمهور وتحسين الأداء\n" +
+    "5. تأسيس الأعمال في الإمارات\n" +
+    "6. اختيار المناطق الحرة والامتثال",
+};
+
 const introAfterLang = {
   tr:
     "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri ve yapay zekâ çözümleri hakkında sorularınızı yanıtlayabilirim.\n\n",
+    "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can assist you with UAE company formation, residency, visas, cost of living, business plans, strategies, and AI solutions.\n\n",
+    "I can answer your questions about UAE company formation, residency, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n",
   ar:
     "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "أستطيع مساعدتك في تأسيس الشركات، الإقامة، التأشيرات، تكاليف المعيشة، وخطط الأعمال.\n\n",
+    "أستطيع مساعدتك في تأسيس الشركات في الإمارات، الإقامة، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n",
 };
 
 const contactText = {
@@ -229,79 +152,79 @@ function detectTopic(text) {
   const t = text.toLowerCase();
 
   if (
-    t.indexOf("şirket") !== -1 ||
-    t.indexOf("company") !== -1 ||
-    t.indexOf("business setup") !== -1 ||
-    t.indexOf("company setup") !== -1
+    t.includes("şirket") ||
+    t.includes("company") ||
+    t.includes("business setup") ||
+    t.includes("company setup")
   )
     return "company";
 
   if (
-    t.indexOf("oturum") !== -1 ||
-    t.indexOf("residency") !== -1 ||
-    t.indexOf("visa") !== -1 ||
-    t.indexOf("ikamet") !== -1
+    t.includes("oturum") ||
+    t.includes("residency") ||
+    t.includes("visa") ||
+    t.includes("ikamet")
   )
     return "residency";
 
   if (
-    t.indexOf("ai") !== -1 ||
-    t.indexOf("bot") !== -1 ||
-    t.indexOf("chatbot") !== -1 ||
-    t.indexOf("webchat") !== -1
+    t.includes("ai") ||
+    t.includes("bot") ||
+    t.includes("chatbot") ||
+    t.includes("webchat")
   )
     return "ai";
 
   if (
-    t.indexOf("maliyet") !== -1 ||
-    t.indexOf("cost") !== -1 ||
-    t.indexOf("price") !== -1 ||
-    t.indexOf("ücret") !== -1 ||
-    t.indexOf("bütçe") !== -1 ||
-    t.indexOf("budget") !== -1
+    t.includes("maliyet") ||
+    t.includes("cost") ||
+    t.includes("price") ||
+    t.includes("ücret") ||
+    t.includes("bütçe") ||
+    t.includes("budget")
   )
     return "cost";
 
   return "other";
 }
 
-function calculateIntentScore(text, currentScore) {
+function calculateIntentScore(text, currentScore = 0) {
   const t = text.toLowerCase();
-  let score = currentScore || 0;
+  let score = currentScore;
 
   if (
-    t.indexOf("şirket kurmak istiyorum") !== -1 ||
-    t.indexOf("company setup") !== -1 ||
-    t.indexOf("i want to open a company") !== -1
+    t.includes("şirket kurmak istiyorum") ||
+    t.includes("company setup") ||
+    t.includes("i want to open a company")
   )
     score += 30;
 
   if (
-    t.indexOf("oturum almak istiyorum") !== -1 ||
-    t.indexOf("residency") !== -1 ||
-    t.indexOf("visa application") !== -1
+    t.includes("oturum almak istiyorum") ||
+    t.includes("residency") ||
+    t.includes("visa application")
   )
     score += 25;
 
   if (
-    t.indexOf("bütçe") !== -1 ||
-    t.indexOf("budget") !== -1 ||
-    t.indexOf("fiyat") !== -1 ||
-    t.indexOf("price") !== -1
+    t.includes("bütçe") ||
+    t.includes("budget") ||
+    t.includes("fiyat") ||
+    t.includes("price")
   )
     score += 15;
 
   if (
-    t.indexOf("ne kadar sürer") !== -1 ||
-    t.indexOf("timeline") !== -1 ||
-    t.indexOf("kaç günde") !== -1
+    t.includes("ne kadar sürer") ||
+    t.includes("timeline") ||
+    t.includes("kaç günde")
   )
     score += 10;
 
   if (
-    t.indexOf("merak ettim") !== -1 ||
-    t.indexOf("sadece soruyorum") !== -1 ||
-    t.indexOf("just curious") !== -1
+    t.includes("merak ettim") ||
+    t.includes("sadece soruyorum") ||
+    t.includes("just curious")
   )
     score -= 10;
 
@@ -314,7 +237,7 @@ function calculateIntentScore(text, currentScore) {
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
-app.get("/webhook", function (req, res) {
+app.get("/webhook", (req, res) => {
   if (
     req.query["hub.mode"] === "subscribe" &&
     req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN
@@ -327,16 +250,14 @@ app.get("/webhook", function (req, res) {
 // -------------------------------
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
-app.post("/webhook", async function (req, res) {
+app.post("/webhook", async (req, res) => {
   try {
-    const entry = req.body.entry && req.body.entry[0];
-    const change = entry && entry.changes && entry.changes[0];
-    const value = change && change.value;
-    const message = value && value.messages && value.messages[0];
-
+    const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
+    const text = message.text?.body || "";
+    const lower = text.toLowerCase();
 
     // FIRST MESSAGE
     if (!sessions[from]) {
@@ -347,6 +268,12 @@ app.post("/webhook", async function (req, res) {
         followUpStage: 0,
         intentScore: 0,
         topics: [],
+        profile: {
+          name: null,
+          country: null,
+          budget: null,
+          interest: null,
+        },
       };
 
       await sendMessage(
@@ -371,10 +298,9 @@ app.post("/webhook", async function (req, res) {
 
     // LANGUAGE SELECTION
     if (!session.lang) {
-      const textRaw = message.text && message.text.body ? message.text.body : "";
-      if (textRaw === "1") session.lang = "en";
-      else if (textRaw === "2") session.lang = "tr";
-      else if (textRaw === "3") session.lang = "ar";
+      if (text === "1") session.lang = "en";
+      else if (text === "2") session.lang = "tr";
+      else if (text === "3") session.lang = "ar";
       else {
         await sendMessage(from, "Please choose 1, 2 or 3.");
         return res.sendStatus(200);
@@ -386,116 +312,13 @@ app.post("/webhook", async function (req, res) {
 
     const lang = session.lang;
 
-    // ---------------------------
-    //  IMAGE HANDLING (FINAL)
-// ---------------------------
-    if (message.type === "image" && message.image && message.image.id) {
-      try {
-        const mediaId = message.image.id;
-
-        const mediaMeta = await axios.get(
-          `https://graph.facebook.com/v20.0/${mediaId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-            },
-          }
-        );
-
-        const mediaUrl = mediaMeta.data.url;
-        const mimeType = mediaMeta.data.mime_type || "image/jpeg";
-
-        const file = await axios.get(mediaUrl, {
-          responseType: "arraybuffer",
-          headers: {
-            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          },
-        });
-
-        const analysis = await callGeminiVision(file.data, mimeType);
-
-        session.history.push({ role: "user", text: "[GÖRÜNTÜ GÖNDERİLDİ]" });
-        if (session.history.length > 10) session.history.shift();
-        session.lastMessageTime = Date.now();
-        session.followUpStage = 0;
-
-        await sendMessage(
-          from,
-          "Gönderdiğiniz görüntüyü inceledim. Analiz sonucu:\n" + analysis
-        );
-
-        return res.sendStatus(200);
-      } catch (err) {
-        console.error(
-          "Image handling error:",
-          err.response && err.response.data ? err.response.data : err.message
-        );
-        await sendMessage(
-          from,
-          "Görüntü analizi sırasında bir sorun oluştu. Metin olarak sorarsanız detaylı yardımcı olabilirim."
-        );
-        return res.sendStatus(200);
-      }
-    }
-
-    // ---------------------------
-    //  AUDIO HANDLING
-    // ---------------------------
-    let text = message.text && message.text.body ? message.text.body : "";
-
-    if (message.type === "audio" && message.audio && message.audio.id) {
-      try {
-        const mediaId = message.audio.id;
-
-        const mediaMeta = await axios.get(
-          `https://graph.facebook.com/v20.0/${mediaId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-            },
-          }
-        );
-
-        const mediaUrl = mediaMeta.data.url;
-        const mimeType = mediaMeta.data.mime_type || "audio/ogg";
-
-        const file = await axios.get(mediaUrl, {
-          responseType: "arraybuffer",
-          headers: {
-            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          },
-        });
-
-        const transcript = await callGeminiSpeechToText(file.data, mimeType);
-
-        await sendMessage(
-          from,
-          "Ses kaydınızı metne çevirdim:\n" + transcript
-        );
-
-        text = transcript;
-      } catch (err) {
-        console.error(
-          "Audio handling error:",
-          err.response && err.response.data ? err.response.data : err.message
-        );
-        await sendMessage(
-          from,
-          "Ses kaydı metne çevrilirken bir sorun oluştu. Metin olarak yazarsanız detaylı yardımcı olabilirim."
-        );
-        return res.sendStatus(200);
-      }
-    }
-
-    const lower = text.toLowerCase();
-
     // CONTACT
     if (
-      lower.indexOf("contact") !== -1 ||
-      lower.indexOf("iletişim") !== -1 ||
-      lower.indexOf("whatsapp") !== -1 ||
-      lower.indexOf("call") !== -1 ||
-      lower.indexOf("telefon") !== -1
+      lower.includes("contact") ||
+      lower.includes("iletişim") ||
+      lower.includes("whatsapp") ||
+      lower.includes("call") ||
+      lower.includes("telefon")
     ) {
       await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
@@ -503,14 +326,14 @@ app.post("/webhook", async function (req, res) {
 
     // AI CHATBOT PRICE / PLAN REDIRECT
     if (
-      lower.indexOf("ai bot") !== -1 ||
-      lower.indexOf("chatbot") !== -1 ||
-      lower.indexOf("bot fiyat") !== -1 ||
-      lower.indexOf("ai fiyat") !== -1 ||
-      lower.indexOf("chatbot fiyat") !== -1 ||
-      lower.indexOf("webchat") !== -1 ||
-      lower.indexOf("ai plan") !== -1 ||
-      lower.indexOf("bot plan") !== -1
+      lower.includes("ai bot") ||
+      lower.includes("chatbot") ||
+      lower.includes("bot fiyat") ||
+      lower.includes("ai fiyat") ||
+      lower.includes("chatbot fiyat") ||
+      lower.includes("webchat") ||
+      lower.includes("ai plan") ||
+      lower.includes("bot plan")
     ) {
       await sendMessage(
         from,
@@ -520,7 +343,7 @@ app.post("/webhook", async function (req, res) {
     }
 
     // MEMORY UPDATE
-    session.history.push({ role: "user", text: text });
+    session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
     session.followUpStage = 0;
@@ -528,39 +351,32 @@ app.post("/webhook", async function (req, res) {
     // TOPIC & INTENT
     const topic = detectTopic(text);
     if (!session.topics) session.topics = [];
-    if (topic !== "other" && session.topics.indexOf(topic) === -1) {
+    if (topic !== "other" && !session.topics.includes(topic)) {
       session.topics.push(topic);
     }
-    session.intentScore = calculateIntentScore(text, session.intentScore);
+    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
 
     const historyText = session.history
-      .map(function (m) {
-        return "User: " + m.text;
-      })
+      .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    // -------------------------------
-    //  FINAL KURUMSAL PROMPT (3 DİL)
-//  (SADECE BU YAPI KULLANILIYOR)
-// -------------------------------
+    // PROMPT
     const prompt =
       lang === "tr"
         ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.Kullanıcı iletişim bilgileri istendiğinde ya da canlı bir temsilci ile doğrudan sohbet etmek istediğinde, iletişim bilgilerini doğrudan verme.önce kullanıcının niyetini öğren,Kullanıcı bilgi aldıktan sonra kullanıcıyı bilgilendirdikten sonra ciddi niyet gösterirse (şirket kurmak, oturum almak, Dubai’de işlem yapmak) onu canlı danışmana yönlendir ve iletişim bilgilerini ver. Ciddi niyet yoksa iletişim bilgisi verme.Kullanıcıya detaylı bilgi vermeden uzman bir danışmanla sizi görüştüreceğiz gibi söylemler kullanma.Öncelikli amacın kullanıcının niyetini anlamak ve detaylı bilgi vermek olsun. Eğer kullanıcı sadece sohbet ediyor, bilgi alıyor, merak ediyor, ciddi değilse,İletişim bilgisi asla verme,sadece bilgi ver.hiçbir mesaja iletişim bilgisi ekleme.kullanıcı iletişim bilgisi alma konusunda ısrarcı olursa(3-4 kez iletişim bilgisi isterse) sadece 1 kere ver.iletişim bilgileri: mail:info@samchecompany.com-telefon: +971 50 179 38 80 - +971 52 662 28 75- web: https://samchecompany.com- instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc Linkleri asla Markdown formatında yazma. Linkleri sadece düz metin olarak yaz. Sohbet geçmişi:\n${historyText}\n\nKullanıcının son mesajı:\n${text}`
         : lang === "en"
-        ? `You are the corporate AI consultant of SamChe Company LLC. Provide professional, strategic, analytical and advisory answers. When the user asks for contact details or to speak directly with a live consultant, do not immediately share contact details. First understand the user’s intent. After you provide information, if the user shows serious intent (company setup, residency, doing business in Dubai), then direct them to a live consultant and share the contact details. If there is no serious intent, do not share contact details. Do not say “we will connect you with an expert consultant” before giving sufficient information. Your primary goal is to understand the user’s intent and provide detailed information. If the user is only chatting, asking for general info, or is not serious, never share contact details, only provide information. Do not add contact details to every message. If the user insists on getting contact details (3–4 times), share them only once. Contact details: mail:info@samchecompany.com - phone: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc Do not format links in Markdown. Use plain text only. Conversation history:\n${historyText}\n\nUser message:\n${text}`
-        : `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. قدّم إجابات مهنية، استراتيجية، تحليلية وإرشادية. عند طلب المستخدم لبيانات التواصل أو التحدث مباشرة مع مستشار بشري، لا تقدّم بيانات التواصل فورًا. افهم نية المستخدم أولًا. بعد تقديم المعلومات، إذا أظهر المستخدم نية جدية (تأسيس شركة، الحصول على إقامة، القيام بأعمال في دبي)، عندها وجّهه إلى مستشار مباشر وقدّم بيانات التواصل. إذا لم تكن هناك نية جدية، لا تقدّم بيانات التواصل. لا تستخدم عبارات مثل "سنوصلكم بخبير" قبل تقديم معلومات كافية. الهدف الأساسي هو فهم نية المستخدم وتقديم معلومات تفصيلية. إذا كان المستخدم فقط يستفسر أو يتحدث بشكل عام وغير جدي، لا تقدّم بيانات التواصل، بل قدّم المعلومات فقط. لا تضف بيانات التواصل في كل رسالة. إذا أصر المستخدم على الحصول على بيانات التواصل (3–4 مرات)، قدّمها مرة واحدة فقط. بيانات التواصل: mail:info@samchecompany.com - phone: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin:https://www.linkedin.com/company/samche-company-llc لا تستخدم Markdown للروابط، استخدم نصًا عاديًا فقط. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
+        ? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, advisory answers. Do not directly share contact details or connect to a live consultant unless the user clearly shows serious intent (such as setting up a company, obtaining residency, or doing business in Dubai) after receiving sufficient information. Your primary goal is to understand the user's intent and provide detailed, helpful information. If the user is only chatting, exploring, or casually asking, do not share any contact details. Only if the user insists 3–4 times specifically asking for contact details, share them once. Contact details: mail: info@samchecompany.com - phone: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin: https://www.linkedin.com/company/samche-company-llc. Never format links in Markdown, always plain text. Conversation history:\n${historyText}\n\nUser message:\n${text}`
+        : `أنت المستشار الذكي لشركة SamChe Company LLC. قدّم إجابات مهنية، تحليلية واستشارية. لا تشارك بيانات التواصل أو تربط المستخدم بمستشار مباشر إلا إذا أظهر نية جدية واضحة (مثل تأسيس شركة، الحصول على إقامة، أو القيام بأعمال في دبي) بعد حصوله على معلومات كافية. هدفك الأساسي هو فهم نية المستخدم وتقديم معلومات تفصيلية ومفيدة. إذا كان المستخدم فقط يستفسر أو يتحدث بشكل عام، فلا تشارك أي بيانات تواصل. إذا أصر المستخدم 3–4 مرات على طلب بيانات التواصل، شاركها مرة واحدة فقط. بيانات التواصل: mail: info@samchecompany.com - phone: +971 50 179 38 80 - +971 52 662 28 75 - web: https://samchecompany.com - instagram: https://www.instagram.com/samchecompany - linkedin: https://www.linkedin.com/company/samche-company-llc. لا تكتب الروابط بصيغة Markdown، بل كنص عادي فقط. سياق المحادثة:\n${historyText}\n\nرسالة المستخدم:\n${text}`;
 
     const reply = await callGemini(prompt);
 
     if (!reply) {
-      await sendMessage(
-        from,
-        "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. Daha net bir şekilde tekrar yazabilirsiniz."
-      );
+      await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
     session.history.push({ role: "assistant", text: reply });
+
     await sendMessage(from, reply);
 
     res.sendStatus(200);
@@ -573,7 +389,7 @@ app.post("/webhook", async function (req, res) {
 // -------------------------------
 //  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
 // -------------------------------
-cron.schedule("0 * * * *", async function () {
+cron.schedule("0 * * * *", async () => {
   const now = Date.now();
 
   for (const user in sessions) {
@@ -664,6 +480,4 @@ cron.schedule("0 * * * *", async function () {
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
-app.listen(port, function () {
-  console.log("SamChe Bot running on port " + port);
-});
+app.listen(port, () => console.log("SamChe Bot running on port " + port));
