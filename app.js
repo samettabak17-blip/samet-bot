@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash
+// app.js – WhatsApp + Gemini
 // FINAL – KURUMSAL PROMPT (3 DİL), GÖRÜNTÜ + SES ANALİZİ, CRON, NİYET SKORU
 
 const express = require("express");
@@ -60,7 +60,7 @@ async function sendMessage(to, body) {
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -99,7 +99,7 @@ async function callGemini(prompt) {
 async function callGeminiVision(imageBuffer, mimeType) {
   const base64 = Buffer.from(imageBuffer).toString("base64");
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -153,7 +153,7 @@ async function callGeminiVision(imageBuffer, mimeType) {
 async function callGeminiSpeechToText(audioBuffer, mimeType) {
   const base64 = Buffer.from(audioBuffer).toString("base64");
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -387,28 +387,28 @@ app.post("/webhook", async function (req, res) {
     const lang = session.lang;
 
     // ---------------------------
-    //  IMAGE HANDLING
-    // ---------------------------
+    //  IMAGE HANDLING (FINAL)
+// ---------------------------
     if (message.type === "image" && message.image && message.image.id) {
       try {
         const mediaId = message.image.id;
 
         const mediaMeta = await axios.get(
-          "https://graph.facebook.com/v20.0/" + mediaId,
+          `https://graph.facebook.com/v20.0/${mediaId}`,
           {
             headers: {
-              Authorization: "Bearer " + process.env.WHATSAPP_TOKEN,
+              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
             },
           }
         );
 
-        const mediaUrl = mediaMeta.data && mediaMeta.data.url;
-        const mimeType = mediaMeta.data && mediaMeta.data.mime_type;
+        const mediaUrl = mediaMeta.data.url;
+        const mimeType = mediaMeta.data.mime_type || "image/jpeg";
 
         const file = await axios.get(mediaUrl, {
           responseType: "arraybuffer",
           headers: {
-            Authorization: "Bearer " + process.env.WHATSAPP_TOKEN,
+            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
           },
         });
 
@@ -448,21 +448,21 @@ app.post("/webhook", async function (req, res) {
         const mediaId = message.audio.id;
 
         const mediaMeta = await axios.get(
-          "https://graph.facebook.com/v20.0/" + mediaId,
+          `https://graph.facebook.com/v20.0/${mediaId}`,
           {
             headers: {
-              Authorization: "Bearer " + process.env.WHATSAPP_TOKEN,
+              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
             },
           }
         );
 
-        const mediaUrl = mediaMeta.data && mediaMeta.data.url;
-        const mimeType = mediaMeta.data && mediaMeta.data.mime_type;
+        const mediaUrl = mediaMeta.data.url;
+        const mimeType = mediaMeta.data.mime_type || "audio/ogg";
 
         const file = await axios.get(mediaUrl, {
           responseType: "arraybuffer",
           headers: {
-            Authorization: "Bearer " + process.env.WHATSAPP_TOKEN,
+            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
           },
         });
 
