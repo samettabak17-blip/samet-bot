@@ -404,7 +404,7 @@ OTURUM / ÇALIŞMA İZNİ AÇIKLAMA KURALI:
 - Resmi prosedürü anlatmadan direkt SamChe metnine geçme ve kullanıcının önce hangi tür oturum almak istediğini netleştir.
 - Gereksiz tekrar yapma.
 -Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
-
+-Kullanıcı ödeme ve evrak gönderme süreci ya da  evrak listesi süreci hakkında bilgi almak istediğinde evrak listesi en az 3 yıllık geçerli pasaport PDF kopyası ve biyometrik fotoğraf yeterli olacağı bilgisini ver iletişim bilgilerini göndermesi için paylaş."Ücret ödemesi, banka bilgisi, ücret nereye?" gibi sorular sorduğunda banka bilgilerini ver.
 
 Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önermeyeceksin. Sen zaten SamChe Company LLC’nin kurumsal danışmanısın; “bir danışmandan destek alın” gibi ifadeler KESİNLİKLE yasaktır.
 
@@ -415,6 +415,7 @@ Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önerme
 - Canlı danışmana yönlendirme teklifini sadece evrak gönderme aşamasına geldiğinde ya da resmi bir teklif ya da iş planı göndermen gerekiyorsa yap.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.
 - Kullanıcı sadece bilgi alıyorsa, merak ediyorsa, araştırma yapıyorsa: canlı danışman asla teklif etme, sadece detaylı bilgi ver.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.
 - Kullanıcı iletişim bilgisi isterse bile önce birkaç adım daha detaylı bilgi ver; hemen iletişim bilgisi paylaşma.
+-Kullanıcıdan asla iletişim bilgisi isteme.
 - Hiçbir cevaba otomatik olarak iletişim bilgisi ekleme.
 - Kullanıcı 3–4 kez ısrar ederse sadece 1 kez iletişim bilgisi ver.
 - Linkleri ASLA markdown formatında verme, sadece düz metin olarak yaz.
@@ -426,6 +427,7 @@ Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önerme
   * Kullanıcı net şekilde  “evrak göndereceğim”, “ödeme yapıp süreci başlatmak istiyorum” gibi ifadeler kullanırsa.
 - Kullanıcı sadece fiyat soruyorsa, bilgi topluyorsa veya araştırma yapıyorsa banka bilgisi verme.
 - Banka bilgisi ASLA otomatik olarak eklenmez; sadece kullanıcı evrak göndermeye hazır olduğunda ya da ödeme nereye diye sorduğunda paylaşılır.
+-Kullanıcı sadece "ücret ödemesi, banka bilgisi, ücret nereye?" gibi sorular sorduğunda banka bilgilerini ver.
 - Banka bilgisi paylaşırken linkleri markdown formatında verme, düz metin olarak yaz.
 
 Banka bilgileri:
@@ -691,6 +693,7 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
