@@ -699,7 +699,7 @@ cron.schedule("0 * * * *", async () => {
       } else {
         message =
           "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
-    }
+  }
 
      await sendMessage(user, message);
 s.followUpStage = 3;
@@ -737,8 +737,6 @@ app.listen(port, () => console.log("SamChe Bot running on port " + port));
 // 🔥🔥🔥 5 SANİYELİK INSTAGRAM POLLING BURADA BAŞLIYOR 🔥🔥🔥
 // ----------------------------------------------------
 
-const axios = require("axios");
-
 async function checkMessages() {
   try {
     const response = await axios.get(
@@ -764,7 +762,6 @@ async function checkMessages() {
 
       const lastMessage = messages.data.data[0];
 
-      // Botun kendi mesajı değilse → normal kullanıcı mesajıdır
       if (lastMessage && lastMessage.from.id !== process.env.INSTAGRAM_USER_ID) {
         console.log("Normal kullanıcı mesajı:", lastMessage.text);
 
