@@ -699,7 +699,7 @@ cron.schedule("0 * * * *", async () => {
       } else {
         message =
           "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
-      }
+    }
 
      await sendMessage(user, message);
 s.followUpStage = 3;
@@ -731,6 +731,55 @@ app.post("/instagram", (req, res) => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
+
+// ----------------------------------------------------
+// 🔥🔥🔥 5 SANİYELİK INSTAGRAM POLLING BURADA BAŞLIYOR 🔥🔥🔥
+// ----------------------------------------------------
+
+const axios = require("axios");
+
+async function checkMessages() {
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/v20.0/${process.env.INSTAGRAM_USER_ID}/conversations`,
+      {
+        params: {
+          access_token: process.env.INSTAGRAM_TOKEN
+        }
+      }
+    );
+
+    const conversations = response.data.data;
+
+    for (const convo of conversations) {
+      const messages = await axios.get(
+        `https://graph.facebook.com/v20.0/${convo.id}/messages`,
+        {
+          params: {
+            access_token: process.env.INSTAGRAM_TOKEN
+          }
+        }
+      );
+
+      const lastMessage = messages.data.data[0];
+
+      // Botun kendi mesajı değilse → normal kullanıcı mesajıdır
+      if (lastMessage && lastMessage.from.id !== process.env.INSTAGRAM_USER_ID) {
+        console.log("Normal kullanıcı mesajı:", lastMessage.text);
+
+        // İstersen burada cevap gönderebilirsin:
+        // await sendMessage(lastMessage.from.id, "Mesajını aldım!");
+      }
+    }
+  } catch (err) {
+    console.error("Polling hatası:", err.response?.data || err.message);
+  }
+}
+
+// 5 saniyede bir çalıştır
+setInterval(checkMessages, 5000);
+
 
 
 
