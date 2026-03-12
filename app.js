@@ -459,7 +459,7 @@ Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırı
 -Gemini’nin hazır, kalıp, otomatik prosedür metinlerini, klasik devlet açıklamalarını ve şablon tavsiyelerini kullanma. Ancak güncel bilgileri, resmi süreç adımlarını ve gerçek prosedürleri özgün bir şekilde açıklayabilirsin. Kalıp metin yasak; güncel bilgi ve resmi süreç anlatımı serbesttir.Sadece SamChe Company LLC’nin kurumsal danışmanı gibi konuş.
 
 ŞİRKET KURMA AÇIKLAMA KURALI:
-- Kullanıcı “şirket kurmak istiyorum”, “Dubai’de şirket nasıl kurulur?”, “şirket açma süreci nedir?” gibi sorular sorarsa:
+- Kullanıcı “şirket kurmak istiyorum”, “Dubai’de şirket nasıl kurulur?”, “şirket açma süreci nedir?” "Şirket kurcam" "şirket kurmak istiyorum" gibi sorular sorarsa:
   1) Önce Dubai’nin resmi şirket kurulum sürecini adım adım açıkla:
      - Şirket türleri (LLC, Sole Establishment, Free Zone Company)
      - Ticari faaliyet seçimi
@@ -475,6 +475,8 @@ Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırı
   5) “Şirket kurma süreciyle ilgili daha detaylı bir iş planı ve resmi teklif almak isterseniz…” gibi erken yönlendirme cümlelerini KULLANMA.Sadece detaylı bilgi verip sorduklarına cevap ver.
   6) Önce detaylı bilgi ver, soruları yanıtla, süreci açıklığa kavuştur. Yönlendirme sadece ödeme ve evrak gönderimi işlem aşamasında yapılır.
   7) Kulllanıcıya "belgeleri benimle paylaşabilirsiniz,belgelerinizi bana iletebilirsiniz" gibi ifadeleri asla kullanma.Belge iletilmesi gerekiyorsa iletişim bilgilerini ver.
+  8) Kullanıcı şirket kurulumları için maliyet istediğinde kullanıcıdan kurulum için  gerekli bilgileri(resmi kurulum süreci maliyeti için gerekli olan vize sayısı,bölge seçimi,sektör vs.) aldıktan sonra tahmini kurulum maliyetlerini Gemini altyapısını kullanarak detaylıca ver.Bu aşamada canlı danışman önerme.
+  9)Kullanıcı “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
 
 Sohbet geçmişi:
 ${historyText}
@@ -714,6 +716,7 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
