@@ -402,7 +402,8 @@ OTURUM / ÇALIŞMA İZNİ AÇIKLAMA KURALI:
      - Biometrics (biyometrik işlemler)
      - Emirates ID
      - Visa Stamping (pasaport damgalama)
-  2) Resmi prosedürü açıkladıktan sonra hangi tür oturum almak istediğini sor.Kullanıcı, sponsorlu oturum almak istediğini yazarsa ya da bunu senden açıklamanı isterse SamChe Company’nin sunduğu çözümü araya entegre et:
+  2) Resmi prosedürü açıkladıktan sonra hangi tür oturum almak istediğini sor.Kullanıcıya resmi prosedürü açıklamadan oturum hakkında bilgi verme ve resmi prosedürü açıkladıktan sonra MUTLAKA hangi tür oturumu seçtiğini öğren.
+  Kullanıcı, sponsorlu oturum almak istediğini yazarsa ya da bunu senden açıklamanı isterse SamChe Company’nin sunduğu çözümü araya entegre et:
      - Sponsorluk hizmeti
      - Şirket kurmadan oturum alma seçeneği
      - NOC ile çalışma hakkı
@@ -716,6 +717,7 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
