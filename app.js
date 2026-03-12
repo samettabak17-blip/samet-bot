@@ -701,11 +701,29 @@ cron.schedule("0 * * * *", async () => {
           "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
       }
 
-      await sendMessage(user, message);
-      s.followUpStage = 3;
-      continue;
-    }
+     await sendMessage(user, message);
+s.followUpStage = 3;
+continue;
+}
+}
+});
+
+// -------------------------------
+//  INSTAGRAM WEBHOOK (GET + POST)
+// -------------------------------
+app.get("/instagram", (req, res) => {
+  const verify = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (verify === process.env.INSTAGRAM_VERIFY_TOKEN) {
+    return res.status(200).send(challenge);
   }
+  return res.sendStatus(403);
+});
+
+app.post("/instagram", (req, res) => {
+  console.log("Instagram mesaj geldi:", JSON.stringify(req.body, null, 2));
+  res.sendStatus(200);
 });
 
 // -------------------------------
