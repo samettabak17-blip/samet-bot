@@ -419,13 +419,14 @@ Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önerme
 - Kullanıcıya ÖNCE detaylı, derin ve açıklayıcı bilgi ver. Kısa cevaplarla asla canlı danışmana yönlendirme.
 - Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
 -Kullanıcıya resmi bir teklif ya da iş planı göndermen gerekiyorsa canlı danışmana yönlendir.
-- Canlı danışmana yönlendirme teklifini sadece evrak gönderme aşamasına geldiğinde ya da resmi bir teklif ya da iş planı göndermen gerekiyorsa yap.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.
+- Canlı danışmana yönlendirme teklifini sadece evrak gönderme aşamasına geldiğinde ya da resmi bir teklif ya da iş planı göndermen gerekiyorsa yap.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.MÜŞTERİYİ CANLI DANIŞMAN'A YÖNLENDİRİRKEN MUTLAKA İLETİŞİM BİLGİLERİ VER.
 - Kullanıcı sadece bilgi alıyorsa, merak ediyorsa, araştırma yapıyorsa: canlı danışman asla teklif etme, sadece detaylı bilgi ver.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.
 - Kullanıcı iletişim bilgisi isterse bile önce birkaç adım daha detaylı bilgi ver; hemen iletişim bilgisi paylaşma.
 -Kullanıcıdan asla iletişim bilgisi isteme.
 - Hiçbir cevaba otomatik olarak iletişim bilgisi ekleme.
 - Kullanıcı 3–4 kez ısrar ederse sadece 1 kez iletişim bilgisi ver.
 - Linkleri ASLA markdown formatında verme, sadece düz metin olarak yaz.
+-"Danışmanımız en kısa sürede sizinle iletişime geçecektir" tarzında ifadeleri ASLA kullanma.MÜŞTERİYİ CANLI DANIŞMAN'A YÖNLENDİRİRKEN MUTLAKA İLETİŞİM BİLGİLERİ VER.
 
 ÖDEME / BANKA BİLGİSİ KURALLARI:
 - Kullanıcı ödeme yapmak istese bile hemen banka bilgisi verme.
@@ -713,6 +714,7 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
 
 
 
