@@ -1,19 +1,31 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON, NİYET SKORU, PROFİL, KONU TESPİTİ)
+// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – JSON STATE + CRON READY)
 
 import express from "express";
 import bodyParser from "body-parser";
 import axios from "axios";
 import dotenv from "dotenv";
-import cron from "node-cron";
+import fs from "fs";
 dotenv.config();
 
 const app = express();
 app.use(bodyParser.json());
 
 // -------------------------------
-//  SESSION MEMORY
+//  JSON SESSION STORAGE
 // -------------------------------
-const sessions = {};
+function loadSessions() {
+  try {
+    return JSON.parse(fs.readFileSync("./data/sessions.json", "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function saveSessions(sessions) {
+  fs.writeFileSync("./data/sessions.json", JSON.stringify(sessions, null, 2));
+}
+
+let sessions = loadSessions();
 
 // -------------------------------
 //  WHATSAPP SEND (4096 LIMIT SAFE)
@@ -60,7 +72,7 @@ function corporateFallback(lang) {
   if (lang === "en") {
     return (
       "I couldn’t fully understand your question, but I’d be glad to assist. " +
-      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
+      "You may ask more specifically about UAE company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
       "Live consultant: +971 52 728 8586"
     );
   }
@@ -96,7 +108,6 @@ async function callGemini(prompt) {
     return null;
   }
 }
-
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
@@ -252,16 +263,20 @@ app.get("/webhook", (req, res) => {
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
-    const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const message =
+      req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
+    // LOAD SESSION
+    let session = sessions[from];
+
     // FIRST MESSAGE
-    if (!sessions[from]) {
-      sessions[from] = {
+    if (!session) {
+      session = {
         lang: null,
         history: [],
         lastMessageTime: Date.now(),
@@ -275,6 +290,9 @@ app.post("/webhook", async (req, res) => {
           interest: null,
         },
       };
+
+      sessions[from] = session;
+      saveSessions(sessions);
 
       await sendMessage(
         from,
@@ -294,8 +312,6 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const session = sessions[from];
-
     // LANGUAGE SELECTION
     if (!session.lang) {
       if (text === "1") session.lang = "en";
@@ -305,6 +321,9 @@ app.post("/webhook", async (req, res) => {
         await sendMessage(from, "Please choose 1, 2 or 3.");
         return res.sendStatus(200);
       }
+
+      sessions[from] = session;
+      saveSessions(sessions);
 
       await sendMessage(from, introAfterLang[session.lang]);
       return res.sendStatus(200);
@@ -354,29 +373,27 @@ app.post("/webhook", async (req, res) => {
     if (topic !== "other" && !session.topics.includes(topic)) {
       session.topics.push(topic);
     }
-    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
+    session.intentScore = calculateIntentScore(
+      text,
+      session.intentScore || 0
+    );
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
-
-    // PROMPT
+        // PROMPT (TR / EN / AR — FULL RULESET)
+   // PROMPT
 const prompt =
 lang === "tr"
-? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN TÜM KURALLARA UYGUN CEVAP VER.
+? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
 
 Aşağıdaki ifadeleri KESİNLİKLE KULLANMA:
 - “Süreçlerin karmaşıklığı nedeniyle bir avukat veya danışmanlık firmasından destek almanız faydalı olabilir.”
 - “Bir danışmanlık firmasından teklif almanız önemlidir.”
-- ”Kesin maliyeti belirlemek için freezone ile iletişime geçin.”
-- ”Freezone otoritesi ile iletişime geçin.”
 - “Dubai’ye seyahat etmek için öncelikle seyahat vizesi almanız gerekmektedir.” (Eğer kullanıcı sorarsa: SamChe Company’nin bunu sağladığını belirt.)
 - “İş bulmanız gerekir, işveren sizin adınıza başvuru yapar.”
 - MOHRE, GDRFA, çalışma izni prosedürü, iş teklifi gereklidir gibi klasik devlet prosedürü anlatımları.
-- Başka bir firmaya, avukata, freezone otoritesine,devlet kurumuna,danışmanlık şirketine ASLA yönlendirme.
-- ”Danışmanımız en kısa sürede sizinle iletişime geçecektir”
-- ”İletişim bilgilerinizi bize bırakın”
-- ”Size özel bir resmi teklif-iş planı- maliyet planı- çıkarıyor/ hazırlıyorum/ hazırlayabilirim.”
+- Başka bir firmaya, avukata, danışmanlık şirketine yönlendirme.
 
 Bu ifadeler YASAKTIR.
 
@@ -407,8 +424,7 @@ OTURUM / ÇALIŞMA İZNİ AÇIKLAMA KURALI:
      - Biometrics (biyometrik işlemler)
      - Emirates ID
      - Visa Stamping (pasaport damgalama)
-  2) Resmi prosedürü açıkladıktan sonra hangi tür oturum almak istediğini sor.Kullanıcıya resmi prosedürü açıklamadan oturum hakkında bilgi verme ve resmi prosedürü açıkladıktan sonra MUTLAKA hangi tür oturumu seçtiğini öğren.
-  Kullanıcı, sponsorlu oturum almak istediğini yazarsa ya da bunu senden açıklamanı isterse SamChe Company’nin sunduğu çözümü araya entegre et:
+  2) Resmi prosedürü açıkladıktan sonra hangi tür oturum almak istediğini sor.Kullanıcı, sponsorlu oturum almak istediğini yazarsa ya da bunu senden açıklamanı isterse SamChe Company’nin sunduğu çözümü araya entegre et:
      - Sponsorluk hizmeti
      - Şirket kurmadan oturum alma seçeneği
      - NOC ile çalışma hakkı
@@ -416,31 +432,31 @@ OTURUM / ÇALIŞMA İZNİ AÇIKLAMA KURALI:
   3) Kullanıcı, sponsorlu oturum almak istediğini belirtirse hem resmi süreci hem de SamChe’nin çözümünü tek bir bütün olarak sun.
 - Resmi prosedürü anlatmadan direkt SamChe metnine geçme ve kullanıcının önce hangi tür oturum almak istediğini netleştir.
 - Gereksiz tekrar yapma.
-- Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
-- Kullanıcı ödeme ve evrak gönderme süreci ya da  evrak listesi süreci hakkında bilgi almak istediğinde evrak listesi en az 3 yıllık geçerli pasaport PDF kopyası ve biyometrik fotoğraf yeterli olacağı bilgisini ver ve iletişim bilgilerini ver (mail yolu ya da iletişim kanallarımız aracılığı ile) göndermesi için paylaş."Ücret ödemesi, banka bilgisi, ücret nereye?" gibi sorular sorduğunda banka bilgilerini ver.
-- Kulllanıcıya "belgeleri benimle paylaşabilirsiniz,belgelerinizi bana iletebilirsiniz" gibi ifadeleri asla kullanma.Belge iletilmesi gerekiyorsa iletişim bilgilerini ver.
-- Kullanıcıya ASLA başka bir firma, freezone otoritesi, avukat veya danışmanlık şirketi önermeyeceksin. Sen zaten SamChe Company LLC’nin kurumsal danışmanısın; “bir danışmandan destek alın” gibi ifadeler KESİNLİKLE yasaktır.
+-Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
+-Kullanıcı ödeme ve evrak gönderme süreci ya da  evrak listesi süreci hakkında bilgi almak istediğinde evrak listesi en az 3 yıllık geçerli pasaport PDF kopyası ve biyometrik fotoğraf yeterli olacağı bilgisini ver ve iletişim bilgilerini ver (mail yolu ya da iletişim kanallarımız aracılığı ile) göndermesi için paylaş."Ücret ödemesi, banka bilgisi, ücret nereye?" gibi sorular sorduğunda banka bilgilerini ver.
+-Kulllanıcıya "belgeleri benimle paylaşabilirsiniz,belgelerinizi bana iletebilirsiniz" gibi ifadeleri asla kullanma.Belge iletilmesi gerekiyorsa iletişim bilgilerini ver.
+Kullanıcıya ASLA başka bir firma, avukat veya danışmanlık şirketi önermeyeceksin. Sen zaten SamChe Company LLC’nin kurumsal danışmanısın; “bir danışmandan destek alın” gibi ifadeler KESİNLİKLE yasaktır.
 
 İLETİŞİM BİLGİSİ KURALLARI:
 - Kullanıcıya ÖNCE detaylı, derin ve açıklayıcı bilgi ver. Kısa cevaplarla asla canlı danışmana yönlendirme.
 - Kullanıcı  “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
-- Canlı danışmana yönlendirme teklifini sadece ödeme ve evrak gönderme aşamasına geldiğinde yap.Her kullanıcıya canlı danışmana yönlendirme,canlı danışman tarafından iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, uzun bilgi alan kullanıcılara teklif et.MÜŞTERİYİ CANLI DANIŞMAN'A YÖNLENDİRİRKEN MUTLAKA İLETİŞİM BİLGİLERİ VER.
+-Kullanıcıya resmi bir teklif ya da iş planı göndermen gerekiyorsa canlı danışmana yönlendir.
+- Canlı danışmana yönlendirme teklifini sadece evrak gönderme aşamasına geldiğinde ya da resmi bir teklif ya da iş planı göndermen gerekiyorsa yap.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.
 - Kullanıcı sadece bilgi alıyorsa, merak ediyorsa, araştırma yapıyorsa: canlı danışman asla teklif etme, sadece detaylı bilgi ver.Her kullanıcıya iş planı ya da resmi teklif gönderme teklifinde bulunma.Sadece detaylı soru soran, bilgi alan kullanıcılara teklif et.
 - Kullanıcı iletişim bilgisi isterse bile önce birkaç adım daha detaylı bilgi ver; hemen iletişim bilgisi paylaşma.
-- Kullanıcılardan ASLA iletişim bilgisi isteme.
+-Kullanıcıdan asla iletişim bilgisi isteme.
 - Hiçbir cevaba otomatik olarak iletişim bilgisi ekleme.
 - Kullanıcı 3–4 kez ısrar ederse sadece 1 kez iletişim bilgisi ver.
 - Linkleri ASLA markdown formatında verme, sadece düz metin olarak yaz.
--"Danışmanımız en kısa sürede sizinle iletişime geçecektir" tarzında ifadeleri ASLA kullanma.MÜŞTERİYİ CANLI DANIŞMAN'A YÖNLENDİRİRKEN MUTLAKA İLETİŞİM BİLGİLERİ VER.
 
 ÖDEME / BANKA BİLGİSİ KURALLARI:
 - Kullanıcı ödeme yapmak istese bile hemen banka bilgisi verme.
 - Önce detaylı bilgi ver, süreç adımlarını açıkla, kullanıcının gerçekten işlem başlatmaya hazır olup olmadığını doğrula.
 - Banka bilgisi SADECE şu durumda verilir:
-- Kullanıcı net şekilde  “evrak göndereceğim”, “ödeme yapıp süreci başlatmak istiyorum” gibi ifadeler kullanırsa.
+-Kullanıcı net şekilde  “evrak göndereceğim”, “ödeme yapıp süreci başlatmak istiyorum” gibi ifadeler kullanırsa.
 - Kullanıcı sadece fiyat soruyorsa, bilgi topluyorsa veya araştırma yapıyorsa banka bilgisi verme.
 - Banka bilgisi ASLA otomatik olarak eklenmez; sadece kullanıcı evrak göndermeye hazır olduğunda ya da ödeme nereye diye sorduğunda paylaşılır.
-- Kullanıcı sadece "ücret ödemesi, banka bilgisi, ücret nereye?" gibi sorular sorduğunda banka bilgilerini ver.
+-Kullanıcı sadece "ücret ödemesi, banka bilgisi, ücret nereye?" gibi sorular sorduğunda banka bilgilerini ver.
 - Banka bilgisi paylaşırken linkleri markdown formatında verme, düz metin olarak yaz.
 
 Banka bilgileri:
@@ -464,9 +480,9 @@ Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırı
 -Gemini’nin hazır, kalıp, otomatik prosedür metinlerini, klasik devlet açıklamalarını ve şablon tavsiyelerini kullanma. Ancak güncel bilgileri, resmi süreç adımlarını ve gerçek prosedürleri özgün bir şekilde açıklayabilirsin. Kalıp metin yasak; güncel bilgi ve resmi süreç anlatımı serbesttir.Sadece SamChe Company LLC’nin kurumsal danışmanı gibi konuş.
 
 ŞİRKET KURMA AÇIKLAMA KURALI:
-- Kullanıcı “şirket kurmak istiyorum”, “Dubai’de şirket nasıl kurulur?”, “şirket açma süreci nedir?” ,"Şirket kurcam" ,"şirket kurmak istiyorum" gibi sorular sorarsa:
+- Kullanıcı “şirket kurmak istiyorum”, “Dubai’de şirket nasıl kurulur?”, “şirket açma süreci nedir?” gibi sorular sorarsa:
   1) Önce Dubai’nin resmi şirket kurulum sürecini adım adım açıkla:
-     - Şirket türleri (Mainland Company, Free Zone Company)
+     - Şirket türleri (LLC, Sole Establishment, Free Zone Company)
      - Ticari faaliyet seçimi
      - Ticari isim onayı
      - Lisans başvurusu
@@ -475,27 +491,11 @@ Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırı
      - Banka hesabı açılışı
      - Vize kontenjanı ve oturum hakları
   2) Resmi süreci açıkladıktan sonra SamChe Company’nin bu süreçte sunduğu hizmetleri anlat.
-  3) Resmi süreci açıkladıktan ve SamChe Company’nin bu süreçte sunduğu hizmetleri anlattıktan sonra kullanıcıya hangi türde şirket kurmak istediğini(mailand-freezone) ve hangi sektörde faaliyet göstermek istediğini(eğer bir önceki mesajlarda belirttiyse sorma) ve kaç adet vizeye ihtiyacı olduğunu sor ve kullanıcı cevabını verdikten sonra şirket kurulumu ile ilgili istediği tüm bilgileri kullanıcıya ver,kullanıcıyı bilgilendir.
-  4) Kullanıcı bilgi aşamasındaysa ASLA canlı danışman önermeyeceksin.
-  5) Kullanıcı net şekilde “işleme başlamak istiyorum”, “evrak göndereceğim”, “ödeme yapacağım” gibi ifadeler kullanmadıkça canlı danışman teklif etmeyeceksin.
-  6) “Şirket kurma süreciyle ilgili daha detaylı bir iş planı ve resmi teklif almak isterseniz…” gibi erken yönlendirme cümlelerini KULLANMA.Sadece detaylı bilgi verip sorduklarına cevap ver.
-  7) Önce detaylı bilgi ver, soruları yanıtla, süreci açıklığa kavuştur. Yönlendirme sadece ödeme ve evrak gönderimi işlem aşamasında yapılır.
-  8) Kulllanıcıya "belgeleri benimle paylaşabilirsiniz,belgelerinizi bana iletebilirsiniz" gibi ifadeleri asla kullanma.Belge iletilmesi gerekiyorsa iletişim bilgilerini ver.
-  9) Kullanıcı şirket kurulumları için maliyet istediğinde kullanıcıdan kurulum için  gerekli bilgileri(resmi kurulum süreci maliyeti için gerekli olan vize sayısı,bölge seçimi,sektör vs.) aldıktan sonra tahmini kurulum maliyetlerini Gemini altyapısını kullanarak detaylıca ver.Bu aşamada canlı danışman önerme.
-  10) Kullanıcı “işleme başlayalım”, “evrak göndermek istiyorum” gibi net ve ileri seviye niyet gösterene kadar canlı danışman önerme.
-  11) Kullanıcı Freezone şirket kurmak istediğini belitirse:
-  - Birleşik Arap Emirliklerinde  farklı emirliklerde bir çok freezone bölge olduğunu belirt.Eğer fiziksel bir ofis açmayı düşünmüyorsa sadece Dubai merkezli(Meydan,JAFZA,IFZA,DMCC) Freezone değil daha düşük maliyetli olabilecek  Shams,SPC,RAKEZ,Ajman gibi diğer freezone lar olduğunu da belirt, bilgi isterse detaylı bilgi ver.
-  - Kullanıcının sektörüne en uygun ve seçtiği freezone bölge üzerinden anlatımla ilerle,rastgele freezone bölgesi seçimi asla yapma.
-  12) Sadece Mainland’da kurulabilen(freezone da asla kurulamayan) sektörler hakkında bilgi verirken  şu faaliyetleri dikkate al ona göre bilgi ver:
-
--Restoran, cafe, catering ve diğer gıda hizmetleri
--Perakende mağazalar (giyim, elektronik, market vb.)
--İnşaat ve müteahhitlik şirketleri
--Gayrimenkul şirketi,brokerlık ve emlak ofisleri
--Turizm ve seyahat acenteleri
--Güvenlik ve CCTV şirketleri
--Temizlik şirketleri ve manpower supply
--Taşımacılık ve transport ve UBER şirketleri
+  3) Kullanıcı bilgi aşamasındaysa ASLA canlı danışman önermeyeceksin.
+  4) Kullanıcı net şekilde “işleme başlamak istiyorum”, “evrak göndereceğim”, “ödeme yapacağım” gibi ifadeler kullanmadıkça canlı danışman teklif etmeyeceksin.
+  5) “Şirket kurma süreciyle ilgili daha detaylı bir iş planı ve resmi teklif almak isterseniz…” gibi erken yönlendirme cümlelerini KULLANMA.Sadece detaylı bilgi verip sorduklarına cevap ver.
+  6) Önce detaylı bilgi ver, soruları yanıtla, süreci açıklığa kavuştur. Yönlendirme sadece ödeme ve evrak gönderimi işlem aşamasında yapılır.
+  7) Kulllanıcıya "belgeleri benimle paylaşabilirsiniz,belgelerinizi bana iletebilirsiniz" gibi ifadeleri asla kullanma.Belge iletilmesi gerekiyorsa iletişim bilgilerini ver.
 
 Sohbet geçmişi:
 ${historyText}
@@ -622,6 +622,7 @@ ${historyText}
 رسالة المستخدم:
 ${text}`;
 
+    // GEMINI CALL
     const reply = await callGemini(prompt);
 
     if (!reply) {
@@ -629,8 +630,12 @@ ${text}`;
       return res.sendStatus(200);
     }
 
+    // SAVE ASSISTANT MESSAGE
     session.history.push({ role: "assistant", text: reply });
+    sessions[from] = session;
+    saveSessions(sessions);
 
+    // SEND TO USER
     await sendMessage(from, reply);
 
     res.sendStatus(200);
@@ -639,119 +644,10 @@ ${text}`;
     res.sendStatus(500);
   }
 });
-
-// -------------------------------
-//  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
-// -------------------------------
-cron.schedule("0 * * * *", async () => {
-  const now = Date.now();
-
-  for (const user in sessions) {
-    const s = sessions[user];
-    if (!s.lastMessageTime) continue;
-
-    const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
-    const topics = s.topics || [];
-    const lastTopic = topics.length ? topics[topics.length - 1] : "general";
-
-    let message = null;
-
-    // 1. HATIRLATMA – 24 SAAT
-    if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
-      if (lastTopic === "company") {
-        message =
-          "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
-      } else if (lastTopic === "residency") {
-        message =
-          "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
-      } else if (lastTopic === "ai") {
-        message =
-          "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
-      } else if (lastTopic === "cost") {
-        message =
-          "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
-      } else {
-        message =
-          "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
-      }
-
-      await sendMessage(user, message);
-      s.followUpStage = 1;
-      continue;
-    }
-
-    // 2. HATIRLATMA – 72 SAAT
-    if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
-      if (lastTopic === "company") {
-        message =
-          "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
-      } else if (lastTopic === "residency") {
-        message =
-          "Tekrar merhaba. Dubai oturum süreciyle ilgili konuşmuştuk. Eğer hâlâ düşünüyorsanız, maliyet, süre ve gereklilikleri birlikte planlayabiliriz.";
-      } else if (lastTopic === "ai") {
-        message =
-          "Tekrar merhaba. AI chatbot ve otomasyon süreçleriyle ilgili konuşmuştuk. Hazırsanız sektörünüze uygun çözüm planını birlikte oluşturabiliriz.";
-      } else if (lastTopic === "cost") {
-        message =
-          "Tekrar merhaba. Maliyet ve süreç planlamasıyla ilgili konuşmuştuk. Hazırsanız size özel bir maliyet analizi oluşturabiliriz.";
-      } else {
-        message =
-          "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
-      }
-
-      await sendMessage(user, message);
-      s.followUpStage = 2;
-      continue;
-    }
-
-    // 3. HATIRLATMA – 7 GÜN
-    if (s.followUpStage === 2 && diffHours >= 24 * 7) {
-      if (lastTopic === "company") {
-        message =
-          "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
-      } else if (lastTopic === "residency") {
-        message =
-          "Merhaba, oturum süreciyle ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz.";
-      } else if (lastTopic === "ai") {
-        message =
-          "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
-      } else if (lastTopic === "cost") {
-        message =
-          "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız yeniden yardımcı olabiliriz.";
-      } else {
-        message =
-          "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
-      }
-
-      await sendMessage(user, message);
-      s.followUpStage = 3;
-      continue;
-    }
-  }
-});
-
 // -------------------------------
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("SamChe Bot running on port " + port));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+app.listen(port, () =>
+  console.log("SamChe Bot running on port " + port)
+);
