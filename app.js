@@ -634,6 +634,8 @@ ${text}`;
 //  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
 // -------------------------------
 cron.schedule("0 * * * *", async () => {
+  console.log("[CRON] Hatırlatma kontrolü çalıştı:", new Date().toLocaleString());
+
   const now = Date.now();
 
   for (const user in sessions) {
@@ -648,6 +650,13 @@ cron.schedule("0 * * * *", async () => {
 
     // 1. HATIRLATMA – 24 SAAT
     if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
+
+      console.log("[CRON] 24 saatlik hatırlatma tetiklendi:", {
+        user,
+        lastTopic,
+        diffHours
+      });
+
       if (lastTopic === "company") {
         message =
           "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
@@ -665,13 +674,27 @@ cron.schedule("0 * * * *", async () => {
           "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
       }
 
-      await sendMessage(user, message);
+      try {
+        console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
+        await sendMessage(user, message);
+        console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
+      } catch (err) {
+        console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+      }
+
       s.followUpStage = 1;
       continue;
     }
 
     // 2. HATIRLATMA – 72 SAAT
     if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
+
+      console.log("[CRON] 72 saatlik hatırlatma tetiklendi:", {
+        user,
+        lastTopic,
+        diffHours
+      });
+
       if (lastTopic === "company") {
         message =
           "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
@@ -689,13 +712,27 @@ cron.schedule("0 * * * *", async () => {
           "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
       }
 
-      await sendMessage(user, message);
+      try {
+        console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
+        await sendMessage(user, message);
+        console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
+      } catch (err) {
+        console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+      }
+
       s.followUpStage = 2;
       continue;
     }
 
     // 3. HATIRLATMA – 7 GÜN
     if (s.followUpStage === 2 && diffHours >= 24 * 7) {
+
+      console.log("[CRON] 7 günlük hatırlatma tetiklendi:", {
+        user,
+        lastTopic,
+        diffHours
+      });
+
       if (lastTopic === "company") {
         message =
           "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
@@ -713,7 +750,14 @@ cron.schedule("0 * * * *", async () => {
           "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
       }
 
-      await sendMessage(user, message);
+      try {
+        console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
+        await sendMessage(user, message);
+        console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
+      } catch (err) {
+        console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+      }
+
       s.followUpStage = 3;
       continue;
     }
