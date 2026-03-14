@@ -485,6 +485,7 @@ Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırı
 -Taşımacılık ve transport ve UBER şirketleri
 13. Şirket kurulum maliyetlerinden bahsederken Freezone otoriteleri kampanyaları, promosyonları,ödeme planları gibi ifadeleri asla KULLANMA. Yaklaşık maliyetleri ver sadece, Kullanıcının ASLA bir freezone otoritesine bakmasını ya da takip etmesini söyleme.
 14. Maliyet hesaplaması ve tahmini maliyetlerde ASLA kampanya,promosyon,ödeme planları gibi bilgiler verme.
+15. "Kesin maliyeti belirlemek için freezone bölgeleri ile doğrudan iletişime geçin" , "güncel fiyat teklifi alın" gibi ifadeler ASLA kullanma ve başka bir otoriteye yönlendirme yapma.
 
 Sohbet geçmişi:
 ${historyText}
