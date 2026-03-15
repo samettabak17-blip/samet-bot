@@ -492,7 +492,7 @@ Etihad Airways Centre 5th Floor, Abu Dhabi, UAE
 
 İletişim bilgileri:
 mail: info@samchecompany.com
-telefon: +971 50 179 38 80 - +971 52 662 28 75
+telefon: +971 50 179 38 80 - +971 52 728 8586
 
 Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırım, maliyet, süreç, prosedür gibi konular sorarsa:
 • 	SamChe Company’nin bu hizmetleri sağladığını belirt.
@@ -641,7 +641,7 @@ Bank address: Etihad Airways Centre 5th Floor, Abu Dhabi
 
 Contact details:
 mail: info@samchecompany.com
-phone: +971 50 179 38 80 - +971 52 662 28 75
+phone: +971 50 179 38 80 - +971 52 728 8586
 web: https://samchecompany.com
 instagram: https://www.instagram.com/samchecompany
 linkedin: https://www.linkedin.com/company/samche-company-llc
@@ -700,7 +700,7 @@ Bank address: Etihad Airways Centre 5th Floor, Abu Dhabi
 
 معلومات التواصل:
 mail: info@samchecompany.com
-phone: +971 50 179 38 80 - +971 52 662 28 75
+phone: +971 50 179 38 80 - +971 52 728 8586
 web: https://samchecompany.com
 instagram: https://www.instagram.com/samchecompany
 linkedin: https://www.linkedin.com/company/samche-company-llc
