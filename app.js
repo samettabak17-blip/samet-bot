@@ -735,133 +735,146 @@ ${text}`;
 //  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
 // -------------------------------
 cron.schedule("0 * * * *", async () => {
-  console.log("[CRON] Hatırlatma kontrolü çalıştı:", new Date().toLocaleString());
+  try {
+    console.log("[CRON] Hatırlatma kontrolü çalıştı:", new Date().toLocaleString());
 
-  const now = Date.now();
+    const now = Date.now();
 
-  for (const user in sessions) {
-    const s = sessions[user];
-    if (!s.lastMessageTime) continue;
-
-    const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
-    const topics = s.topics || [];
-    const lastTopic = topics.length ? topics[topics.length - 1] : "general";
-
-    let message = null;
-
-    // 1. HATIRLATMA – 24 SAAT
-    if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
-
-      console.log("[CRON] 24 saatlik hatırlatma tetiklendi:", {
-        user,
-        lastTopic,
-        diffHours
-      });
-
-      if (lastTopic === "company") {
-        message =
-          "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
-      } else if (lastTopic === "residency") {
-        message =
-          "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
-      } else if (lastTopic === "ai") {
-        message =
-          "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
-      } else if (lastTopic === "cost") {
-        message =
-          "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
-      } else {
-        message =
-          "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
-      }
-
-      try {
-        console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
-        await sendMessage(user, message);
-        console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
-      } catch (err) {
-        console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
-      }
-
-      s.followUpStage = 1;
-      continue;
+    // SESSIONS GÜVENLİK KALKANI
+    if (!sessions || typeof sessions !== "object") {
+      console.log("[CRON] sessions geçersiz, işlem yapılmadı.");
+      return;
     }
 
-    // 2. HATIRLATMA – 72 SAAT
-    if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
+    for (const user in sessions) {
+      const s = sessions[user];
 
-      console.log("[CRON] 72 saatlik hatırlatma tetiklendi:", {
-        user,
-        lastTopic,
-        diffHours
-      });
+      // *** TÜM CRASH'LERİ ÖNLEYEN KRİTİK GÜVENLİK KATMANI ***
+      if (!s || typeof s !== "object") continue;
+      if (!s.lastMessageTime) continue;
 
-      if (lastTopic === "company") {
-        message =
-          "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
-      } else if (lastTopic === "residency") {
-        message =
-          "Tekrar merhaba. Dubai oturum süreciyle ilgili konuşmuştuk. Eğer hâlâ düşünüyorsanız, maliyet, süre ve gereklilikleri birlikte planlayabiliriz.";
-      } else if (lastTopic === "ai") {
-        message =
-          "Tekrar merhaba. AI chatbot ve otomasyon süreçleriyle ilgili konuşmuştuk. Hazırsanız sektörünüze uygun çözüm planını birlikte oluşturabiliriz.";
-      } else if (lastTopic === "cost") {
-        message =
-          "Tekrar merhaba. Maliyet ve süreç planlamasıyla ilgili konuşmuştuk. Hazırsanız size özel bir maliyet analizi oluşturabiliriz.";
-      } else {
-        message =
-          "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
+      const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
+      const topics = Array.isArray(s.topics) ? s.topics : [];
+      const lastTopic = topics.length ? topics[topics.length - 1] : "general";
+
+      let message = null;
+
+      // 1. HATIRLATMA – 24 SAAT
+      if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
+
+        console.log("[CRON] 24 saatlik hatırlatma tetiklendi:", {
+          user,
+          lastTopic,
+          diffHours
+        });
+
+        if (lastTopic === "company") {
+          message =
+            "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
+        } else if (lastTopic === "residency") {
+          message =
+            "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
+        } else if (lastTopic === "ai") {
+          message =
+            "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
+        } else if (lastTopic === "cost") {
+          message =
+            "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
+        } else {
+          message =
+            "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
+        }
+
+        try {
+          console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
+          await sendMessage(user, message);
+          console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
+        } catch (err) {
+          console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+        }
+
+        s.followUpStage = 1;
+        continue;
       }
 
-      try {
-        console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
-        await sendMessage(user, message);
-        console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
-      } catch (err) {
-        console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+      // 2. HATIRLATMA – 72 SAAT
+      if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
+
+        console.log("[CRON] 72 saatlik hatırlatma tetiklendi:", {
+          user,
+          lastTopic,
+          diffHours
+        });
+
+        if (lastTopic === "company") {
+          message =
+            "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
+        } else if (lastTopic === "residency") {
+          message =
+            "Tekrar merhaba. Dubai oturum süreciyle ilgili konuşmuştuk. Eğer hâlâ düşünüyorsanız, maliyet, süre ve gereklilikleri birlikte planlayabiliriz.";
+        } else if (lastTopic === "ai") {
+          message =
+            "Tekrar merhaba. AI chatbot ve otomasyon süreçleriyle ilgili konuşmuştuk. Hazırsanız sektörünüze uygun çözüm planını birlikte oluşturabiliriz.";
+        } else if (lastTopic === "cost") {
+          message =
+            "Tekrar merhaba. Maliyet ve süreç planlamasıyla ilgili konuşmuştuk. Hazırsanız size özel bir maliyet analizi oluşturabiliriz.";
+        } else {
+          message =
+            "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
+        }
+
+        try {
+          console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
+          await sendMessage(user, message);
+          console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
+        } catch (err) {
+          console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+        }
+
+        s.followUpStage = 2;
+        continue;
       }
 
-      s.followUpStage = 2;
-      continue;
+      // 3. HATIRLATMA – 7 GÜN
+      if (s.followUpStage === 2 && diffHours >= 24 * 7) {
+
+        console.log("[CRON] 7 günlük hatırlatma tetiklendi:", {
+          user,
+          lastTopic,
+          diffHours
+        });
+
+        if (lastTopic === "company") {
+          message =
+            "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
+        } else if (lastTopic === "residency") {
+          message =
+            "Merhaba, oturum süreciyle ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz.";
+        } else if (lastTopic === "ai") {
+          message =
+            "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
+        } else if (lastTopic === "cost") {
+          message =
+            "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız yeniden yardımcı olabiliriz.";
+        } else {
+          message =
+            "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
+        }
+
+        try {
+          console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
+          await sendMessage(user, message);
+          console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
+        } catch (err) {
+          console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
+        }
+
+        s.followUpStage = 3;
+        continue;
+      }
     }
-
-    // 3. HATIRLATMA – 7 GÜN
-    if (s.followUpStage === 2 && diffHours >= 24 * 7) {
-
-      console.log("[CRON] 7 günlük hatırlatma tetiklendi:", {
-        user,
-        lastTopic,
-        diffHours
-      });
-
-      if (lastTopic === "company") {
-        message =
-          "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
-      } else if (lastTopic === "residency") {
-        message =
-          "Merhaba, oturum süreciyle ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz.";
-      } else if (lastTopic === "ai") {
-        message =
-          "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
-      } else if (lastTopic === "cost") {
-        message =
-          "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız yeniden yardımcı olabiliriz.";
-      } else {
-        message =
-          "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
-      }
-
-      try {
-        console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
-        await sendMessage(user, message);
-        console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
-      } catch (err) {
-        console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
-      }
-
-      s.followUpStage = 3;
-      continue;
-    }
+  } catch (err) {
+    console.error("[CRON] Genel CRON hatası:", err);
   }
 });
 
