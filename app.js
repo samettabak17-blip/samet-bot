@@ -259,7 +259,29 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // FIRST MESSAGE
+    // ---------------------------------------------------
+    // 1) FOTO / SES / VİDEO / STICKER / DOSYA / BOŞ MESAJ FİLTRESİ
+    // ---------------------------------------------------
+    const isInvalid =
+      message.type === "image" ||
+      message.type === "audio" ||
+      message.type === "voice" ||
+      message.type === "video" ||
+      message.type === "sticker" ||
+      message.type === "document" ||
+      !text || text.trim() === "";
+
+    if (isInvalid) {
+      await sendMessage(
+        from,
+        "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?"
+      );
+      return res.sendStatus(200); // follow-up zamanını güncelleme
+    }
+
+    // ---------------------------------------------------
+    // 2) İLK MESAJ (SESSION OLUŞTURMA)
+    // ---------------------------------------------------
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
