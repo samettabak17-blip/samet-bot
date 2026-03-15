@@ -383,6 +383,8 @@ lang === "tr"
 •   ”Bu konuyla ilgili Freezone Otoritesi ile iletişime geçmek önemlidir”
 •   ”Kesin maliyetler için ilgili freezone ile iletişime geçin”
 •   ”Kesin maliyetleri ilgili freezone belirler”
+•   ”Bu konuyla ilgili freezone otoriteleri sorumludur”
+
 
 Bu ifadeler YASAKTIR.
 
