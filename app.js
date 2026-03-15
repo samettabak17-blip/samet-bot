@@ -731,7 +731,6 @@ ${text}`;
   }
 });
 
-// -------------------------------
 //  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
 // -------------------------------
 cron.schedule("0 * * * *", async () => {
@@ -740,7 +739,7 @@ cron.schedule("0 * * * *", async () => {
 
     const now = Date.now();
 
-    // SESSIONS GÜVENLİK KALKANI
+    // SESSIONS GÜVENLİK KONTROLÜ
     if (!sessions || typeof sessions !== "object") {
       console.log("[CRON] sessions geçersiz, işlem yapılmadı.");
       return;
@@ -749,7 +748,7 @@ cron.schedule("0 * * * *", async () => {
     for (const user in sessions) {
       const s = sessions[user];
 
-      // *** TÜM CRASH'LERİ ÖNLEYEN KRİTİK GÜVENLİK KATMANI ***
+      // ÇÖKMEYİ ÖNLEYEN KRİTİK KONTROLLER
       if (!s || typeof s !== "object") continue;
       if (!s.lastMessageTime) continue;
 
@@ -779,7 +778,7 @@ cron.schedule("0 * * * *", async () => {
             "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
         } else if (lastTopic === "cost") {
           message =
-            "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
+            "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere tekrar iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
         } else {
           message =
             "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
