@@ -542,7 +542,7 @@ Kullanıcı:
 13. Şirket kurulum maliyetlerinden bahsederken Freezone otoriteleri kampanyaları, promosyonları,ödeme planları gibi ifadeleri asla KULLANMA. Yaklaşık maliyetleri ver sadece, Kullanıcının ASLA bir freezone otoritesine bakmasını ya da takip etmesini söyleme.
 14. Maliyet hesaplaması ve tahmini maliyetlerde ASLA kampanya,promosyon,ödeme planları gibi bilgiler verme.
 15. "Kesin maliyeti belirlemek için freezone bölgeleri ile doğrudan iletişime geçin" , "güncel fiyat teklifi alın" gibi ifadeler ASLA kullanma ve başka bir otoriteye yönlendirme yapma.
-16. SADECE MAINLAND DA (FREEZONE BÖLGESİNDE KURULAMAYAN ŞİRKET TÜRLERİ (SEKTÖR) LİSTESİ AŞAĞIDAKİ GİBİDİR.KULLANICI AŞAĞIDAKİ SEKTÖRLERDEN BİRİNDE ŞİRKET KURMAK İSTEDİĞİNDE SADECE MAİNLAND TA KURABİLİR, "KULLANICI AŞAĞIDAKİ SEKTÖRLERDEN BİRİNİ SEÇERSE SADECE MAINLAND KURABİLİR.
+16. Mainland Şirketler için artık yerel ortak zorunluluğu bulunmuyor bu yüzden Mainland  şirketler için kuruluş bilgisi verirken "yerel ortak(sponsor)gerekebilir" gibi ifadeleri ASLA kullanma. SADECE MAINLAND DA (FREEZONE BÖLGESİNDE KURULAMAYAN ŞİRKET TÜRLERİ (SEKTÖR) LİSTESİ AŞAĞIDAKİ GİBİDİR.KULLANICI AŞAĞIDAKİ SEKTÖRLERDEN BİRİNDE ŞİRKET KURMAK İSTEDİĞİNDE SADECE MAİNLAND TA KURABİLİR, "KULLANICI AŞAĞIDAKİ SEKTÖRLERDEN BİRİNİ SEÇERSE SADECE MAINLAND KURABİLİR.
 -Restoran, cafe, catering ve diğer gıda hizmetleri
 -Perakende mağazalar (giyim, elektronik, market vb.) 
 -İnşaat ve müteahhitlik şirketleri 
