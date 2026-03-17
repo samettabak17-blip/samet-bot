@@ -383,9 +383,10 @@ app.post("/webhook", async (req, res) => {
       .join("\n");
 
     // PROMPT
-const prompt =
-lang === "tr"
-? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
+let prompt = "";
+
+if (lang === "tr") {
+  prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın.Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
 
     GENEL DAVRANIŞ KURALLARI:
     
@@ -627,11 +628,6 @@ STRICTLY FORBIDDEN PHRASES:
 - Any MOHRE/GDRFA procedural explanations, job‑offer requirements, or standard government processes.
 - Referring the user to any other company, lawyer, or consultancy.
 
-If the user asks about residency or work permits, you may ONLY use the following official SamChe explanation:
-
-“In order to live and work in this country, you need a sponsor or you must open a company and sponsor yourself. If you prefer not to open a company, we can provide this sponsorship service for you. For the two‑year residency, companies here sponsor you; you do not work for that company, they only sponsor your residency. After your process is completed, with the NOC (No Objection Certificate) provided by your sponsor, you gain the legal right to work or establish a business in any sector. We start the two‑year residency and employment visa process from Turkey; you enter the country with an employment visa. The total cost is 13,000 AED. First payment: 4,000 AED (job offer and contract). Government‑approved documents arrive within 10 days, then the second payment is taken. Second payment: 8,000 AED (employment visa). E‑visa arrives within 30 days. Third payment: 1,000 AED (ID card and stamping) paid after entering the country. Total duration: 30 days.”
-
-Use this ONLY when the user asks. Do not repeat it unnecessarily.
 
 CONTACT RULES:
 - Do NOT share contact details immediately.
@@ -686,11 +682,6 @@ ${text}`
 - أي شروحات حكومية أو إجراءات MOHRE/GDRFA أو متطلبات عرض عمل.
 - الإحالة إلى أي شركة أو محامٍ أو جهة أخرى.
 
-إذا سأل المستخدم عن الإقامة أو تصريح العمل، استخدم فقط النص الرسمي التالي:
-
-“للعيش والعمل في هذا البلد، تحتاج إلى كفيل أو يجب عليك فتح شركة وتكفل نفسك. إذا لم ترغب في فتح شركة، يمكننا توفير خدمة الكفالة لك. لمدة الإقامة لسنتين، تقوم الشركات هنا بكفالتك؛ أنت لا تعمل لدى تلك الشركة، هي فقط تكفلك للإقامة. بعد اكتمال الإجراءات، يمنحك خطاب عدم الممانعة NOC الحق القانوني في العمل أو تأسيس مشروع في أي قطاع. نبدأ إجراءات الإقامة وتأشيرة العمل من تركيا؛ وتدخل البلاد بتأشيرة عمل. التكلفة الإجمالية 13,000 درهم. الدفعة الأولى 4,000 درهم (عرض العمل والعقد). تصل المستندات الحكومية خلال 10 أيام، ثم تُدفع الدفعة الثانية. الدفعة الثانية 8,000 درهم (تأشيرة العمل). تصل التأشيرة الإلكترونية خلال 30 يومًا. الدفعة الثالثة 1,000 درهم (الهوية والختم) بعد دخول البلاد. المدة الإجمالية 30 يومًا.”
-
-استخدم هذا النص فقط عند سؤال المستخدم. لا تكرره دون داعٍ.
 
 قواعد مشاركة معلومات التواصل:
 - لا تشارك المعلومات مباشرة.
@@ -734,8 +725,10 @@ ${historyText}
 
 رسالة المستخدم:
 ${text}`;
+}
 
-    const reply = await callGemini(prompt);
+
+const reply = await callGemini(prompt);
 
     if (!reply) {
       await sendMessage(from, corporateFallback(lang));
