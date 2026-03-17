@@ -351,11 +351,12 @@ app.post("/webhook", async (req, res) => {
       lower.includes("ai bot") ||
       lower.includes("chatbot") ||
       lower.includes("bot fiyat") ||
-      lower.includes("ai fiyat") ||
+      lower.includes("ai chatbot fiyat") ||
       lower.includes("chatbot fiyat") ||
       lower.includes("webchat") ||
       lower.includes("ai plan") ||
       lower.includes("bot plan")
+      lower.includes("ai chatbot bilgi")
     ) {
       await sendMessage(
         from,
