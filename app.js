@@ -346,10 +346,8 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-const text = req.body.message;
-const lower = text.toLowerCase();
 
-    // AI CHATBOT PRICE / PLAN REDIRECT
+      // AI CHATBOT PRICE / PLAN REDIRECT
 if (
   lower.includes("bot fiyat") ||
   lower.includes("ai fiyat") ||
