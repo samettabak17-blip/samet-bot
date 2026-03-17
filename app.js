@@ -346,24 +346,24 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // AI CHATBOT PRICE / PLAN REDIRECT
-    if (
-      lower.includes("ai bot") ||
-      lower.includes("chatbot") ||
-      lower.includes("bot fiyat") ||
-      lower.includes("ai chatbot fiyat") ||
-      lower.includes("chatbot fiyat") ||
-      lower.includes("webchat") ||
-      lower.includes("ai plan") ||
-      lower.includes("bot plan")
-      lower.includes("ai chatbot bilgi")
-    ) {
-      await sendMessage(
-        from,
-        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-      );
-      return res.sendStatus(200);
-    }
+  // AI CHATBOT PRICE / PLAN REDIRECT
+if (
+  lower.includes("bot fiyat") ||
+  lower.includes("ai fiyat") ||
+  lower.includes("chatbot fiyat") ||
+  lower.includes("ai bot fiyat") ||
+  lower.includes("ai plan") ||
+  lower.includes("bot plan") ||
+  lower.includes("ai chatbot fiyat") ||
+  lower.includes("ai chatbot bilgi fiyat") ||
+  lower.includes("webchat fiyat")
+) {
+  await sendMessage(
+    from,
+    "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
+  );
+  return res.sendStatus(200);
+}
 
     // MEMORY UPDATE
     session.history.push({ role: "user", text });
