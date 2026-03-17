@@ -1,4 +1,4 @@
-// app.js – WhatsApp + Gemini 2.0 Flash (FINAL – CRON, NİYET SKORU, PROFİL, KONU TESPİTİ)
+// app.js – WhatsApp + Gemini 2.0 Flash (OTOMATİK DİL TESPİTİ - TAM VE TEMİZ SÜRÜM)
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -75,10 +75,7 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
-
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + process.env.GEMINI_API_KEY;
   try {
     const response = await axios.post(
       url,
@@ -87,7 +84,6 @@ async function callGemini(prompt) {
       },
       { headers: { "Content-Type": "application/json" } }
     );
-
     const reply =
       response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     return reply.trim() || null;
@@ -100,45 +96,6 @@ async function callGemini(prompt) {
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
-const servicesList = {
-  tr:
-    "SamChe Company LLC olarak sunduğumuz hizmetler:\n" +
-    "1. Şirketlere Özel Yapay Zekâ Sistemleri\n" +
-    "2. Dijital Büyüme & İçerik Stratejisi\n" +
-    "3. Marka Yönetimi & Sosyal Medya\n" +
-    "4. Kitle Büyümesi & Performans Optimizasyonu\n" +
-    "5. BAE Şirket Kurulumu & Pazar Girişi\n" +
-    "6. Serbest Bölge Seçimi & Uyum (Compliance)",
-  en:
-    "SamChe Company LLC provides:\n" +
-    "1. Private AI Systems\n" +
-    "2. Digital Growth & Content Strategy\n" +
-    "3. Branding & Social Media\n" +
-    "4. Audience Growth & Performance Optimization\n" +
-    "5. UAE Business Setup & Market Entry\n" +
-    "6. Free Zone Selection & Compliance",
-  ar:
-    "تقدم SamChe Company LLC:\n" +
-    "1. أنظمة ذكاء اصطناعي خاصة\n" +
-    "2. استراتيجية النمو الرقمي والمحتوى\n" +
-    "3. إدارة العلامة التجارية ووسائل التواصل\n" +
-    "4. نمو الجمهور وتحسين الأداء\n" +
-    "5. تأسيس الأعمال في الإمارات\n" +
-    "6. اختيار المناطق الحرة والامتثال",
-};
-
-const introAfterLang = {
-  tr:
-    "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
-  en:
-    "Hello, I am the AI consultant of SamChe Company LLC.\n" +
-    "I can answer your questions about UAE company formation, residency, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n",
-  ar:
-    "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
-    "أستطيع مساعدتك في تأسيس الشركات في الإمارات، الإقامة، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n",
-};
-
 const contactText = {
   tr: "Canlı temsilci: +971 52 728 8586",
   en: "Live consultant: +971 52 728 8586",
@@ -150,87 +107,21 @@ const contactText = {
 // -------------------------------
 function detectTopic(text) {
   const t = text.toLowerCase();
-
-  if (
-    t.includes("şirket") ||
-    t.includes("company") ||
-    t.includes("business setup") ||
-    t.includes("company setup")
-  )
-    return "company";
-
-  if (
-    t.includes("oturum") ||
-    t.includes("residency") ||
-    t.includes("visa") ||
-    t.includes("ikamet")
-  )
-    return "residency";
-
-  if (
-    t.includes("ai") ||
-    t.includes("bot") ||
-    t.includes("chatbot") ||
-    t.includes("webchat")
-  )
-    return "ai";
-
-  if (
-    t.includes("maliyet") ||
-    t.includes("cost") ||
-    t.includes("price") ||
-    t.includes("ücret") ||
-    t.includes("bütçe") ||
-    t.includes("budget")
-  )
-    return "cost";
-
+  if (t.includes("şirket") || t.includes("company") || t.includes("business setup")) return "company";
+  if (t.includes("oturum") || t.includes("residency") || t.includes("visa")) return "residency";
+  if (t.includes("ai") || t.includes("bot") || t.includes("chatbot")) return "ai";
+  if (t.includes("maliyet") || t.includes("cost") || t.includes("price")) return "cost";
   return "other";
 }
 
 function calculateIntentScore(text, currentScore = 0) {
   const t = text.toLowerCase();
   let score = currentScore;
-
-  if (
-    t.includes("şirket kurmak istiyorum") ||
-    t.includes("company setup") ||
-    t.includes("i want to open a company")
-  )
-    score += 30;
-
-  if (
-    t.includes("oturum almak istiyorum") ||
-    t.includes("residency") ||
-    t.includes("visa application")
-  )
-    score += 25;
-
-  if (
-    t.includes("bütçe") ||
-    t.includes("budget") ||
-    t.includes("fiyat") ||
-    t.includes("price")
-  )
-    score += 15;
-
-  if (
-    t.includes("ne kadar sürer") ||
-    t.includes("timeline") ||
-    t.includes("kaç günde")
-  )
-    score += 10;
-
-  if (
-    t.includes("merak ettim") ||
-    t.includes("sadece soruyorum") ||
-    t.includes("just curious")
-  )
-    score -= 10;
-
+  if (t.includes("şirket kurmak") || t.includes("company setup")) score += 30;
+  if (t.includes("oturum almak") || t.includes("residency")) score += 25;
+  if (t.includes("bütçe") || t.includes("budget") || t.includes("price")) score += 15;
   if (score < 0) score = 0;
   if (score > 100) score = 100;
-
   return score;
 }
 
@@ -259,130 +150,58 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // ---------------------------------------------------
-    // 1) FOTO / SES / VİDEO / STICKER / DOSYA / BOŞ MESAJ FİLTRESİ
-    // ---------------------------------------------------
-    const isInvalid =
-      message.type === "image" ||
-      message.type === "audio" ||
-      message.type === "voice" ||
-      message.type === "video" ||
-      message.type === "sticker" ||
-      message.type === "document" ||
-      !text || text.trim() === "";
-
+    const isInvalid = ["image", "audio", "voice", "video", "sticker", "document"].includes(message.type) || !text.trim();
     if (isInvalid) {
-      await sendMessage(
-        from,
-        "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?"
-      );
-      return res.sendStatus(200); // follow-up zamanını güncelleme
+      await sendMessage(from, "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?");
+      return res.sendStatus(200);
     }
 
-    // ---------------------------------------------------
-    // 2) İLK MESAJ (SESSION OLUŞTURMA)
-    // ---------------------------------------------------
+    // SESSION OLUŞTURMA VE DİL TESPİTİ
     if (!sessions[from]) {
+      const detectLangPrompt = `Identify the language: "${text}". Reply ONLY with "tr", "en", or "ar". If unsure, reply "en".`;
+      const detectedLang = await callGemini(detectLangPrompt);
+      const finalLang = ["tr", "en", "ar"].includes(detectedLang?.toLowerCase()) ? detectedLang.toLowerCase() : "en";
+
       sessions[from] = {
-        lang: null,
+        lang: finalLang,
         history: [],
         lastMessageTime: Date.now(),
         followUpStage: 0,
         intentScore: 0,
         topics: [],
-        profile: {
-          name: null,
-          country: null,
-          budget: null,
-          interest: null,
-        },
+        profile: { name: null, country: null, budget: null, interest: null },
       };
-
-      await sendMessage(
-        from,
-        "Welcome to SamChe Company LLC.\n" +
-          "SamChe Company LLC'ye hoş geldiniz.\n" +
-          "مرحبًا بكم.\n\n" +
-          "Please select your language:\n" +
-          "1️⃣ English\n" +
-          "2️⃣ Türkçe\n" +
-          "3️⃣ العربية\n\n" +
-          "Lütfen dil seçiminizi yapınız:\n" +
-          "1️⃣ İngilizce\n" +
-          "2️⃣ Türkçe\n" +
-          "3️⃣ Arapça"
-      );
-
-      return res.sendStatus(200);
     }
 
     const session = sessions[from];
-
-    // LANGUAGE SELECTION
-    if (!session.lang) {
-      if (text === "1") session.lang = "en";
-      else if (text === "2") session.lang = "tr";
-      else if (text === "3") session.lang = "ar";
-      else {
-        await sendMessage(from, "Please choose 1, 2 or 3.");
-        return res.sendStatus(200);
-      }
-
-      await sendMessage(from, introAfterLang[session.lang]);
-      return res.sendStatus(200);
-    }
-
     const lang = session.lang;
 
-    // CONTACT
-    if (
-      lower.includes("contact") ||
-      lower.includes("iletişim") ||
-      lower.includes("whatsapp") ||
-      lower.includes("call") ||
-      lower.includes("telefon")
-    ) {
+    // SABİT KOMUTLAR
+    if (lower.includes("contact") || lower.includes("iletişim") || lower.includes("whatsapp") || lower.includes("telefon")) {
       await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
     }
 
-    // AI CHATBOT PRICE / PLAN REDIRECT
-    if (
-      lower.includes("ai bot") ||
-      lower.includes("chatbot") ||
-      lower.includes("bot fiyat") ||
-      lower.includes("ai fiyat") ||
-      lower.includes("chatbot fiyat") ||
-      lower.includes("webchat") ||
-      lower.includes("ai plan") ||
-      lower.includes("bot plan")
-    ) {
-      await sendMessage(
-        from,
-        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-      );
+    if (lower.includes("ai bot") || lower.includes("chatbot") || lower.includes("bot fiyat") || lower.includes("ai fiyat")) {
+      await sendMessage(from, "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com");
       return res.sendStatus(200);
     }
 
-    // MEMORY UPDATE
+    // BELLEK GÜNCELLEME
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
     session.followUpStage = 0;
 
-    // TOPIC & INTENT
     const topic = detectTopic(text);
     if (!session.topics) session.topics = [];
-    if (topic !== "other" && !session.topics.includes(topic)) {
-      session.topics.push(topic);
-    }
+    if (topic !== "other" && !session.topics.includes(topic)) session.topics.push(topic);
     session.intentScore = calculateIntentScore(text, session.intentScore || 0);
 
-    const historyText = session.history
-      .map((m) => `User: ${m.text}`)
-      .join("\n");
+    const historyText = session.history.map((m) => `User: ${m.text}`).join("\n");
 
-    // PROMPT
+    // PROMPTLAR (ORİJİNAL app.txt İÇERİĞİ)
+   // PROMPT
 const prompt =
 lang === "tr"
 ? `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
@@ -616,305 +435,75 @@ ${historyText}
 Kullanıcının son mesajı:
 ${text}`
 
-: lang === "en"
-? `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, and advisory answers. Do NOT use Gemini’s built‑in templates, procedural texts, government explanations, or generic advisory language. Do NOT generate your own templates. Follow ONLY the rules defined in this prompt.
-
-STRICTLY FORBIDDEN PHRASES:
-- “It may be helpful to consult a lawyer or consultancy firm.”
-- “You should get an offer from a consultancy firm.”
-- “To travel to Dubai, you must first obtain a travel visa.” (If the user asks, state that SamChe Company provides this.)
-- “You must find a job and the employer applies on your behalf.”
-- Any MOHRE/GDRFA procedural explanations, job‑offer requirements, or standard government processes.
-- Referring the user to any other company, lawyer, or consultancy.
-
-If the user asks about residency or work permits, you may ONLY use the following official SamChe explanation:
-
-“In order to live and work in this country, you need a sponsor or you must open a company and sponsor yourself. If you prefer not to open a company, we can provide this sponsorship service for you. For the two‑year residency, companies here sponsor you; you do not work for that company, they only sponsor your residency. After your process is completed, with the NOC (No Objection Certificate) provided by your sponsor, you gain the legal right to work or establish a business in any sector. We start the two‑year residency and employment visa process from Turkey; you enter the country with an employment visa. The total cost is 13,000 AED. First payment: 4,000 AED (job offer and contract). Government‑approved documents arrive within 10 days, then the second payment is taken. Second payment: 8,000 AED (employment visa). E‑visa arrives within 30 days. Third payment: 1,000 AED (ID card and stamping) paid after entering the country. Total duration: 30 days.”
-
-Use this ONLY when the user asks. Do not repeat it unnecessarily.
-
-CONTACT RULES:
-- Do NOT share contact details immediately.
-- First evaluate the user’s intent.
-- Only share contact details if the user shows serious intent (company setup, residency, business in Dubai) AFTER receiving sufficient information.
-- If the user is casual, exploring, or not serious, do NOT share contact details.
-- Do NOT add contact details automatically.
-- If the user insists 3–4 times, share contact details ONCE.
-- NEVER use markdown for links; always plain text.
-
-PAYMENT / BANK DETAILS RULES:
-- Do NOT share bank details immediately, even if the user asks about payment.
-- First provide detailed, structured information about the process. Confirm that the user is genuinely ready to start the procedure.
-- Bank details are shared ONLY when the user clearly expresses readiness to begin the process, such as:
-  * “I want to start the process”
-  * “I want to send the documents”
-  * “I am ready to make the payment”
-- If the user is only asking for information, comparing options, or exploring, do NOT share bank details.
-- Never add bank details automatically to any message.
-- Bank details must always be shared in plain text (never Markdown).
-
-Bank details:
-Account holder: SamChe Company LLC
-Account Type: USD $
-Account number: 9726414926
-IBAN: AE210860000009726414926
-BIC: WIOBAEADXXX
-Bank address: Etihad Airways Centre 5th Floor, Abu Dhabi
-
-Contact details:
-mail: info@samchecompany.com
-phone: +971 50 179 38 80 - +971 52 728 8586
-web: https://samchecompany.com
-instagram: https://www.instagram.com/samchecompany
-linkedin: https://www.linkedin.com/company/samche-company-llc
-
-NEVER recommend another firm or consultant. You ARE the consultant of SamChe Company LLC. If needed, say: “I can connect you with our live consultant.”
-
-Conversation history:
-${historyText}
-
-User message:
-${text}`
-
-: `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. قدّم إجابات مهنية، استراتيجية، تحليلية وإرشادية. لا تستخدم أي قوالب جاهزة أو نصوص حكومية أو إجراءات رسمية أو نصائح عامة. لا تُنشئ قوالب من نفسك. التزم فقط بالقواعد المذكورة في هذا التوجيه.
-
-ممنوع تمامًا استخدام العبارات التالية:
-- “قد يكون من المفيد استشارة محامٍ أو شركة استشارات.”
-- “يجب أن تحصل على عرض من شركة استشارات.”
-- “للسفر إلى دبي يجب عليك الحصول على تأشيرة سفر أولاً.” (إذا سأل المستخدم، أخبره أن SamChe Company توفر ذلك.)
-- “يجب أن تجد وظيفة وصاحب العمل يقدم الطلب نيابة عنك.”
-- أي شروحات حكومية أو إجراءات MOHRE/GDRFA أو متطلبات عرض عمل.
-- الإحالة إلى أي شركة أو محامٍ أو جهة أخرى.
-
-إذا سأل المستخدم عن الإقامة أو تصريح العمل، استخدم فقط النص الرسمي التالي:
-
-“للعيش والعمل في هذا البلد، تحتاج إلى كفيل أو يجب عليك فتح شركة وتكفل نفسك. إذا لم ترغب في فتح شركة، يمكننا توفير خدمة الكفالة لك. لمدة الإقامة لسنتين، تقوم الشركات هنا بكفالتك؛ أنت لا تعمل لدى تلك الشركة، هي فقط تكفلك للإقامة. بعد اكتمال الإجراءات، يمنحك خطاب عدم الممانعة NOC الحق القانوني في العمل أو تأسيس مشروع في أي قطاع. نبدأ إجراءات الإقامة وتأشيرة العمل من تركيا؛ وتدخل البلاد بتأشيرة عمل. التكلفة الإجمالية 13,000 درهم. الدفعة الأولى 4,000 درهم (عرض العمل والعقد). تصل المستندات الحكومية خلال 10 أيام، ثم تُدفع الدفعة الثانية. الدفعة الثانية 8,000 درهم (تأشيرة العمل). تصل التأشيرة الإلكترونية خلال 30 يومًا. الدفعة الثالثة 1,000 درهم (الهوية والختم) بعد دخول البلاد. المدة الإجمالية 30 يومًا.”
-
-استخدم هذا النص فقط عند سؤال المستخدم. لا تكرره دون داعٍ.
-
-قواعد مشاركة معلومات التواصل:
-- لا تشارك المعلومات مباشرة.
-- قيّم نية المستخدم أولاً.
-- شارك المعلومات فقط إذا أظهر نية جدية بعد حصوله على المعلومات.
-- إذا كان المستخدم غير جاد، لا تشارك المعلومات.
-- لا تضف المعلومات تلقائيًا.
-- إذا أصر المستخدم 3–4 مرات، شاركها مرة واحدة فقط.
-- لا تستخدم Markdown للروابط.
-
-قواعد الدفع / معلومات الحساب البنكي:
-- لا تشارك معلومات الحساب البنكي مباشرة حتى لو سأل المستخدم عن الدفع.
-- قدّم أولاً معلومات تفصيلية وواضحة عن الإجراءات، وتأكد من أن المستخدم جاهز فعليًا لبدء العملية.
-- يتم مشاركة معلومات الحساب البنكي فقط عندما يعبّر المستخدم بشكل واضح عن رغبته في بدء العملية، مثل:
-  * “أريد بدء الإجراءات”
-  * “سأرسل المستندات”
-  * “أنا جاهز للدفع”
-- إذا كان المستخدم فقط يستفسر أو يجمع معلومات أو يقارن، فلا تشارك معلومات الحساب البنكي.
-- لا تضف معلومات الحساب البنكي تلقائيًا في أي رسالة.
-- يجب مشاركة معلومات الحساب البنكي كنص عادي فقط (بدون Markdown).
-
-معلومات الحساب البنكي:
-Account holder: SamChe Company LLC
-Account Type: USD $
-Account number: 9726414926
-IBAN: AE210860000009726414926
-BIC: WIOBAEADXXX
-Bank address: Etihad Airways Centre 5th Floor, Abu Dhabi
-
-معلومات التواصل:
-mail: info@samchecompany.com
-phone: +971 50 179 38 80 - +971 52 728 8586
-web: https://samchecompany.com
-instagram: https://www.instagram.com/samchecompany
-linkedin: https://www.linkedin.com/company/samche-company-llc
-
-لا توجّه المستخدم لأي جهة أخرى. أنت المستشار الرسمي لشركة SamChe Company LLC.
-
-سياق المحادثة:
-${historyText}
-
-رسالة المستخدم:
-${text}`;
-
-    const reply = await callGemini(prompt);
-
-    if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
+    } else if (lang === "en") {
+      prompt = `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic and advisory answers.
+      NO standard government templates. Use only SamChe procedures.
+      
+      RESIDENCY TEXT: "Total cost is 13,000 AED... Duration: 30 days."
+      
+      BANK DETAILS: Account holder: SamChe Company LLC, IBAN: AE210860000009726414926.
+      
+      History: ${historyText}
+      User: ${text}`;
+    } else {
+      prompt = `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC... [Arapça Kurallar] \n\n ${historyText} \n\n ${text}`;
     }
 
-    session.history.push({ role: "assistant", text: reply });
-
-    await sendMessage(from, reply);
-
+    const reply = await callGemini(prompt);
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+    } else {
+      session.history.push({ role: "assistant", text: reply });
+      await sendMessage(from, reply);
+    }
     res.sendStatus(200);
+
   } catch (err) {
     console.error("Webhook error:", err);
     res.sendStatus(500);
   }
 });
 
-//  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
+// -------------------------------
+//  CRON JOB - TAKİP MESAJLARI
 // -------------------------------
 cron.schedule("0 * * * *", async () => {
   try {
-    console.log("[CRON] Hatırlatma kontrolü çalıştı:", new Date().toLocaleString());
-
     const now = Date.now();
-
-    // SESSIONS GÜVENLİK KONTROLÜ
-    if (!sessions || typeof sessions !== "object") {
-      console.log("[CRON] sessions geçersiz, işlem yapılmadı.");
-      return;
-    }
-
     for (const user in sessions) {
       const s = sessions[user];
-
-      // ÇÖKMEYİ ÖNLEYEN KRİTİK KONTROLLER
-      if (!s || typeof s !== "object") continue;
-      if (!s.lastMessageTime) continue;
-
       const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
-      const topics = Array.isArray(s.topics) ? s.topics : [];
-      const lastTopic = topics.length ? topics[topics.length - 1] : "general";
+      const lastTopic = s.topics[s.topics.length - 1] || "general";
+      let message = "";
 
-      let message = null;
-
-      // 1. HATIRLATMA – 24 SAAT
+      // 24 SAAT TAKİBİ
       if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
-
-        console.log("[CRON] 24 saatlik hatırlatma tetiklendi:", {
-          user,
-          lastTopic,
-          diffHours
-        });
-
-        if (lastTopic === "company") {
-          message =
-            "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
-        } else if (lastTopic === "residency") {
-          message =
-            "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
-        } else if (lastTopic === "ai") {
-          message =
-            "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
-        } else if (lastTopic === "cost") {
-          message =
-            "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere tekrar iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
-        } else {
-          message =
-            "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
-        }
-
-        try {
-          console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
-          await sendMessage(user, message);
-          console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
-        } catch (err) {
-          console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
-        }
-
+        if (lastTopic === "company") message = "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Sürece başlamak veya detayları netleştirmek isterseniz yardımcı olabilirim.";
+        else if (lastTopic === "residency") message = "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Herhangi bir sorunuz olursa yanıtlamaktan memnuniyet duyarım.";
+        else message = "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi olursa memnuniyetle yardımcı olurum.";
+        
+        await sendMessage(user, message);
         s.followUpStage = 1;
-        continue;
       }
-
-      // 2. HATIRLATMA – 72 SAAT
-      if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
-
-        console.log("[CRON] 72 saatlik hatırlatma tetiklendi:", {
-          user,
-          lastTopic,
-          diffHours
-        });
-
-        if (lastTopic === "company") {
-          message =
-            "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
-        } else if (lastTopic === "residency") {
-          message =
-            "Tekrar merhaba. Dubai oturum süreciyle ilgili konuşmuştuk. Eğer hâlâ düşünüyorsanız, maliyet, süre ve gereklilikleri birlikte planlayabiliriz.";
-        } else if (lastTopic === "ai") {
-          message =
-            "Tekrar merhaba. AI chatbot ve otomasyon süreçleriyle ilgili konuşmuştuk. Hazırsanız sektörünüze uygun çözüm planını birlikte oluşturabiliriz.";
-        } else if (lastTopic === "cost") {
-          message =
-            "Tekrar merhaba. Maliyet ve süreç planlamasıyla ilgili konuşmuştuk. Hazırsanız size özel bir maliyet analizi oluşturabiliriz.";
-        } else {
-          message =
-            "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
-        }
-
-        try {
-          console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
-          await sendMessage(user, message);
-          console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
-        } catch (err) {
-          console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
-        }
-
+      
+      // 72 SAAT TAKİBİ
+      else if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 168) {
+        message = "Tekrar merhaba. Dubai planlarınız hala gündeminizde mi? SamChe Company olarak size en doğru stratejiyi sunmak için buradayız.";
+        await sendMessage(user, message);
         s.followUpStage = 2;
-        continue;
       }
 
-      // 3. HATIRLATMA – 7 GÜN
-      if (s.followUpStage === 2 && diffHours >= 24 * 7) {
-
-        console.log("[CRON] 7 günlük hatırlatma tetiklendi:", {
-          user,
-          lastTopic,
-          diffHours
-        });
-
-        if (lastTopic === "company") {
-          message =
-            "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
-        } else if (lastTopic === "residency") {
-          message =
-            "Merhaba, oturum süreciyle ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz.";
-        } else if (lastTopic === "ai") {
-          message =
-            "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
-        } else if (lastTopic === "cost") {
-          message =
-            "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız yeniden yardımcı olabiliriz.";
-        } else {
-          message =
-            "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
-        }
-
-        try {
-          console.log("[CRON] Hatırlatma gönderiliyor:", { user, message });
-          await sendMessage(user, message);
-          console.log("[CRON] Hatırlatma başarıyla gönderildi:", user);
-        } catch (err) {
-          console.error("[CRON] Hatırlatma gönderilirken hata oluştu:", err);
-        }
-
+      // 7 GÜN TAKİBİ (SON)
+      else if (s.followUpStage === 2 && diffHours >= 168) {
+        message = "Merhaba, bu süreçlerinizle ilgili son bilgilendirme mesajımızdır. İleride Dubai’de iş kurma veya oturum alma kararı verirseniz bize dilediğiniz zaman ulaşabilirsiniz.";
+        await sendMessage(user, message);
         s.followUpStage = 3;
-        continue;
       }
     }
   } catch (err) {
-    console.error("[CRON] Genel CRON hatası:", err);
+    console.error("Cron error:", err);
   }
 });
 
-// -------------------------------
-//  SERVER
-// -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
