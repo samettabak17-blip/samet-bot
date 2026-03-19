@@ -742,8 +742,8 @@ const reply = await callGemini(prompt);
   }
 });
 
-//  CRON TABANLI 24–72 SAAT & 7 GÜN HATIRLATMA
-// -------------------------------
+//  CRON TABANLI 3 SAAT + 24–72 SAAT & 7 GÜN HATIRLATMA
+// -----------------------------------------------------
 cron.schedule("0 * * * *", async () => {
   try {
     console.log("[CRON] Hatırlatma kontrolü çalıştı:", new Date().toLocaleString());
@@ -769,9 +769,24 @@ cron.schedule("0 * * * *", async () => {
 
       let message = null;
 
-      // 1. HATIRLATMA – 24 SAAT
-      if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
+      // ----------------------------------------------------
+      // 1) KISA SÜRELİ 3 SAAT FOLLOW-UP  (EKLENDİ — DOĞRU HALİ)
+      // ----------------------------------------------------
+      if (diffHours >= 3 && !s.followUpSent3h) {
+        await sendMessage(
+          user,
+          "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum."
+        );
 
+        s.followUpSent3h = true;
+        console.log("[CRON] 3 saatlik follow-up gönderildi:", user);
+        continue;
+      }
+
+      // ----------------------------------------------------
+      // 1. HATIRLATMA – 24 SAAT
+      // ----------------------------------------------------
+      if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
         console.log("[CRON] 24 saatlik hatırlatma tetiklendi:", {
           user,
           lastTopic,
@@ -807,9 +822,10 @@ cron.schedule("0 * * * *", async () => {
         continue;
       }
 
+      // ----------------------------------------------------
       // 2. HATIRLATMA – 72 SAAT
+      // ----------------------------------------------------
       if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
-
         console.log("[CRON] 72 saatlik hatırlatma tetiklendi:", {
           user,
           lastTopic,
@@ -845,9 +861,10 @@ cron.schedule("0 * * * *", async () => {
         continue;
       }
 
+      // ----------------------------------------------------
       // 3. HATIRLATMA – 7 GÜN
+      // ----------------------------------------------------
       if (s.followUpStage === 2 && diffHours >= 24 * 7) {
-
         console.log("[CRON] 7 günlük hatırlatma tetiklendi:", {
           user,
           lastTopic,
