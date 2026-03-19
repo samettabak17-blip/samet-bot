@@ -347,8 +347,20 @@ app.post("/webhook", async (req, res) => {
     }
 
 
-      // AI CHATBOT PRICE / PLAN REDIRECT
-if (
+   // AI CHATBOT PRICE / PLAN REDIRECT
+   if (
+  lower.includes("fiyat") ||
+  lower.includes("ücret") ||
+  lower.includes("ucret") ||
+  lower.includes("ne kadar") ||
+  lower.includes("kaça") ||
+  lower.includes("kaca") ||
+  lower.includes("fiyat ne") ||
+  lower.includes("fiyat nedir") ||
+  lower.includes("fiyat bilgisi") ||
+  lower.includes("fiyatlar") ||
+  lower.includes("fiyat listesi") ||
+  lower.includes("ücretlendirme") ||
   lower.includes("bot fiyat") ||
   lower.includes("ai fiyat") ||
   lower.includes("chatbot fiyat") ||
@@ -357,7 +369,7 @@ if (
   lower.includes("bot plan") ||
   lower.includes("ai chatbot fiyat") ||
   lower.includes("ai chatbot bilgi fiyat") ||
-  lower.includes("webchat fiyat")
+  lower.includes("wechat fiyat")
 ) {
   await sendMessage(
     from,
