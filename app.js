@@ -802,6 +802,7 @@ cron.schedule("0 * * * *", async () => {
 
      // 24 SAAT HATIRLATMA
 if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
+ 
   if (lang === "tr") {
     if (lastTopic === "company") {
       message =
@@ -864,6 +865,7 @@ if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
   }
 // 72 SAAT HATIRLATMA
 if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
+
   if (lang === "tr") {
     if (lastTopic === "company") {
       message =
@@ -924,8 +926,10 @@ if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
   s.followUpStage = 2;
   continue;
 }
-    // 7 GÜN HATIRLATMA
+
+// 7 GÜN HATIRLATMA
 if (s.followUpStage === 2 && diffHours >= 24 * 7) {
+ 
   if (lang === "tr") {
     if (lastTopic === "company") {
       message =
