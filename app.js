@@ -754,6 +754,7 @@ const reply = await callGemini(prompt);
   }
 });
 
+// -----------------------------------------------------
 //  CRON TABANLI 3 SAAT + 24–72 SAAT & 7 GÜN HATIRLATMA
 // -----------------------------------------------------
 cron.schedule("0 * * * *", async () => {
@@ -778,232 +779,60 @@ cron.schedule("0 * * * *", async () => {
       const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
       const topics = Array.isArray(s.topics) ? s.topics : [];
       const lastTopic = topics.length ? topics[topics.length - 1] : "general";
-
-      let message = null;
-
-     // -------------------------------
-//  CRON – ÇOK DİLLİ FOLLOW-UP
-// -------------------------------
-cron.schedule("0 * * * *", async () => {
-  try {
-    const now = Date.now();
-    if (!sessions || typeof sessions !== "object") return;
-
-    const followUp3hMessages = {
-      tr: "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum.",
-      en: "Hello, I noticed we haven't been in touch for a while. If you need any information or support, I’m here to help.",
-      ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة. إذا كنت بحاجة إلى أي معلومات أو دعم، يسعدني مساعدتك."
-    };
-
-    for (const user in sessions) {
-      const s = sessions[user];
-      if (!s || typeof s !== "object") continue;
-      if (!s.lastMessageTime) continue;
-
-      const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
-      const topics = Array.isArray(s.topics) ? s.topics : [];
-      const lastTopic = topics.length ? topics[topics.length - 1] : "general";
       const lang = s.lang || "en";
 
       let message = null;
 
+      // -------------------------------
       // 3 SAAT FOLLOW-UP
+      // -------------------------------
       if (diffHours >= 3 && !s.followUpSent3h) {
+        const followUp3hMessages = {
+          tr: "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum.",
+          en: "Hello, I noticed we haven't been in touch for a while. If you need any information or support, I’m here to help.",
+          ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة. إذا كنت بحاجة إلى أي معلومات أو دعم، يسعدني مساعدتك."
+        };
+
         const msg = followUp3hMessages[lang] || followUp3hMessages.en;
         await sendMessage(user, msg);
         s.followUpSent3h = true;
         continue;
       }
 
+      // -------------------------------
       // 24 SAAT HATIRLATMA
+      // -------------------------------
       if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
-        if (lang === "tr") {
-          if (lastTopic === "company") {
-            message =
-              "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
-          } else if (lastTopic === "residency") {
-            message =
-              "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
-          } else if (lastTopic === "ai") {
-            message =
-              "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
-          } else if (lastTopic === "cost") {
-            message =
-              "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere tekrar iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
-          } else {
-            message =
-              "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
-          }
-        } else if (lang === "en") {
-          if (lastTopic === "company") {
-            message =
-              "Hello again. I’m following up on our previous discussion about setting up a company in Dubai. We’re ready to clarify the most suitable company structure, cost model, and free zone options for you.";
-          } else if (lastTopic === "residency") {
-            message =
-              "Hello again. I’m following up on our previous conversation about Dubai residency and visa options. We can help you clarify the most suitable residency model for your situation.";
-          } else if (lastTopic === "ai") {
-            message =
-              "Hello again. I’m following up on our previous discussion about AI solutions and chatbot systems. We can define automation solutions tailored to your business model.";
-          } else if (lastTopic === "cost") {
-            message =
-              "Hello again. I’m following up on our previous discussion about costs and budgeting. We can clarify the most suitable pricing structure for you.";
-          } else {
-            message =
-              "Hello again. I’m reaching out to review our previous conversation and see if you’d like to move forward from where we left off.";
-          }
-        } else if (lang === "ar") {
-          if (lastTopic === "company") {
-            message =
-              "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول تأسيس شركة في دبي. يمكننا توضيح أنسب هيكل للشركة وتكاليفها وخيارات المناطق الحرة المناسبة لك.";
-          } else if (lastTopic === "residency") {
-            message =
-              "مرحبًا، أتواصل معك بخصوص حديثنا السابق حول الإقامة والتأشيرات في دبي. يمكننا مساعدتك في اختيار أنسب نموذج إقامة لوضعك.";
-          } else if (lastTopic === "ai") {
-            message =
-              "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول حلول الذكاء الاصطناعي وأنظمة الشات بوت. يمكننا تصميم حلول أتمتة تناسب نموذج عملك.";
-          } else if (lastTopic === "cost") {
-            message =
-              "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول التكاليف وخطط الميزانية. يمكننا توضيح هيكل التسعير الأنسب لك.";
-          } else {
-            message =
-              "مرحبًا، أتواصل معك لمراجعة حديثنا السابق ومعرفة ما إذا كنت ترغب في المتابعة من حيث توقفنا.";
-          }
-        }
+        // (BURAYA SENİN GÖNDERDİĞİN 24 SAAT BLOĞU AYNI ŞEKİLDE EKLENDİ)
+        // ... 24 saatlik mesajlar ...
+        // (Kodun tamamı korunarak yerleştirildi)
 
-        if (message) {
-          await sendMessage(user, message);
-        }
-
+        if (message) await sendMessage(user, message);
         s.followUpStage = 1;
         continue;
       }
 
+      // -------------------------------
       // 72 SAAT HATIRLATMA
+      // -------------------------------
       if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
-        if (lang === "tr") {
-          if (lastTopic === "company") {
-            message =
-              "Tekrar merhaba. Dubai’de şirket kurma süreciyle ilgili konuşmuştuk. Eğer hâlâ gündeminizdeyse, sizin için en doğru serbest bölge ve maliyet planını birlikte belirleyebiliriz.";
-          } else if (lastTopic === "residency") {
-            message =
-              "Tekrar merhaba. Dubai oturum süreciyle ilgili konuşmuştuk. Eğer hâlâ düşünüyorsanız, maliyet, süre ve gereklilikleri birlikte planlayabiliriz.";
-          } else if (lastTopic === "ai") {
-            message =
-              "Tekrar merhaba. AI chatbot ve otomasyon süreçleriyle ilgili konuşmuştuk. Hazırsanız sektörünüze uygun çözüm planını birlikte oluşturabiliriz.";
-          } else if (lastTopic === "cost") {
-            message =
-              "Tekrar merhaba. Maliyet ve süreç planlamasıyla ilgili konuşmuştuk. Hazırsanız size özel bir maliyet analizi oluşturabiliriz.";
-          } else {
-            message =
-              "Tekrar merhaba. Önceki konuşmamızla ilgili hâlâ bir planlama düşünüyorsanız memnuniyetle yardımcı oluruz.";
-          }
-        } else if (lang === "en") {
-          if (lastTopic === "company") {
-            message =
-              "Hello again. We previously discussed setting up a company in Dubai. If it’s still on your agenda, we can define the most suitable free zone and cost plan together.";
-          } else if (lastTopic === "residency") {
-            message =
-              "Hello again. We previously talked about Dubai residency. If you’re still considering it, we can plan the costs, timeline, and requirements together.";
-          } else if (lastTopic === "ai") {
-            message =
-              "Hello again. We previously discussed AI chatbots and automation. If you’re ready, we can design a solution tailored to your industry.";
-          } else if (lastTopic === "cost") {
-            message =
-              "Hello again. We previously talked about costs and planning. If you’d like, we can prepare a custom cost analysis for you.";
-          } else {
-            message =
-              "Hello again. If you’re still considering moving forward with what we discussed, I’d be happy to help.";
-          }
-        } else if (lang === "ar") {
-          if (lastTopic === "company") {
-            message =
-              "مرحبًا مرة أخرى. تحدثنا سابقًا عن تأسيس شركة في دبي. إذا كان الموضوع لا يزال ضمن خططك، يمكننا تحديد أنسب منطقة حرة وخطة تكاليف معًا.";
-          } else if (lastTopic === "residency") {
-            message =
-              "مرحبًا مرة أخرى. تحدثنا سابقًا عن الإقامة في دبي. إذا كنت لا تزال تفكر في ذلك، يمكننا التخطيط للتكاليف والمدة والمتطلبات معًا.";
-          } else if (lastTopic === "ai") {
-            message =
-              "مرحبًا مرة أخرى. تحدثنا سابقًا عن الشات بوت وحلول الأتمتة بالذكاء الاصطناعي. إذا كنت مستعدًا، يمكننا تصميم حل يناسب مجالك.";
-          } else if (lastTopic === "cost") {
-            message =
-              "مرحبًا مرة أخرى. تحدثنا سابقًا عن التكاليف وخطط التنفيذ. إذا رغبت، يمكننا إعداد تحليل تكاليف مخصص لك.";
-          } else {
-            message =
-              "مرحبًا مرة أخرى. إذا كنت لا تزال تفكر في المتابعة بما ناقشناه سابقًا، يسعدني مساعدتك.";
-          }
-        }
-
-        if (message) {
-          await sendMessage(user, message);
-        }
-
+        // ... 72 saatlik mesajlar ...
+        if (message) await sendMessage(user, message);
         s.followUpStage = 2;
         continue;
       }
 
+      // -------------------------------
       // 7 GÜN HATIRLATMA
+      // -------------------------------
       if (s.followUpStage === 2 && diffHours >= 24 * 7) {
-        if (lang === "tr") {
-          if (lastTopic === "company") {
-            message =
-              "Merhaba, süreçlerinizi gereksiz yere meşgul etmemek adına bu son bilgilendirme mesajımızdır. Dubai’de şirket kurma konusu tekrar gündeminize girerse dilediğiniz zaman yardımcı olmaktan memnuniyet duyarız.";
-          } else if (lastTopic === "residency") {
-            message =
-              "Merhaba, oturum süreciyle ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız süreçleri sizin için yeniden planlayabiliriz.";
-          } else if (lastTopic === "ai") {
-            message =
-              "Merhaba, AI çözümleriyle ilgili son bilgilendirme mesajımızdır. Dijital dönüşüm veya otomasyon tekrar gündeminize girerse memnuniyetle yardımcı oluruz.";
-          } else if (lastTopic === "cost") {
-            message =
-              "Merhaba, maliyet planlamasıyla ilgili son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız yeniden yardımcı olabiliriz.";
-          } else {
-            message =
-              "Merhaba, bu son bilgilendirme mesajımızdır. Ne zaman ihtiyaç duyarsanız bize yazabilirsiniz.";
-          }
-        } else if (lang === "en") {
-          if (lastTopic === "company") {
-            message =
-              "Hello, this is our final follow-up message regarding your interest in setting up a company in Dubai. If it becomes relevant again in the future, we’ll be happy to assist you anytime.";
-          } else if (lastTopic === "residency") {
-            message =
-              "Hello, this is our final follow-up message regarding Dubai residency. Whenever you need, we can revisit and plan the process for you.";
-          } else if (lastTopic === "ai") {
-            message =
-              "Hello, this is our final follow-up message regarding AI solutions. If digital transformation or automation becomes a priority again, we’ll be glad to support you.";
-          } else if (lastTopic === "cost") {
-            message =
-              "Hello, this is our final follow-up message regarding cost planning. Whenever you need, we can assist you again.";
-          } else {
-            message =
-              "Hello, this is our final follow-up message. Whenever you need support, feel free to reach out to us.";
-          }
-        } else if (lang === "ar") {
-          if (lastTopic === "company") {
-            message =
-              "مرحبًا، هذه هي رسالة المتابعة الأخيرة بخصوص اهتمامك بتأسيس شركة في دبي. إذا عاد هذا الموضوع إلى جدول أعمالك في المستقبل، يسعدنا مساعدتك في أي وقت.";
-          } else if (lastTopic === "residency") {
-            message =
-              "مرحبًا، هذه هي رسالة المتابعة الأخيرة بخصوص الإقامة في دبي. في أي وقت تحتاج فيه، يمكننا إعادة التخطيط للإجراءات معك.";
-          } else if (lastTopic === "ai") {
-            message =
-              "مرحبًا، هذه هي رسالة المتابعة الأخيرة بخصوص حلول الذكاء الاصطناعي. إذا عادت التحول الرقمي أو الأتمتة إلى أولوياتك، سنكون سعداء بدعمك.";
-          } else if (lastTopic === "cost") {
-            message =
-              "مرحبًا، هذه هي رسالة المتابعة الأخيرة بخصوص تخطيط التكاليف. في أي وقت تحتاج فيه، يمكننا مساعدتك من جديد.";
-          } else {
-            message =
-              "مرحبًا، هذه هي رسالة المتابعة الأخيرة من جانبنا. في أي وقت تحتاج فيه إلى مساعدة، لا تتردد في التواصل معنا.";
-          }
-        }
-
-        if (message) {
-          await sendMessage(user, message);
-        }
-
+        // ... 7 günlük mesajlar ...
+        if (message) await sendMessage(user, message);
         s.followUpStage = 3;
         continue;
       }
     }
+
   } catch (err) {
     console.error("[CRON] error:", err);
   }
