@@ -734,6 +734,7 @@ ${historyText}
 رسالة المستخدم:
 ${text}
 `;
+}
 
 
 const reply = await callGemini(prompt);
