@@ -637,7 +637,8 @@ Sohbet geçmişi:
 ${historyText}
 
 Kullanıcı mesajı:
-${text}`;
+${text}
+`;
 }
 
 else if (lang === "en") {
@@ -682,8 +683,10 @@ Conversation history:
 ${historyText}
 
 User message:
-${text}`;
+${text}
+`;
 }
+
 
 else {
   prompt = `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. قدّم إجابات مهنية، استراتيجية، تحليلية وإرشادية. لا تستخدم أي قوالب جاهزة أو نصوص حكومية أو إجراءات رسمية أو نصائح عامة. لا تُنشئ قوالب من نفسك. التزم فقط بالقواعد المذكورة في هذا التوجيه.
@@ -727,10 +730,8 @@ linkedin: https://www.linkedin.com/company/samche-company-llc
 ${historyText}
 
 رسالة المستخدم:
-${text}`;
-}
-
-
+${text}
+`;
 
 
 const reply = await callGemini(prompt);
