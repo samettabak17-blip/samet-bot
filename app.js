@@ -234,8 +234,6 @@ function calculateIntentScore(text, currentScore = 0) {
   return score;
 }
 
-const cron = require("node-cron");
-
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
