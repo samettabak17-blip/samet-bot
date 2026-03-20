@@ -343,24 +343,29 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-   // AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
-const isPriceQuery =
-  lower.includes("fiyat") ||
-  lower.includes("ücret") ||
-  lower.includes("ucret") ||
-  lower.includes("ne kadar") ||
-  lower.includes("maliyet") ||
-  lower.includes("cost") ||
-  lower.includes("price") ||
-  lower.includes("budget") ||
-  lower.includes("bütçe");
+  // ✔ AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
 
+// 1) Fiyat sorgusu
+const isPriceQuery =
+  lower.includes("ai fiyat") ||
+  lower.includes("ai ücret") ||
+  lower.includes("ai ucret") ||
+  lower.includes("ai maliyet") ||
+  lower.includes("chatbot fiyat") ||
+  lower.includes("chatbot ücret") ||
+  lower.includes("chatbot maliyet") ||
+  lower.includes("chatbot price") ||
+  lower.includes("ai price") ||
+  lower.includes("ai cost");
+
+// 2) AI bağlamı
 const isAIContext =
   topic === "ai" ||
-  lower.includes("ai") ||
-  lower.includes("chatbot") ||
-  lower.includes("bot");
+  lower.includes("ai chatbot") ||
+  lower.includes("yapay zeka chatbot") ||
+  lower.includes("chatbot");
 
+// 3) Yalnızca ikisi birlikteyse tetikle
 if (isAIContext && isPriceQuery) {
   await sendMessage(
     from,
