@@ -254,8 +254,7 @@ app.get("/webhook", (req, res) => {
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
-    const message =
-      req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
@@ -298,22 +297,43 @@ app.post("/webhook", async (req, res) => {
         },
       };
 
-      // ❗ DİL SEÇİMİ KALDIRILDI — OTOMATİK ALGILAMA
-      const hasArabic = /[\u0600-\u06FF]/.test(text);
-      const hasTurkish = /[ğüşöçıİĞÜŞÖÇ]/i.test(text);
+      await sendMessage(
+        from,
+        "Welcome to SamChe Company LLC.\n" +
+          "SamChe Company LLC'ye hoş geldiniz.\n" +
+          "مرحبًا بكم.\n\n" +
+          "Please select your language:\n" +
+          "1️⃣ English\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ العربية\n\n" +
+          "Lütfen dil seçiminizi yapınız:\n" +
+          "1️⃣ İngilizce\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ Arapça"
+      );
 
-      if (hasArabic) sessions[from].lang = "ar";
-      else if (hasTurkish) sessions[from].lang = "tr";
-      else sessions[from].lang = "en";
-
-      await sendMessage(from, introAfterLang[sessions[from].lang]);
       return res.sendStatus(200);
     }
 
     const session = sessions[from];
+
+    // LANGUAGE SELECTION
+    if (!session.lang) {
+      if (text === "1") session.lang = "en";
+      else if (text === "2") session.lang = "tr";
+      else if (text === "3") session.lang = "ar";
+      else {
+        await sendMessage(from, "Please choose 1, 2 or 3.");
+        return res.sendStatus(200);
+      }
+
+      await sendMessage(from, introAfterLang[session.lang]);
+      return res.sendStatus(200);
+    }
+
     const lang = session.lang;
 
-      // CONTACT
+    // CONTACT
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
@@ -325,7 +345,7 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-   // AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
+  // AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
 const isPriceQuery =
   lower.includes("fiyat") ||
   lower.includes("ücret") ||
@@ -363,16 +383,14 @@ if (isAIContext && isPriceQuery) {
     if (topic !== "other" && !session.topics.includes(topic)) {
       session.topics.push(topic);
     }
-    session.intentScore = calculateIntentScore(
-      text,
-      session.intentScore || 0
-    );
+    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-   // PROMPT
+
+    // PROMPT
 let prompt = "";
 
 if (lang === "tr") {
@@ -717,8 +735,7 @@ ${text}
 }
 
 
-
-    const reply = await callGemini(prompt);
+const reply = await callGemini(prompt);
 
     if (!reply) {
       await sendMessage(from, corporateFallback(lang));
@@ -740,10 +757,7 @@ ${text}
 //  CRON TABANLI 3 SAAT + 24–72 SAAT & 7 GÜN HATIRLATMA
 // -----------------------------------------------------
 cron.schedule("0 * * * *", async () => {
-  console.log(
-    "[CRON] Hatırlatma kontrolü tetiklendi:",
-    new Date().toLocaleString()
-  );
+  console.log("[CRON] Hatırlatma kontrolü tetiklendi:", new Date().toLocaleString());
 
   try {
     const now = Date.now();
@@ -793,6 +807,7 @@ cron.schedule("0 * * * *", async () => {
         // 24 SAAT HATIRLATMA
         // -------------------------------
         if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 72) {
+
           if (lang === "tr") {
             if (lastTopic === "company") {
               message =
@@ -862,6 +877,7 @@ cron.schedule("0 * * * *", async () => {
         // 72 SAAT HATIRLATMA
         // -------------------------------
         if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 24 * 7) {
+
           if (lang === "tr") {
             if (lastTopic === "company") {
               message =
@@ -931,6 +947,7 @@ cron.schedule("0 * * * *", async () => {
         // 7 GÜN HATIRLATMA
         // -------------------------------
         if (s.followUpStage === 2 && diffHours >= 24 * 7) {
+
           if (lang === "tr") {
             if (lastTopic === "company") {
               message =
@@ -995,14 +1012,14 @@ cron.schedule("0 * * * *", async () => {
           s.followUpStage = 3;
           continue;
         }
+
       } catch (innerErr) {
-        console.error(
-          "[CRON] user loop error:",
-          innerErr && innerErr.stack ? innerErr.stack : innerErr
-        );
+        console.error("[CRON] user loop error:", innerErr && innerErr.stack ? innerErr.stack : innerErr);
+        // Bu kullanıcıyı atla, diğerlerine devam et
         continue;
       }
-    }
+    } // for loop end
+
   } catch (err) {
     console.error("[CRON] TOP-LEVEL error:", err && err.stack ? err.stack : err);
   }
@@ -1012,6 +1029,16 @@ cron.schedule("0 * * * *", async () => {
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
-app.listen(port, () =>
-  console.log("SamChe Bot running on port " + port)
-);
+app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
+
+
+
+
+
+
+
+
+
+
+
