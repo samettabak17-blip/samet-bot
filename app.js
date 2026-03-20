@@ -250,19 +250,6 @@ app.get("/webhook", (req, res) => {
 });
 
 // -------------------------------
-//  WEBHOOK VERIFY
-// -------------------------------
-app.get("/webhook", (req, res) => {
-  if (
-    req.query["hub.mode"] === "subscribe" &&
-    req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN
-  ) {
-    return res.status(200).send(req.query["hub.challenge"]);
-  }
-  return res.sendStatus(403);
-});
-
-// -------------------------------
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
 app.post("/webhook", async (req, res) => {
@@ -376,23 +363,9 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    const reply = await generateGeminiResponse(
-      session.lang,
-      historyText,
-      session.profile,
-      session.topics
-    );
+    const lang = session.lang || "en";
 
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-    // PROMPT
+   // PROMPT
 let prompt = "";
 
 if (lang === "tr") {
@@ -631,7 +604,6 @@ AI chatbot kurulumu
 Instagram / WhatsApp otomasyonu
 CRM entegrasyonu
 Satış otomasyon sistemleri
-18. Kullanıcı daha önce sektör bilgisini verdiyse, bir daha ASLA sektör sorma.
 
 Sohbet geçmişi:
 ${historyText}
@@ -737,7 +709,7 @@ ${text}
 }
 
 
-const reply = await callGemini(prompt);
+    const reply = await callGemini(prompt);
 
     if (!reply) {
       await sendMessage(from, corporateFallback(lang));
@@ -748,10 +720,10 @@ const reply = await callGemini(prompt);
 
     await sendMessage(from, reply);
 
-    res.sendStatus(200);
+    return res.sendStatus(200);
   } catch (err) {
     console.error("Webhook error:", err);
-    res.sendStatus(500);
+    return res.sendStatus(500);
   }
 });
 
@@ -1017,7 +989,6 @@ cron.schedule("0 * * * *", async () => {
 
       } catch (innerErr) {
         console.error("[CRON] user loop error:", innerErr && innerErr.stack ? innerErr.stack : innerErr);
-        // Bu kullanıcıyı atla, diğerlerine devam et
         continue;
       }
     } // for loop end
@@ -1032,15 +1003,3 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
-
-
-
-
-
-
-
-
-
-
-
-
