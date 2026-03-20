@@ -250,6 +250,19 @@ app.get("/webhook", (req, res) => {
 });
 
 // -------------------------------
+//  WEBHOOK VERIFY
+// -------------------------------
+app.get("/webhook", (req, res) => {
+  if (
+    req.query["hub.mode"] === "subscribe" &&
+    req.query["hub.verify_token"] === process.env.WHATSAPP_VERIFY_TOKEN
+  ) {
+    return res.status(200).send(req.query["hub.challenge"]);
+  }
+  return res.sendStatus(403);
+});
+
+// -------------------------------
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
 app.post("/webhook", async (req, res) => {
@@ -261,63 +274,52 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // 1) MEDYA / BOŞ MESAJ FİLTRESİ
+    // 1) MEDYA FİLTRESİ
     const isInvalid =
-      message.type === "image" ||
-      message.type === "audio" ||
-      message.type === "voice" ||
-      message.type === "video" ||
-      message.type === "sticker" ||
-      message.type === "document" ||
+      message.type !== "text" ||
       !text ||
       text.trim() === "";
 
     if (isInvalid) {
-      await sendMessage(
-        from,
-        "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?"
-      );
+      await sendMessage(from, "Lütfen mesajınızı yazılı olarak iletin.");
       return res.sendStatus(200);
     }
 
-    // 2) İLK MESAJ (SESSION OLUŞTURMA)
-  if (!sessions[from]) {
-  sessions[from] = {
-    lang: null,
-    history: [],
-    lastMessageTime: Date.now(),
-    followUpStage: 0,
-    intentScore: 0,
-    topics: [],
-    profile: {
-      name: null,
-      country: null,
-      budget: null,
-      interest: null,
-    },
-  };
+    // 2) İLK MESAJ
+    if (!sessions[from]) {
+      sessions[from] = {
+        lang: null,
+        history: [],
+        lastMessageTime: Date.now(),
+        followUpStage: 0,
+        intentScore: 0,
+        topics: [],
+        profile: {
+          name: null,
+          country: null,
+          budget: null,
+          interest: null,
+        },
+      };
 
-  // OTOMATİK DİL ALGILAMA
-  const lower = text.toLowerCase();
-  const hasArabic = /[\u0600-\u06FF]/.test(text);
-  const hasTurkishChars = /[ğüşöçıİĞÜŞÖÇ]/i.test(text);
+      // DİL ALGILAMA
+      const hasArabic = /[\u0600-\u06FF]/.test(text);
+      const hasTurkishChars = /[ğüşöçıİĞÜŞÖÇ]/i.test(text);
+      const turkishWords = [
+        "merhaba","selam","nasilsin","bilgi","yardim","fiyat","ucret",
+        "firma","sirket","kurmak","oturum","vize","danismanlik",
+        "maliyet","ne kadar","evrak","belge"
+      ];
+      const isTurkishWord = turkishWords.some(w => lower.includes(w));
 
-  const turkishWords = [
-    "merhaba","selam","nasilsin","bilgi","yardim","fiyat","ucret",
-    "firma","sirket","kurmak","oturum","vize","danismanlik",
-    "maliyet","ne kadar","evrak","belge"
-  ];
+      if (hasArabic) sessions[from].lang = "ar";
+      else if (hasTurkishChars || isTurkishWord) sessions[from].lang = "tr";
+      else sessions[from].lang = "en";
 
-  const isTurkishWord = turkishWords.some(w => lower.includes(w));
+      await sendMessage(from, introAfterLang[sessions[from].lang]);
+    }
 
-  if (hasArabic) sessions[from].lang = "ar";
-  else if (hasTurkishChars || isTurkishWord) sessions[from].lang = "tr";
-  else sessions[from].lang = "en";
-
-  await sendMessage(from, introAfterLang[sessions[from].lang]);
-
-  // ❌ return YOK — akış devam ediyor
-}
+    const session = sessions[from];
 
     // CONTACT
     if (
@@ -327,55 +329,69 @@ app.post("/webhook", async (req, res) => {
       lower.includes("call") ||
       lower.includes("telefon")
     ) {
-      await sendMessage(from, contactText[lang]);
+      await sendMessage(from, contactText[session.lang]);
       return res.sendStatus(200);
     }
 
-  // AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
-const isPriceQuery =
-  lower.includes("fiyat") ||
-  lower.includes("ücret") ||
-  lower.includes("ucret") ||
-  lower.includes("ne kadar") ||
-  lower.includes("maliyet") ||
-  lower.includes("cost") ||
-  lower.includes("price") ||
-  lower.includes("budget") ||
-  lower.includes("bütçe");
+    // FİYAT FİLTRESİ
+    const isPriceQuery =
+      lower.includes("fiyat") ||
+      lower.includes("ücret") ||
+      lower.includes("ucret") ||
+      lower.includes("ne kadar") ||
+      lower.includes("maliyet") ||
+      lower.includes("cost") ||
+      lower.includes("price") ||
+      lower.includes("budget") ||
+      lower.includes("bütçe");
 
-const isAIContext =
-  topic === "ai" ||
-  lower.includes("ai") ||
-  lower.includes("chatbot") ||
-  lower.includes("bot");
+    const isAIContext =
+      session.topics.includes("ai") ||
+      lower.includes("ai") ||
+      lower.includes("chatbot") ||
+      lower.includes("bot");
 
-if (isAIContext && isPriceQuery) {
-  await sendMessage(
-    from,
-    "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-  );
-  return res.sendStatus(200);
-}
+    if (isAIContext && isPriceQuery) {
+      await sendMessage(
+        from,
+        "AI chatbot fiyatları için:\nhttps://aichatbot.samchecompany.com"
+      );
+      return res.sendStatus(200);
+    }
 
-    // MEMORY UPDATE
+    // ✔ GEMINI İŞLEME BLOĞU — DOĞRU YERİ BURASI
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
     session.followUpStage = 0;
 
-    // TOPIC & INTENT
     const topic = detectTopic(text);
-    if (!session.topics) session.topics = [];
-    if (topic !== "other" && !session.topics.includes(topic)) {
+    if (!session.topics.includes(topic) && topic !== "other") {
       session.topics.push(topic);
     }
+
     session.intentScore = calculateIntentScore(text, session.intentScore || 0);
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
+    const reply = await generateGeminiResponse(
+      session.lang,
+      historyText,
+      session.profile,
+      session.topics
+    );
 
+    await sendMessage(from, reply);
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
     // PROMPT
 let prompt = "";
 
