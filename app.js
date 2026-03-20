@@ -281,57 +281,44 @@ app.post("/webhook", async (req, res) => {
     }
 
     // 2) İLK MESAJ (SESSION OLUŞTURMA)
-    if (!sessions[from]) {
-      sessions[from] = {
-        lang: null,
-        history: [],
-        lastMessageTime: Date.now(),
-        followUpStage: 0,
-        intentScore: 0,
-        topics: [],
-        profile: {
-          name: null,
-          country: null,
-          budget: null,
-          interest: null,
-        },
-      };
+if (!sessions[from]) {
+  sessions[from] = {
+    lang: null,
+    history: [],
+    lastMessageTime: Date.now(),
+    followUpStage: 0,
+    intentScore: 0,
+    topics: [],
+    profile: {
+      name: null,
+      country: null,
+      budget: null,
+      interest: null,
+    },
+  };
 
-      await sendMessage(
-        from,
-        "Welcome to SamChe Company LLC.\n" +
-          "SamChe Company LLC'ye hoş geldiniz.\n" +
-          "مرحبًا بكم.\n\n" +
-          "Please select your language:\n" +
-          "1️⃣ English\n" +
-          "2️⃣ Türkçe\n" +
-          "3️⃣ العربية\n\n" +
-          "Lütfen dil seçiminizi yapınız:\n" +
-          "1️⃣ İngilizce\n" +
-          "2️⃣ Türkçe\n" +
-          "3️⃣ Arapça"
-      );
+  // OTOMATİK DİL ALGILAMA
+  const lower = text.toLowerCase();
+  const hasArabic = /[\u0600-\u06FF]/.test(text);
+  const hasTurkishChars = /[ğüşöçıİĞÜŞÖÇ]/i.test(text);
 
-      return res.sendStatus(200);
-    }
+  const turkishWords = [
+    "merhaba","selam","nasilsin","bilgi","yardim","fiyat","ucret",
+    "firma","sirket","kurmak","oturum","vize","danismanlik",
+    "maliyet","ne kadar","evrak","belge"
+  ];
 
-    const session = sessions[from];
+  const isTurkishWord = turkishWords.some(w => lower.includes(w));
 
-    // LANGUAGE SELECTION
-    if (!session.lang) {
-      if (text === "1") session.lang = "en";
-      else if (text === "2") session.lang = "tr";
-      else if (text === "3") session.lang = "ar";
-      else {
-        await sendMessage(from, "Please choose 1, 2 or 3.");
-        return res.sendStatus(200);
-      }
+  if (hasArabic) sessions[from].lang = "ar";
+  else if (hasTurkishChars || isTurkishWord) sessions[from].lang = "tr";
+  else sessions[from].lang = "en";
 
-      await sendMessage(from, introAfterLang[session.lang]);
-      return res.sendStatus(200);
-    }
+  await sendMessage(from, introAfterLang[sessions[from].lang]);
+  return res.sendStatus(200);
+}
 
-    const lang = session.lang;
+const session = sessions[from];
 
     // CONTACT
     if (
