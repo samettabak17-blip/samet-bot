@@ -258,7 +258,7 @@ app.post("/webhook", async (req, res) => {
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
-    const text = message.text?.body || "";
+    const text = message.text?.body?.trim() || "";
     const lower = text.toLowerCase();
 
     // 1) MEDYA FİLTRESİ
@@ -271,17 +271,13 @@ app.post("/webhook", async (req, res) => {
       await sendMessage(from, "Lütfen mesajınızı yazılı olarak iletin.");
       return res.sendStatus(200);
     }
-     
-    // MESAJI AL
-const text = req.body.Body?.trim() || "";
-const lower = text.toLowerCase();
 
-// ❗ SİLENCE FİLTRESİ — EN DOĞRU YER BURASI
-if (lower === "silence") {
-  return res.sendStatus(200);
-}
+    // 2) SİLENCE FİLTRESİ (DOĞRU YER)
+    if (lower === "silence") {
+      return res.sendStatus(200);
+    }
 
-    // 2) İLK MESAJ
+    // 3) İLK MESAJ
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
@@ -316,7 +312,7 @@ if (lower === "silence") {
     }
 
     const session = sessions[from];
-
+   
     // CONTACT
     if (
       lower.includes("contact") ||
