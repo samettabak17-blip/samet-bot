@@ -343,37 +343,30 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-  // ✔ AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
-
-// 1) Fiyat sorgusu
-const isPriceQuery =
+// AI CHATBOT PRICE / PLAN REDIRECT
+if (
   lower.includes("ai fiyat") ||
   lower.includes("ai ücret") ||
   lower.includes("ai ucret") ||
   lower.includes("ai maliyet") ||
+  lower.includes("ai cost") ||
+  lower.includes("ai price") ||
+  lower.includes("ai bot fiyat") ||
+  lower.includes("ai chatbot fiyat") ||
   lower.includes("chatbot fiyat") ||
   lower.includes("chatbot ücret") ||
+  lower.includes("chatbot ucret") ||
   lower.includes("chatbot maliyet") ||
-  lower.includes("chatbot price") ||
-  lower.includes("ai price") ||
-  lower.includes("ai cost");
-
-// 2) AI bağlamı
-const isAIContext =
-  topic === "ai" ||
-  lower.includes("ai chatbot") ||
-  lower.includes("yapay zeka chatbot") ||
-  lower.includes("chatbot");
-
-// 3) Yalnızca ikisi birlikteyse tetikle
-if (isAIContext && isPriceQuery) {
+  lower.includes("bot fiyat") ||
+  lower.includes("ai plan") ||
+  lower.includes("bot plan")
+) {
   await sendMessage(
     from,
     "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
   );
   return res.sendStatus(200);
 }
-
     // MEMORY UPDATE
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
