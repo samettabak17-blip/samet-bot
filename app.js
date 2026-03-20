@@ -271,6 +271,15 @@ app.post("/webhook", async (req, res) => {
       await sendMessage(from, "Lütfen mesajınızı yazılı olarak iletin.");
       return res.sendStatus(200);
     }
+     
+    // MESAJI AL
+const text = req.body.Body?.trim() || "";
+const lower = text.toLowerCase();
+
+// ❗ SİLENCE FİLTRESİ — EN DOĞRU YER BURASI
+if (lower === "silence") {
+  return res.sendStatus(200);
+}
 
     // 2) İLK MESAJ
     if (!sessions[from]) {
@@ -369,16 +378,19 @@ app.post("/webhook", async (req, res) => {
 let prompt = "";
 
 if (lang === "tr") {
-  prompt = `KURAL: Kullanıcı hangi mesajı yazarsa yazsın, asla karşılama mesajı üretme. Kendini tanıtma, şirketi tanıtma, giriş cümlesi yazma. “Merhaba”, “Selam”, “Hello” gibi ifadeler kullanma. Mesaja doğrudan yanıt ver.
+ prompt = `
+KURAL: Kullanıcı hangi mesajı yazarsa yazsın, asla karşılama mesajı üretme. 
+Kendini tanıtma, şirketi tanıtma, giriş cümlesi yazma. “Merhaba”, “Selam”, “Hello” gibi ifadeler kullanma. Mesaja doğrudan yanıt ver.
 
 KURAL: Kullanıcı sektörünü, amacını veya niyetini bir kez belirttiyse tekrar sorma.
 
 KURAL: Sohbet geçmişinde aynı konu varsa tekrar açıklama yapma; doğrudan ilerlet.
 
-KURAL: Hazır kalıp, prosedür, devlet metni, klasik danışmanlık dili, resmi yönlendirme, otomatik açıklama üretme. KENDİ KALIPLARINI ÜRETME. SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
+KURAL: Hazır kalıp, prosedür, devlet metni, klasik danışmanlık dili, resmi yönlendirme, otomatik açıklama üretme. 
+KENDİ KALIPLARINI ÜRETME. SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
 
-ROL: SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma.
-
+ROL: SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
+Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma.
 
     GENEL DAVRANIŞ KURALLARI:
     
@@ -626,13 +638,15 @@ ${text}
 
 
 else if (lang === "en") {
-    prompt = `RULE: Regardless of what the user writes, do NOT generate greetings, introductions, or opening sentences. Do NOT say hello. Do NOT introduce yourself or the company. Respond directly to the message.
+    prompt = 
+      `RULE: Regardless of what the user writes, do NOT generate greetings, introductions, or opening sentences. 
+       Do NOT say hello. Do NOT introduce yourself or the company. Respond directly to the message.
 
-RULE: If the user has already stated their sector, goal, or intent once, do NOT ask again.
+       RULE: If the user has already stated their sector, goal, or intent once, do NOT ask again.
 
-RULE: If the conversation history already contains the topic, do NOT repeat explanations; continue directly.
+       RULE: If the conversation history already contains the topic, do NOT repeat explanations; continue directly.
 
-RULE: Do NOT use templates, procedures, government text, generic advisory language, or auto‑generated explanations. Do NOT create your own templates. Follow ONLY the rules defined in this prompt.
+       RULE: Do NOT use templates, procedures, government text, generic advisory language, or auto‑generated explanations. Do NOT create your own templates. Follow ONLY the rules defined in this prompt.
 
 RULE: NEVER make, suggest, imply, or suggest the following statements:
 - “It may be helpful to consult a lawyer or consultancy firm.”
