@@ -129,16 +129,14 @@ const servicesList = {
 
 const introAfterLang = {
   tr:
-    "Merhaba, SamChe Company LLC adına size yardımcı olmak için buradayım.\n" +
-    "Dubai’de şirket kuruluşu, iş planları, oturum seçenekleri, vizeler, maliyetler ve sonrasında sunduğumuz danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
-
+    "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
+    "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
   en:
-    "Hello, I’m here on behalf of SamChe Company LLC to assist you.\n" +
-    "I can help you with company formation in Dubai, business planning, residency options, visas, costs, and our post‑setup consultancy services. How may I support you today?\n\n",
-
+    "Hello, I am the AI consultant of SamChe Company LLC.\n" +
+    "I can answer your questions about UAE company formation, residency, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n",
   ar:
-    "مرحبًا، أنا هنا نيابةً عن SamChe Company LLC لمساعدتك.\n" +
-    "يمكنني مساعدتك في تأسيس الشركات في دبي، خطط الأعمال، خيارات الإقامة، التأشيرات، التكاليف، وخدمات الاستشارات التي نقدمها بعد التأسيس. كيف يمكنني مساعدتك اليوم؟\n\n",
+    "مرحبًا، أنا المساعد الذكي لشركة SamChe Company LLC.\n" +
+    "أستطيع مساعدتك في تأسيس الشركات في الإمارات، الإقامة، التأشيرات، تكاليف المعيشة، خطط الأعمال، الاستراتيجيات، حلول الذكاء الاصطناعي وخدمة روبوت الدردشة الذكي (Webchat AI Chatbot). كيف يمكنني مساعدتك؟\n\n",
 };
 
 const contactText = {
@@ -258,26 +256,29 @@ app.post("/webhook", async (req, res) => {
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
-    const text = message.text?.body?.trim() || "";
+    const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // 1) MEDYA FİLTRESİ
+    // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
-      message.type !== "text" ||
+      message.type === "image" ||
+      message.type === "audio" ||
+      message.type === "voice" ||
+      message.type === "video" ||
+      message.type === "sticker" ||
+      message.type === "document" ||
       !text ||
       text.trim() === "";
 
     if (isInvalid) {
-      await sendMessage(from, "Lütfen mesajınızı yazılı olarak iletin.");
+      await sendMessage(
+        from,
+        "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?"
+      );
       return res.sendStatus(200);
     }
 
-    // 2) SİLENCE FİLTRESİ (DOĞRU YER)
-    if (lower === "silence") {
-      return res.sendStatus(200);
-    }
-
-    // 3) İLK MESAJ
+    // 2) İLK MESAJ (SESSION OLUŞTURMA)
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
@@ -294,25 +295,42 @@ app.post("/webhook", async (req, res) => {
         },
       };
 
-      // DİL ALGILAMA
-      const hasArabic = /[\u0600-\u06FF]/.test(text);
-      const hasTurkishChars = /[ğüşöçıİĞÜŞÖÇ]/i.test(text);
-      const turkishWords = [
-        "merhaba","selam","nasilsin","bilgi","yardim","fiyat","ucret",
-        "firma","sirket","kurmak","oturum","vize","danismanlik",
-        "maliyet","ne kadar","evrak","belge"
-      ];
-      const isTurkishWord = turkishWords.some(w => lower.includes(w));
+      await sendMessage(
+        from,
+        "Welcome to SamChe Company LLC.\n" +
+          "SamChe Company LLC'ye hoş geldiniz.\n" +
+          "مرحبًا بكم.\n\n" +
+          "Please select your language:\n" +
+          "1️⃣ English\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ العربية\n\n" +
+          "Lütfen dil seçiminizi yapınız:\n" +
+          "1️⃣ İngilizce\n" +
+          "2️⃣ Türkçe\n" +
+          "3️⃣ Arapça"
+      );
 
-      if (hasArabic) sessions[from].lang = "ar";
-      else if (hasTurkishChars || isTurkishWord) sessions[from].lang = "tr";
-      else sessions[from].lang = "en";
-
-      await sendMessage(from, introAfterLang[sessions[from].lang]);
+      return res.sendStatus(200);
     }
 
     const session = sessions[from];
-   
+
+    // LANGUAGE SELECTION
+    if (!session.lang) {
+      if (text === "1") session.lang = "en";
+      else if (text === "2") session.lang = "tr";
+      else if (text === "3") session.lang = "ar";
+      else {
+        await sendMessage(from, "Please choose 1, 2 or 3.");
+        return res.sendStatus(200);
+      }
+
+      await sendMessage(from, introAfterLang[session.lang]);
+      return res.sendStatus(200);
+    }
+
+    const lang = session.lang;
+
     // CONTACT
     if (
       lower.includes("contact") ||
@@ -321,77 +339,65 @@ app.post("/webhook", async (req, res) => {
       lower.includes("call") ||
       lower.includes("telefon")
     ) {
-      await sendMessage(from, contactText[session.lang]);
+      await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
     }
 
-    // FİYAT FİLTRESİ
-    const isPriceQuery =
+    // AI CHATBOT PRICE / PLAN REDIRECT
+    if (
       lower.includes("fiyat") ||
       lower.includes("ücret") ||
       lower.includes("ucret") ||
       lower.includes("ne kadar") ||
-      lower.includes("maliyet") ||
-      lower.includes("cost") ||
-      lower.includes("price") ||
-      lower.includes("budget") ||
-      lower.includes("bütçe");
-
-    const isAIContext =
-      session.topics.includes("ai") ||
-      lower.includes("ai") ||
-      lower.includes("chatbot") ||
-      lower.includes("bot");
-
-    if (isAIContext && isPriceQuery) {
+      lower.includes("kaça") ||
+      lower.includes("kaca") ||
+      lower.includes("fiyat ne") ||
+      lower.includes("fiyat nedir") ||
+      lower.includes("fiyat bilgisi") ||
+      lower.includes("fiyatlar") ||
+      lower.includes("fiyat listesi") ||
+      lower.includes("ücretlendirme") ||
+      lower.includes("bot fiyat") ||
+      lower.includes("ai fiyat") ||
+      lower.includes("chatbot fiyat") ||
+      lower.includes("ai bot fiyat") ||
+      lower.includes("ai plan") ||
+      lower.includes("bot plan") ||
+      lower.includes("ai chatbot fiyat") ||
+      lower.includes("ai chatbot bilgi fiyat") ||
+      lower.includes("wechat fiyat")
+    ) {
       await sendMessage(
         from,
-        "AI chatbot fiyatları için:\nhttps://aichatbot.samchecompany.com"
+        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
       );
       return res.sendStatus(200);
     }
 
- // ✔ GEMINI İŞLEME BLOĞU — DOĞRU FORMAT
-session.history.push({ role: "user", content: text });
+    // MEMORY UPDATE
+    session.history.push({ role: "user", text });
+    if (session.history.length > 10) session.history.shift();
+    session.lastMessageTime = Date.now();
+    session.followUpStage = 0;
 
-if (session.history.length > 10) {
-  session.history.shift();
-}
+    // TOPIC & INTENT
+    const topic = detectTopic(text);
+    if (!session.topics) session.topics = [];
+    if (topic !== "other" && !session.topics.includes(topic)) {
+      session.topics.push(topic);
+    }
+    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
 
-session.lastMessageTime = Date.now();
-session.followUpStage = 0;
+    const historyText = session.history
+      .map((m) => `User: ${m.text}`)
+      .join("\n");
 
-const topic = detectTopic(text);
-if (!session.topics.includes(topic) && topic !== "other") {
-  session.topics.push(topic);
-}
 
-session.intentScore = calculateIntentScore(text, session.intentScore || 0);
-
-// ✔ DOĞRU HISTORY FORMAT — text DEĞİL content KULLAN
-const historyText = session.history
-  .map((m) => `User: ${m.content}`)
-  .join("\n");
-
-const lang = session.lang || "en";
-
-   // PROMPT
+    // PROMPT
 let prompt = "";
 
 if (lang === "tr") {
- prompt = `
-KURAL: Kullanıcı hangi mesajı yazarsa yazsın, asla karşılama mesajı üretme. 
-Kendini tanıtma, şirketi tanıtma, giriş cümlesi yazma. “Merhaba”, “Selam”, “Hello” gibi ifadeler kullanma. Mesaja doğrudan yanıt ver.
-
-KURAL: Kullanıcı sektörünü, amacını veya niyetini bir kez belirttiyse tekrar sorma.
-
-KURAL: Sohbet geçmişinde aynı konu varsa tekrar açıklama yapma; doğrudan ilerlet.
-
-KURAL: Hazır kalıp, prosedür, devlet metni, klasik danışmanlık dili, resmi yönlendirme, otomatik açıklama üretme. 
-KENDİ KALIPLARINI ÜRETME. SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
-
-ROL: Aşağıdaki kurallara göre cevap üret. Kendini tanıtma, rolünü açıklama, kim olduğunu söyleme. Kullanıcıya asla “Ben SamChe Company LLC’nin yapay zekâ danışmanıyım” gibi ifadeler kullanma.
-Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma.
+  prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın.Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
 
     GENEL DAVRANIŞ KURALLARI:
     
@@ -421,7 +427,6 @@ Aşağıdaki davranışlarda KESİNLİKLE BULUNMA:
 • Benzerlik, tahmin, niyet çıkarımı, konu benzerliği veya olası anlam üzerinden otomatik tetikleme yapma.
 • Kullanıcı mesajı belirsizse, eksikse veya yoruma açıksa hiçbir hazır şablon tetikleme.
 • Tahmin yürütme, konu açma veya yönlendirme yapma.
-• Kullanıcı hangi mesajı yazarsa yazsın, asla karşılama mesajı üretme. Kendini tanıtma, şirketi tanıtma, giriş cümlesi yazma. Sadece soruya veya konuya direkt yanıt ver.
 
 AÇIKLAYICI CEVAP + DEVAM SORUSU KURALI:
 
@@ -627,7 +632,6 @@ AI chatbot kurulumu
 Instagram / WhatsApp otomasyonu
 CRM entegrasyonu
 Satış otomasyon sistemleri
-18. Kullanıcı sektörünü bir kez belirttiyse (ör: inşaat, e‑ticaret, yazılım, lojistik vb.) bir daha sektör sorma. Sektör bilgisi session.profile.interest içinde tutulur ve tekrar istenmez.
 
 Sohbet geçmişi:
 ${historyText}
@@ -639,29 +643,17 @@ ${text}
 
 
 else if (lang === "en") {
-    prompt = 
-      `RULE: Regardless of what the user writes, do NOT generate greetings, introductions, or opening sentences. 
-       Do NOT say hello. Do NOT introduce yourself or the company. Respond directly to the message.
+    prompt = `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, and advisory answers. Do NOT use Gemini’s built‑in templates, procedural texts, government explanations, or generic advisory language. Do NOT generate your own templates. Follow ONLY the rules defined in this prompt.
 
-       RULE: If the user has already stated their sector, goal, or intent once, do NOT ask again.
-
-       RULE: If the conversation history already contains the topic, do NOT repeat explanations; continue directly.
-
-       RULE: Do NOT use templates, procedures, government text, generic advisory language, or auto‑generated explanations. Do NOT create your own templates. Follow ONLY the rules defined in this prompt.
-
-RULE: NEVER make, suggest, imply, or suggest the following statements:
+STRICTLY FORBIDDEN PHRASES:
 - “It may be helpful to consult a lawyer or consultancy firm.”
 - “You should get an offer from a consultancy firm.”
 - “To travel to Dubai, you must first obtain a travel visa.”
 - “You must find a job and the employer applies on your behalf.”
 - Any MOHRE/GDRFA procedural explanations, job‑offer requirements, or standard government processes.
 - Referring the user to any other company, lawyer, or consultancy.
-- Regardless of what the user writes, do NOT generate greetings, introductions, or company introductions. Do NOT say hello. Respond directly to the user’s message.
-- If the user has already specified their business sector once, do NOT ask again. The sector is stored in session.profile.interest and must not be requested again.
 
-ROLE: Follow the rules below. Do NOT introduce yourself, do NOT mention your role, do NOT say you are an AI consultant of SamChe Company LLC.
-
-  CONTACT RULES:
+CONTACT RULES:
 - Do NOT share contact details immediately.
 - Evaluate the user’s intent first.
 - Share contact details ONLY if the user shows serious intent (company setup, residency, business in Dubai).
@@ -699,15 +691,7 @@ ${text}
 
 
 else {
-  prompt = `قاعدة: بغض النظر عمّا يكتبه المستخدم، لا تُنتج أي رسالة ترحيب، أو مقدمة، أو تعريف بنفسك أو بالشركة. لا تستخدم كلمات مثل "مرحبًا" أو "أهلاً". أجب مباشرة على الرسالة فقط.
-
-قاعدة: إذا ذكر المستخدم مجاله (القطاع)، هدفه، أو نيّته مرة واحدة، فلا تطلبها منه مرة أخرى.
-
-قاعدة: إذا كان الموضوع موجودًا مسبقًا في سجل المحادثة، فلا تكرر الشرح. تابع مباشرة دون إعادة أي معلومات.
-
-قاعدة: لا تستخدم أي قوالب جاهزة، أو نصوص حكومية، أو إجراءات رسمية، أو لغة استشارية عامة، ولا تُنشئ قوالب من نفسك. التزم فقط بالقواعد المذكورة في هذا التوجيه.
-
-الدور: أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. قدّم إجابات مهنية، استراتيجية، تحليلية، ومباشرة. لا تستخدم أي قوالب جاهزة من Gemini، ولا نصوصًا حكومية، ولا إجراءات رسمية، ولا شروحات عامة. التزم فقط بالقواعد المذكورة في هذا التوجيه.
+  prompt = `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. قدّم إجابات مهنية، استراتيجية، تحليلية وإرشادية. لا تستخدم أي قوالب جاهزة أو نصوص حكومية أو إجراءات رسمية أو نصائح عامة. لا تُنشئ قوالب من نفسك. التزم فقط بالقواعد المذكورة في هذا التوجيه.
 
 ممنوع تمامًا استخدام العبارات التالية:
 - “قد يكون من المفيد استشارة محامٍ أو شركة استشارات.”
@@ -716,9 +700,6 @@ else {
 - “يجب أن تجد وظيفة وصاحب العمل يقدم الطلب نيابة عنك.”
 - أي شروحات حكومية أو إجراءات MOHRE/GDRFA أو متطلبات عرض عمل.
 - الإحالة إلى أي شركة أو محامٍ أو جهة أخرى.
-- بغض النظر عما يكتبه المستخدم، لا تُنتج أي رسالة ترحيب أو تعريف بنفسك أو بالشركة. لا تقل مرحبًا. أجب مباشرة على رسالة المستخدم.
-- إذا ذكر المستخدم مجاله مرة واحدة، فلا تطلبه مرة أخرى. يتم حفظ القطاع في session.profile.interest ولا يجب طلبه مجددًا.
-
 
 قواعد مشاركة معلومات التواصل:
 - لا تشارك المعلومات مباشرة.
@@ -731,7 +712,6 @@ else {
 - لا تشارك معلومات الحساب البنكي مباشرة.
 - تأكد أولاً من أن المستخدم جاهز فعليًا لبدء العملية.
 - شارك المعلومات فقط عندما يعبّر المستخدم بوضوح عن استعداده.
-
 
 معلومات الحساب البنكي:
 Account holder: SamChe Company LLC
@@ -757,7 +737,7 @@ ${text}
 }
 
 
-    const reply = await callGemini(prompt);
+const reply = await callGemini(prompt);
 
     if (!reply) {
       await sendMessage(from, corporateFallback(lang));
@@ -768,10 +748,10 @@ ${text}
 
     await sendMessage(from, reply);
 
-    return res.sendStatus(200);
+    res.sendStatus(200);
   } catch (err) {
     console.error("Webhook error:", err);
-    return res.sendStatus(500);
+    res.sendStatus(500);
   }
 });
 
@@ -1037,6 +1017,7 @@ cron.schedule("0 * * * *", async () => {
 
       } catch (innerErr) {
         console.error("[CRON] user loop error:", innerErr && innerErr.stack ? innerErr.stack : innerErr);
+        // Bu kullanıcıyı atla, diğerlerine devam et
         continue;
       }
     } // for loop end
@@ -1051,3 +1032,15 @@ cron.schedule("0 * * * *", async () => {
 // -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log("SamChe Bot running on port " + port));
+
+
+
+
+
+
+
+
+
+
+
+
