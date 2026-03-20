@@ -129,8 +129,8 @@ const servicesList = {
 
 const introAfterLang = {
   tr:
-    "Merhaba, ben SamChe Company LLC'nin yapay zekâ danışmanıyım.\n" +
-    "BAE şirket kuruluşu, vizeler, oturum, yaşam maliyetleri, iş planları, iş stratejileri, yapay zekâ çözümleri ve webchat AI chatbot hizmetleri hakkında sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
+    "Merhaba, SamChe Company LLC adına size yardımcı olmak için buradayım.\n" +
+    "Dubai’de şirket kuruluşu, iş planları, oturum seçenekleri, vizeler, maliyetler ve sonrasında sunduğumuz danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
     "I can answer your questions about UAE company formation, residency, visas, cost of living, business plans, business strategies, AI solutions, and webchat AI chatbot services. How can I assist you?\n\n",
@@ -343,36 +343,31 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // AI CHATBOT PRICE / PLAN REDIRECT
-    if (
-      lower.includes("fiyat") ||
-      lower.includes("ücret") ||
-      lower.includes("ucret") ||
-      lower.includes("ne kadar") ||
-      lower.includes("kaça") ||
-      lower.includes("kaca") ||
-      lower.includes("fiyat ne") ||
-      lower.includes("fiyat nedir") ||
-      lower.includes("fiyat bilgisi") ||
-      lower.includes("fiyatlar") ||
-      lower.includes("fiyat listesi") ||
-      lower.includes("ücretlendirme") ||
-      lower.includes("bot fiyat") ||
-      lower.includes("ai fiyat") ||
-      lower.includes("chatbot fiyat") ||
-      lower.includes("ai bot fiyat") ||
-      lower.includes("ai plan") ||
-      lower.includes("bot plan") ||
-      lower.includes("ai chatbot fiyat") ||
-      lower.includes("ai chatbot bilgi fiyat") ||
-      lower.includes("wechat fiyat")
-    ) {
-      await sendMessage(
-        from,
-        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-      );
-      return res.sendStatus(200);
-    }
+   // AI CHATBOT PRICE / PLAN REDIRECT (TOPIC + PRICE COMBO)
+const isPriceQuery =
+  lower.includes("fiyat") ||
+  lower.includes("ücret") ||
+  lower.includes("ucret") ||
+  lower.includes("ne kadar") ||
+  lower.includes("maliyet") ||
+  lower.includes("cost") ||
+  lower.includes("price") ||
+  lower.includes("budget") ||
+  lower.includes("bütçe");
+
+const isAIContext =
+  topic === "ai" ||
+  lower.includes("ai") ||
+  lower.includes("chatbot") ||
+  lower.includes("bot");
+
+if (isAIContext && isPriceQuery) {
+  await sendMessage(
+    from,
+    "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
+  );
+  return res.sendStatus(200);
+}
 
     // MEMORY UPDATE
     session.history.push({ role: "user", text });
@@ -632,6 +627,8 @@ AI chatbot kurulumu
 Instagram / WhatsApp otomasyonu
 CRM entegrasyonu
 Satış otomasyon sistemleri
+18. Kullanıcı daha önce sektör bilgisini verdiyse, bir daha ASLA sektör sorma.
+
 
 Sohbet geçmişi:
 ${historyText}
