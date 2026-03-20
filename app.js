@@ -281,7 +281,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     // 2) İLK MESAJ (SESSION OLUŞTURMA)
-if (!sessions[from]) {
+  if (!sessions[from]) {
   sessions[from] = {
     lang: null,
     history: [],
@@ -315,10 +315,9 @@ if (!sessions[from]) {
   else sessions[from].lang = "en";
 
   await sendMessage(from, introAfterLang[sessions[from].lang]);
-  return res.sendStatus(200);
-}
 
-const session = sessions[from];
+  // ❌ return YOK — akış devam ediyor
+}
 
     // CONTACT
     if (
