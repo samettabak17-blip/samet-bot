@@ -253,7 +253,11 @@ app.get("/webhook", (req, res) => {
 app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    if (!message) return res.sendStatus(200);
+
+    // ❗ KRİTİK FİLTRE — BOTUN KENDİ KENDİNE MESAJ ATMASINI %100 ENGELLER
+    if (!message || message.type !== "text" || !message.text?.body) {
+      return res.sendStatus(200);
+    }
 
     const from = message.from;
     const text = message.text?.body || "";
@@ -343,51 +347,52 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-// -------------------------------
-// AI CHATBOT PRICE REDIRECT (HISTORY + CONTEXT BASED)
-// -------------------------------
+    // -------------------------------
+    // AI CHATBOT PRICE REDIRECT (HISTORY + CONTEXT BASED)
+    // -------------------------------
 
-// 1) Kullanıcı fiyat mı soruyor?
-const isPriceQuery =
-  lower.includes("fiyat") ||
-  lower.includes("ücret") ||
-  lower.includes("ucret") ||
-  lower.includes("maliyet") ||
-  lower.includes("ne kadar") ||
-  lower.includes("fiyat ver") ||
-  lower.includes("fiyat bilgisi") ||
-  lower.includes("fiyatlar") ||
-  lower.includes("fiyat listesi") ||
-  lower.includes("ücretlendirme") ||
-  lower.includes("cost") ||
-  lower.includes("price");
+    // 1) Kullanıcı fiyat mı soruyor?
+    const isPriceQuery =
+      lower.includes("fiyat") ||
+      lower.includes("ücret") ||
+      lower.includes("ucret") ||
+      lower.includes("maliyet") ||
+      lower.includes("ne kadar") ||
+      lower.includes("fiyat ver") ||
+      lower.includes("fiyat bilgisi") ||
+      lower.includes("fiyatlar") ||
+      lower.includes("fiyat listesi") ||
+      lower.includes("ücretlendirme") ||
+      lower.includes("cost") ||
+      lower.includes("price");
 
-// 2) Bu mesaj AI chatbot bağlamı içeriyor mu?
-const isAIInMessage =
-  lower.includes("ai") ||
-  lower.includes("chatbot") ||
-  lower.includes("yapay zeka") ||
-  lower.includes("ai bot") ||
-  lower.includes("bot yazılım");
+    // 2) Bu mesaj AI chatbot bağlamı içeriyor mu?
+    const isAIInMessage =
+      lower.includes("ai") ||
+      lower.includes("chatbot") ||
+      lower.includes("yapay zeka") ||
+      lower.includes("ai bot") ||
+      lower.includes("bot yazılım");
 
-// 3) Geçmiş konuşmada AI chatbot konusu geçti mi?
-const isAIInHistory = session.history.some((m) =>
-  m.content?.toLowerCase().includes("ai") ||
-  m.content?.toLowerCase().includes("chatbot") ||
-  m.content?.toLowerCase().includes("yapay zeka")
-);
+    // 3) Geçmiş konuşmada AI chatbot konusu geçti mi?
+    const isAIInHistory = session.history.some((m) =>
+      m.text?.toLowerCase().includes("ai") ||
+      m.text?.toLowerCase().includes("chatbot") ||
+      m.text?.toLowerCase().includes("yapay zeka")
+    );
 
-// 4) AI bağlamı = (mesajda AI geçmesi) VEYA (geçmişte AI geçmesi)
-const isAIContext = isAIInMessage || isAIInHistory;
+    // 4) AI bağlamı = (mesajda AI geçmesi) VEYA (geçmişte AI geçmesi)
+    const isAIContext = isAIInMessage || isAIInHistory;
 
-// 5) SADECE AI bağlamı + fiyat isteği birlikteyse tetikle
-if (isAIContext && isPriceQuery) {
-  await sendMessage(
-    from,
-    "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-  );
-  return res.sendStatus(200);
-}
+    // 5) SADECE AI bağlamı + fiyat isteği birlikteyse tetikle
+    if (isAIContext && isPriceQuery) {
+      await sendMessage(
+        from,
+        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
+      );
+      return res.sendStatus(200);
+    }
+
     // MEMORY UPDATE
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
@@ -406,6 +411,7 @@ if (isAIContext && isPriceQuery) {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
+    // (Devam eden kodun burada çalışmaya devam eder…)
 
     // PROMPT
 let prompt = "";
