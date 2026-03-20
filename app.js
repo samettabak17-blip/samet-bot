@@ -343,24 +343,45 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-// AI CHATBOT PRICE / PLAN REDIRECT
-if (
-  lower.includes("ai fiyat") ||
-  lower.includes("ai ücret") ||
-  lower.includes("ai ucret") ||
-  lower.includes("ai maliyet") ||
-  lower.includes("ai cost") ||
-  lower.includes("ai price") ||
-  lower.includes("ai bot fiyat") ||
-  lower.includes("ai chatbot fiyat") ||
-  lower.includes("chatbot fiyat") ||
-  lower.includes("chatbot ücret") ||
-  lower.includes("chatbot ucret") ||
-  lower.includes("chatbot maliyet") ||
-  lower.includes("bot fiyat") ||
-  lower.includes("ai plan") ||
-  lower.includes("bot plan")
-) {
+// -------------------------------
+// AI CHATBOT PRICE REDIRECT (HISTORY + CONTEXT BASED)
+// -------------------------------
+
+// 1) Kullanıcı fiyat mı soruyor?
+const isPriceQuery =
+  lower.includes("fiyat") ||
+  lower.includes("ücret") ||
+  lower.includes("ucret") ||
+  lower.includes("maliyet") ||
+  lower.includes("ne kadar") ||
+  lower.includes("fiyat ver") ||
+  lower.includes("fiyat bilgisi") ||
+  lower.includes("fiyatlar") ||
+  lower.includes("fiyat listesi") ||
+  lower.includes("ücretlendirme") ||
+  lower.includes("cost") ||
+  lower.includes("price");
+
+// 2) Bu mesaj AI chatbot bağlamı içeriyor mu?
+const isAIInMessage =
+  lower.includes("ai") ||
+  lower.includes("chatbot") ||
+  lower.includes("yapay zeka") ||
+  lower.includes("ai bot") ||
+  lower.includes("bot yazılım");
+
+// 3) Geçmiş konuşmada AI chatbot konusu geçti mi?
+const isAIInHistory = session.history.some((m) =>
+  m.content?.toLowerCase().includes("ai") ||
+  m.content?.toLowerCase().includes("chatbot") ||
+  m.content?.toLowerCase().includes("yapay zeka")
+);
+
+// 4) AI bağlamı = (mesajda AI geçmesi) VEYA (geçmişte AI geçmesi)
+const isAIContext = isAIInMessage || isAIInHistory;
+
+// 5) SADECE AI bağlamı + fiyat isteği birlikteyse tetikle
+if (isAIContext && isPriceQuery) {
   await sendMessage(
     from,
     "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
