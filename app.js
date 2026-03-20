@@ -351,24 +351,29 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // ✔ GEMINI İŞLEME BLOĞU — DOĞRU YERİ BURASI
-    session.history.push({ role: "user", text });
-    if (session.history.length > 10) session.history.shift();
-    session.lastMessageTime = Date.now();
-    session.followUpStage = 0;
+ // ✔ GEMINI İŞLEME BLOĞU — DOĞRU FORMAT
+session.history.push({ role: "user", content: text });
 
-    const topic = detectTopic(text);
-    if (!session.topics.includes(topic) && topic !== "other") {
-      session.topics.push(topic);
-    }
+if (session.history.length > 10) {
+  session.history.shift();
+}
 
-    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
+session.lastMessageTime = Date.now();
+session.followUpStage = 0;
 
-    const historyText = session.history
-      .map((m) => `User: ${m.text}`)
-      .join("\n");
+const topic = detectTopic(text);
+if (!session.topics.includes(topic) && topic !== "other") {
+  session.topics.push(topic);
+}
 
-    const lang = session.lang || "en";
+session.intentScore = calculateIntentScore(text, session.intentScore || 0);
+
+// ✔ DOĞRU HISTORY FORMAT — text DEĞİL content KULLAN
+const historyText = session.history
+  .map((m) => `User: ${m.content}`)
+  .join("\n");
+
+const lang = session.lang || "en";
 
    // PROMPT
 let prompt = "";
