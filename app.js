@@ -347,10 +347,8 @@ app.post("/webhook", async (req, res) => {
     //  AI CHATBOT PRICE REDIRECT
     // -------------------------------
 
-    // Şirket konusunu tamamen devre dışı bırak
     session.topics = session.topics.filter((t) => t !== "company");
 
-    // 1) Kullanıcı fiyat mı soruyor?
     const isPriceQuery =
       lower.includes("fiyat") ||
       lower.includes("ücret") ||
@@ -365,7 +363,6 @@ app.post("/webhook", async (req, res) => {
       lower.includes("cost") ||
       lower.includes("price");
 
-    // 2) Mesaj AI chatbot bağlamı içeriyor mu?
     const isAIInMessage =
       lower.includes("ai") ||
       lower.includes("chatbot") ||
@@ -373,7 +370,6 @@ app.post("/webhook", async (req, res) => {
       lower.includes("ai bot") ||
       lower.includes("bot yazılım");
 
-    // 3) Mesaj şirket bağlamı içeriyor mu?
     const isCompanyInMessage =
       lower.includes("şirket") ||
       lower.includes("company") ||
@@ -390,7 +386,6 @@ app.post("/webhook", async (req, res) => {
       lower.includes("residence") ||
       lower.includes("immigration");
 
-    // 4) Geçmişte AI chatbot geçti mi?
     const isAIInHistory = session.history.some((m) => {
       const t = m.text?.toLowerCase() || "";
       return (
@@ -400,7 +395,6 @@ app.post("/webhook", async (req, res) => {
       );
     });
 
-    // 5) Geçmişte şirket konusu geçti mi?
     const isCompanyInHistory = session.history.some((m) => {
       const t = m.text?.toLowerCase() || "";
       return (
@@ -421,13 +415,9 @@ app.post("/webhook", async (req, res) => {
       );
     });
 
-    // 6) AI bağlamı
     const isAIContext = isAIInMessage || isAIInHistory;
-
-    // 7) Şirket bağlamı
     const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
 
-    // 8) SADECE AI bağlamı + fiyat isteği → link gönder
     if (isAIContext && !isCompanyContext && isPriceQuery) {
       await sendMessage(
         from,
@@ -436,18 +426,17 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // MEMORY UPDATE
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
     session.followUpStage = 0;
 
-    // TOPIC & INTENT
     const topic = detectTopic(text);
     if (!session.topics) session.topics = [];
     if (topic !== "other" && !session.topics.includes(topic)) {
       session.topics.push(topic);
     }
+
     session.intentScore = calculateIntentScore(
       text,
       session.intentScore || 0
@@ -456,16 +445,6 @@ app.post("/webhook", async (req, res) => {
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
-
-    // (Devam eden AI cevabı üretme kodların burada devam eder…)
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
 
     // PROMPT
 let prompt = "";
