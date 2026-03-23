@@ -344,7 +344,7 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-  // -------------------------------
+ // -------------------------------
 //  AI CHATBOT PRICE REDIRECT
 // -------------------------------
 session.topics = session.topics.filter((t) => t !== "company");
@@ -361,7 +361,8 @@ const isPriceQuery =
   lower.includes("fiyat listesi") ||
   lower.includes("ücretlendirme") ||
   lower.includes("cost") ||
-  lower.includes("price");
+  lower.includes("price") ||
+  lower.includes("how much");
 
 const isAIInMessage =
   lower.includes("ai") ||
@@ -418,6 +419,9 @@ const isCompanyInHistory = session.history.some((m) => {
 const isAIContext = isAIInMessage || isAIInHistory;
 const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
 
+// -------------------------------
+//  DOĞRU MANTIK: SADECE AI + FİYAT
+// -------------------------------
 if (isAIContext && !isCompanyContext && isPriceQuery) {
   let priceMsg = "";
 
