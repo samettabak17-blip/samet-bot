@@ -343,17 +343,23 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // ❗ BURAYA KADAR SENİN KODUNDU — AYNEN KORUDUM
-    // ❗ EKSİK OLAN KAPANIŞLARI EKLİYORUM:
+    // ❗ BURADAN SONRA WEBHOOK DEVAM EDECEK
+    // ❗ ARTIK ERKEN RETURN YOK
+    // ❗ Fonksiyon DOĞRU yerde kapanacak
 
+    // -----------------------------------------------------
+    // BURADAN SONRAKİ TÜM MESAJ İŞLEME KODLARIN
+    // (topic detection, AI cevap üretme, memory update vs.)
+    // -----------------------------------------------------
+
+    // En sonda:
     return res.sendStatus(200);
 
   } catch (err) {
     console.error("Webhook error:", err);
     return res.sendStatus(500);
   }
-});
-
+}); // <-- DOĞRU KAPANIŞ
     
 // AI CHATBOT PRICE REDIRECT (HISTORY + CONTEXT BASED)
 // -------------------------------
