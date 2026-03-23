@@ -343,110 +343,98 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // ❗ BURADAN SONRA TÜM MESAJ İŞLEME KODLARIN GELECEK
-    // (topic detection, AI cevap üretme, memory update vs.)
+    // -------------------------------
+    //  AI CHATBOT PRICE REDIRECT
+    // -------------------------------
 
-    return res.sendStatus(200);
+    // Şirket konusunu tamamen devre dışı bırak
+    session.topics = session.topics.filter((t) => t !== "company");
 
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-}); // <-- WEBHOOK BURADA KAPANIYOR (DOĞRU)
-    
-// AI CHATBOT PRICE REDIRECT (HISTORY + CONTEXT BASED)
-// -------------------------------
+    // 1) Kullanıcı fiyat mı soruyor?
+    const isPriceQuery =
+      lower.includes("fiyat") ||
+      lower.includes("ücret") ||
+      lower.includes("ucret") ||
+      lower.includes("maliyet") ||
+      lower.includes("ne kadar") ||
+      lower.includes("fiyat ver") ||
+      lower.includes("fiyat bilgisi") ||
+      lower.includes("fiyatlar") ||
+      lower.includes("fiyat listesi") ||
+      lower.includes("ücretlendirme") ||
+      lower.includes("cost") ||
+      lower.includes("price");
 
-// ❗ OTOMATİK ŞİRKET MESAJLARINI TAMAMEN DEVRE DIŞI BIRAK
-// detectTopic yanlışlıkla company döndürse bile company topic eklenmez
-session.topics = session.topics.filter(t => t !== "company");
+    // 2) Mesaj AI chatbot bağlamı içeriyor mu?
+    const isAIInMessage =
+      lower.includes("ai") ||
+      lower.includes("chatbot") ||
+      lower.includes("yapay zeka") ||
+      lower.includes("ai bot") ||
+      lower.includes("bot yazılım");
 
-// 1) Kullanıcı fiyat mı soruyor?
-const isPriceQuery =
-  lower.includes("fiyat") ||
-  lower.includes("ücret") ||
-  lower.includes("ucret") ||
-  lower.includes("maliyet") ||
-  lower.includes("ne kadar") ||
-  lower.includes("fiyat ver") ||
-  lower.includes("fiyat bilgisi") ||
-  lower.includes("fiyatlar") ||
-  lower.includes("fiyat listesi") ||
-  lower.includes("ücretlendirme") ||
-  lower.includes("cost") ||
-  lower.includes("price");
+    // 3) Mesaj şirket bağlamı içeriyor mu?
+    const isCompanyInMessage =
+      lower.includes("şirket") ||
+      lower.includes("company") ||
+      lower.includes("firma") ||
+      lower.includes("business setup") ||
+      lower.includes("company setup") ||
+      lower.includes("freezone") ||
+      lower.includes("free zone") ||
+      lower.includes("mainland") ||
+      lower.includes("license") ||
+      lower.includes("trade license") ||
+      lower.includes("vize") ||
+      lower.includes("oturum") ||
+      lower.includes("residence") ||
+      lower.includes("immigration");
 
-// 2) Bu mesaj AI chatbot bağlamı içeriyor mu?
-const isAIInMessage =
-  lower.includes("ai") ||
-  lower.includes("chatbot") ||
-  lower.includes("yapay zeka") ||
-  lower.includes("ai bot") ||
-  lower.includes("bot yazılım");
+    // 4) Geçmişte AI chatbot geçti mi?
+    const isAIInHistory = session.history.some((m) => {
+      const t = m.text?.toLowerCase() || "";
+      return (
+        t.includes("ai") ||
+        t.includes("chatbot") ||
+        t.includes("yapay zeka")
+      );
+    });
 
-// 3) Bu mesaj şirket kurma bağlamı içeriyor mu?
-const isCompanyInMessage =
-  lower.includes("şirket") ||
-  lower.includes("company") ||
-  lower.includes("firma") ||
-  lower.includes("business setup") ||
-  lower.includes("company setup") ||
-  lower.includes("freezone") ||
-  lower.includes("free zone") ||
-  lower.includes("mainland") ||
-  lower.includes("license") ||
-  lower.includes("trade license") ||
-  lower.includes("vize") ||
-  lower.includes("oturum") ||
-  lower.includes("residence") ||
-  lower.includes("immigration");
+    // 5) Geçmişte şirket konusu geçti mi?
+    const isCompanyInHistory = session.history.some((m) => {
+      const t = m.text?.toLowerCase() || "";
+      return (
+        t.includes("şirket") ||
+        t.includes("company") ||
+        t.includes("firma") ||
+        t.includes("business setup") ||
+        t.includes("company setup") ||
+        t.includes("freezone") ||
+        t.includes("free zone") ||
+        t.includes("mainland") ||
+        t.includes("license") ||
+        t.includes("trade license") ||
+        t.includes("vize") ||
+        t.includes("oturum") ||
+        t.includes("residence") ||
+        t.includes("immigration")
+      );
+    });
 
-// 4) Geçmiş konuşmada AI chatbot konusu geçti mi?
-const isAIInHistory = session.history.some((m) => {
-  const t = m.text?.toLowerCase() || "";
-  return (
-    t.includes("ai") ||
-    t.includes("chatbot") ||
-    t.includes("yapay zeka")
-  );
-});
+    // 6) AI bağlamı
+    const isAIContext = isAIInMessage || isAIInHistory;
 
-// 5) Geçmiş konuşmada şirket konusu geçti mi?
-const isCompanyInHistory = session.history.some((m) => {
-  const t = m.text?.toLowerCase() || "";
-  return (
-    t.includes("şirket") ||
-    t.includes("company") ||
-    t.includes("firma") ||
-    t.includes("business setup") ||
-    t.includes("company setup") ||
-    t.includes("freezone") ||
-    t.includes("free zone") ||
-    t.includes("mainland") ||
-    t.includes("license") ||
-    t.includes("trade license") ||
-    t.includes("vize") ||
-    t.includes("oturum") ||
-    t.includes("residence") ||
-    t.includes("immigration")
-  );
-});
+    // 7) Şirket bağlamı
+    const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
 
-// 6) AI bağlamı = mesajda AI geçmesi veya geçmişte AI geçmesi
-const isAIContext = isAIInMessage || isAIInHistory;
-
-// 7) Şirket bağlamı = mesajda şirket geçmesi veya geçmişte şirket geçmesi
-const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
-
-// 8) SADECE AI bağlamı + fiyat isteği → link gönder
-// ❗ Şirket bağlamı varsa ASLA link gönderme
-if (isAIContext && !isCompanyContext && isPriceQuery) {
-  await sendMessage(
-    from,
-    "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-  );
-  return res.sendStatus(200);
-}
+    // 8) SADECE AI bağlamı + fiyat isteği → link gönder
+    if (isAIContext && !isCompanyContext && isPriceQuery) {
+      await sendMessage(
+        from,
+        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
+      );
+      return res.sendStatus(200);
+    }
 
     // MEMORY UPDATE
     session.history.push({ role: "user", text });
@@ -460,13 +448,24 @@ if (isAIContext && !isCompanyContext && isPriceQuery) {
     if (topic !== "other" && !session.topics.includes(topic)) {
       session.topics.push(topic);
     }
-    session.intentScore = calculateIntentScore(text, session.intentScore || 0);
+    session.intentScore = calculateIntentScore(
+      text,
+      session.intentScore || 0
+    );
 
     const historyText = session.history
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    // (Devam eden kodun burada çalışmaya devam eder…)
+    // (Devam eden AI cevabı üretme kodların burada devam eder…)
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
 
     // PROMPT
 let prompt = "";
