@@ -983,7 +983,7 @@ function getPingMessage(lang, topic) {
       residency:
         "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler doğrultusunda bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
       ai:
-      "AI ve otomasyon çözümleriyle ilgili paylaştığım öneri ve bilgiler doğrultusunda projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.\n\nAI Chatbot planlarımıza göz atmak isterseniz aşağıdaki bağlantıyı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com/#pricing"
+      "AI ve otomasyon çözümleriyle ilgili paylaştığım öneri ve bilgiler doğrultusunda projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.\n\nAI Chatbot planlarımıza göz atmak isterseniz aşağıdaki bağlantıyı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com/#pricing",
       cost:
         "Maliyet ve süreç detaylarıyla ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz bütçe ve adımları birlikte netleştirebiliriz.",
       general:
