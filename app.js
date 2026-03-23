@@ -818,7 +818,6 @@ const reply = await callGemini(prompt);
 if (!reply) {
   await sendMessage(from, corporateFallback(lang));
   res.sendStatus(200);   // return KALDIRILDI
-  return;                // istersen bunu da ekleyebilirsin, ama şart değil
 }
 
 session.history.push({ role: "assistant", text: reply });
