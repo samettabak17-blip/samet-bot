@@ -1131,7 +1131,6 @@ function getFollowUpMessage(lang, topic, stage) {
 
   return langSet[topic] || langSet["general"] || "";
 }
-});
 
 // -------------------------------
 //  SERVER
