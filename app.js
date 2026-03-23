@@ -1008,38 +1008,53 @@ cron.schedule("*/10 * * * *", async () => {
 
 
 // -----------------------------------------------------
-// 10 DAKİKA PING MESAJLARI
+// 10 DAKİKA PING MESAJLARI (KURUMSAL – SATIŞ ODAKLI – İNSANİ)
 // -----------------------------------------------------
 function getPingMessage(lang, topic) {
   const messages = {
     tr: {
-      company: "Dubai’de şirket kurulumuyla ilgili devam edelim mi?",
-      residency: "Dubai oturum ve vize süreciyle ilgili devam edelim mi?",
-      ai: "AI çözümleri ve otomasyonlarla ilgili devam edelim mi?",
-      cost: "Maliyet ve bütçe planlamasıyla ilgili devam edelim mi?",
-      general: "Devam edelim mi?"
+      company:
+        "Şirket kurulum sürecinizle ilgili paylaştığım bilgiler doğrultusunda ilerlemek ister misiniz? Hazırsanız süreci sizin için başlatabilirim.",
+      residency:
+        "Oturum ve vize sürecinizle ilgili aktardığım bilgiler doğrultusunda devam etmeyi düşünüyor musunuz? Uygunsanız bir sonraki adımı planlayabiliriz.",
+      ai:
+        "AI ve otomasyon çözümleriyle ilgili paylaştığım bilgiler doğrultusunda ilerlemek ister misiniz? Projenizi bir üst seviyeye taşımaya hazırım.",
+      cost:
+        "Maliyet ve süreç detaylarıyla ilgili paylaştığım bilgiler doğrultusunda devam etmeyi düşünüyor musunuz? Hazırsanız ilerleyebiliriz.",
+      general:
+        "Paylaştığım bilgiler doğrultusunda hangi süreçte ilerlemeyi düşünürsünüz? Hazır olduğunuzda süreçlerle ilgili adımları birlikte netleştirebiliriz."
     },
+
     en: {
-      company: "Shall we continue with your Dubai company setup?",
-      residency: "Shall we continue with your Dubai residency process?",
-      ai: "Shall we continue with your AI automation plan?",
-      cost: "Shall we continue with your budgeting discussion?",
-      general: "Shall we continue?"
+      company:
+        "Would you like to proceed based on the information I shared regarding your company setup? I can initiate the next steps whenever you're ready.",
+      residency:
+        "Would you like to move forward based on the residency and visa details I provided? We can plan the next step whenever it suits you.",
+      ai:
+        "Would you like to proceed with the AI and automation options I shared? I’m ready to help you move forward whenever you are.",
+      cost:
+        "Would you like to continue based on the cost and process details I shared? I can assist further whenever you're ready.",
+      general:
+        "Based on the information I shared, which direction would you like to move forward with? Whenever you're ready, we can clarify the next steps together."
     },
+
     ar: {
-      company: "هل نتابع إجراءات تأسيس الشركة في دبي؟",
-      residency: "هل نتابع إجراءات الإقامة في دبي؟",
-      ai: "هل نتابع حلول الذكاء الاصطناعي؟",
-      cost: "هل نتابع مناقشة التكاليف؟",
-      general: "هل نتابع؟"
+      company:
+        "هل ترغبون بالمتابعة بناءً على المعلومات التي قدمتها حول تأسيس الشركة؟ يمكنني البدء بالإجراءات متى ما كنتم جاهزين.",
+      residency:
+        "هل ترغبون بالمتابعة بناءً على تفاصيل الإقامة والتأشيرة التي شاركتها معكم؟ يمكننا تحديد الخطوة التالية في الوقت المناسب لكم.",
+      ai:
+        "هل تودون المتابعة بناءً على خيارات الذكاء الاصطناعي والأتمتة التي قدمتها؟ أنا جاهز لمساعدتكم في أي وقت.",
+      cost:
+        "هل ترغبون بالمتابعة بناءً على تفاصيل التكاليف والإجراءات التي قدمتها؟ يمكنني مساعدتكم متى ما كنتم جاهزين.",
+      general:
+        "استنادًا إلى المعلومات التي قدمتها، في أي مسار تودون المتابعة؟ عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية معًا."
     }
   };
 
   const langSet = messages[lang] || messages["en"];
   return langSet[topic] || langSet["general"];
 }
-
-
 // -----------------------------------------------------
 // FOLLOW-UP MESAJLARI (3h – 24h – 72h – 7d)
 // -----------------------------------------------------
