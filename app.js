@@ -343,6 +343,17 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // ❗ BURAYA KADAR SENİN KODUNDU — AYNEN KORUDUM
+    // ❗ EKSİK OLAN KAPANIŞLARI EKLİYORUM:
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
+
     
 // AI CHATBOT PRICE REDIRECT (HISTORY + CONTEXT BASED)
 // -------------------------------
