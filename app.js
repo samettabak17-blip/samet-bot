@@ -247,6 +247,7 @@ app.get("/webhook", (req, res) => {
   return res.sendStatus(403);
 });
 
+
 // -------------------------------
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
@@ -254,7 +255,7 @@ app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
 
-    // ❗ KRİTİK FİLTRE — BOTUN KENDİ KENDİNE MESAJ ATMASINI %100 ENGELLER
+    // ❗ BOTUN KENDİ KENDİNE MESAJ ATMASINI ENGELLER
     if (!message || message.type !== "text" || !message.text?.body) {
       return res.sendStatus(200);
     }
@@ -263,24 +264,53 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
-    // 1) MEDYA / BOŞ MESAJ FİLTRESİ
-    const isInvalid =
-      message.type === "image" ||
-      message.type === "audio" ||
-      message.type === "voice" ||
-      message.type === "video" ||
-      message.type === "sticker" ||
-      message.type === "document" ||
-      !text ||
-      text.trim() === "";
 
-    if (isInvalid) {
-      await sendMessage(
-        from,
-        "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?"
-      );
-      return res.sendStatus(200);
+    // -------------------------------
+    //  SESSION OLUŞTURMA / GÜNCELLEME
+    // -------------------------------
+    if (!sessions[from]) {
+      sessions[from] = {
+        lang: "tr",
+        topics: [],
+        lastMessageTime: Date.now(),
+        lastPingSentAt: null,
+        followUpSent3h: false,
+        followUpStage: null
+      };
+    } else {
+      sessions[from].lastMessageTime = Date.now();
     }
+
+
+    // -------------------------------
+    //  KONU TESPİTİ
+    // -------------------------------
+    if (lower.includes("company") || lower.includes("şirket")) {
+      sessions[from].topics.push("company");
+    }
+    else if (lower.includes("residency") || lower.includes("oturum")) {
+      sessions[from].topics.push("residency");
+    }
+    else if (lower.includes("ai") || lower.includes("yapay zeka")) {
+      sessions[from].topics.push("ai");
+    }
+    else if (lower.includes("cost") || lower.includes("ücret") || lower.includes("fiyat")) {
+      sessions[from].topics.push("cost");
+    }
+    else {
+      sessions[from].topics.push("general");
+    }
+
+    // ❗ DİKKAT: BURADA ARTIK OTOMATİK CEVAP YOK
+    // ❗ Bot sadece sessizlik olursa ping/follow-up gönderecek
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
 
     // 2) İLK MESAJ (SESSION OLUŞTURMA)
     if (!sessions[from]) {
