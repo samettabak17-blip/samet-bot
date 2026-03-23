@@ -817,14 +817,13 @@ const reply = await callGemini(prompt);
 
 if (!reply) {
   await sendMessage(from, corporateFallback(lang));
-  res.sendStatus(200);   // return KALDIRILDI
+  res.sendStatus(200);
+} else {
+  session.history.push({ role: "assistant", text: reply });
+  await sendMessage(from, reply);
+  res.sendStatus(200);
 }
 
-session.history.push({ role: "assistant", text: reply });
-
-await sendMessage(from, reply);
-
-res.sendStatus(200);
 } catch (err) {
   console.error("Webhook error:", err);
   res.sendStatus(500);
