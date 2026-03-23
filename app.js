@@ -815,20 +815,21 @@ ${text}
 
 const reply = await callGemini(prompt);
 
-    if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
-    }
+if (!reply) {
+  await sendMessage(from, corporateFallback(lang));
+  res.sendStatus(200);   // return KALDIRILDI
+  return;                // istersen bunu da ekleyebilirsin, ama şart değil
+}
 
-    session.history.push({ role: "assistant", text: reply });
+session.history.push({ role: "assistant", text: reply });
 
-    await sendMessage(from, reply);
+await sendMessage(from, reply);
 
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err);
-    res.sendStatus(500);
-  }
+res.sendStatus(200);
+} catch (err) {
+  console.error("Webhook error:", err);
+  res.sendStatus(500);
+}
 });
 
 // -----------------------------------------------------
@@ -1053,6 +1054,7 @@ function getPingMessage(lang, topic) {
   const langSet = messages[lang] || messages["en"];
   return langSet[topic] || langSet["general"];
 }
+
 // -----------------------------------------------------
 // FOLLOW-UP MESAJLARI (3h – 24h – 72h – 7d)
 // -----------------------------------------------------
