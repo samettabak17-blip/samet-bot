@@ -994,9 +994,9 @@ function getPingMessage(lang, topic) {
       company:
         "If you'd like to move forward with your company setup, I can help you structure the next steps clearly and efficiently.",
       residency:
-      "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing"
+      "If you’d like to proceed with the residency and visa options we discussed, I’m here to guide you through the next steps.",
       ai:
-       "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing"
+       "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing",
       cost:
         "If you'd like to continue based on the cost and process details I shared, we can finalize the most suitable plan together.",
       general:
@@ -1009,7 +1009,7 @@ function getPingMessage(lang, topic) {
       residency:
         "إذا رغبتم بالمتابعة في خيارات الإقامة والتأشيرات، يسعدني توجيهكم للخطوة التالية.",
       ai:
-      "استنادًا إلى الاقتراحات والمعلومات التي شاركتها حول حلول الذكاء الاصطناعي والأتمتة، يمكننا التخطيط للخطوة التالية لجعل مشروعك أكثر كفاءة وقابلية للتوسع.\n\nإذا كنت ترغب في الاطلاع على خطط روبوت الدردشة بالذكاء الاصطناعي، يمكنك زيارة الرابط التالي:\nhttps://aichatbot.samchecompany.com/#pricing"
+      "استنادًا إلى الاقتراحات والمعلومات التي شاركتها حول حلول الذكاء الاصطناعي والأتمتة، يمكننا التخطيط للخطوة التالية لجعل مشروعك أكثر كفاءة وقابلية للتوسع.\n\nإذا كنت ترغب في الاطلاع على خطط روبوت الدردشة بالذكاء الاصطناعي، يمكنك زيارة الرابط التالي:\nhttps://aichatbot.samchecompany.com/#pricing",
       cost:
         "إذا رغبتم بالمتابعة بناءً على تفاصيل التكاليف، يمكننا تحديد الخطة الأنسب لكم.",
       general:
