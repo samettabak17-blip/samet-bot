@@ -268,6 +268,8 @@ app.post("/webhook", async (req, res) => {
     // -------------------------------
     //  SESSION OLUŞTURMA / GÜNCELLEME
     // -------------------------------
+    const isFirstMessage = !sessions[from];
+
     if (!sessions[from]) {
       sessions[from] = {
         lang: "tr",
@@ -301,15 +303,11 @@ app.post("/webhook", async (req, res) => {
       sessions[from].topics.push("general");
     }
 
-    // ❗ OTOMATİK CEVAP YOK
-    return res.sendStatus(200);
 
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
+    // -------------------------------
+    //  İLK MESAJ İÇİN WELCOME MESAJI
+    // -------------------------------
+    if (isFirstMessage) {
       await sendMessage(
         from,
         "Welcome to SamChe Company LLC.\n" +
@@ -324,9 +322,18 @@ app.post("/webhook", async (req, res) => {
           "2️⃣ Türkçe\n" +
           "3️⃣ Arapça"
       );
-
-      return res.sendStatus(200);
     }
+
+    // ❗ OTOMATİK HER MESAJDA CEVAP YOK
+    // Sadece ilk mesajda welcome, sonrası sessizlik → CRON ping/follow-up
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
 
     const session = sessions[from];
 
