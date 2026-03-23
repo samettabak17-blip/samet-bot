@@ -827,294 +827,310 @@ const reply = await callGemini(prompt);
 });
 
 // -----------------------------------------------------
-//  CRON TABANLI 3 SAAT + 24–72 SAAT & 7 GÜN HATIRLATMA
+//  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
 // -----------------------------------------------------
-cron.schedule("0 * * * *", async () => {
+
+cron.schedule("*/10 * * * *", async () => {
   console.log("[CRON] Hatırlatma kontrolü tetiklendi:", new Date().toLocaleString());
 
   try {
     const now = Date.now();
 
+    // -----------------------------------------------------
     // SESSIONS GÜVENLİK KONTROLÜ
+    // -----------------------------------------------------
     if (!sessions || typeof sessions !== "object") {
       console.log("[CRON] sessions geçersiz, işlem yapılmadı.");
       return;
     }
 
-    for (const user in sessions) {
+    const users = Object.keys(sessions);
+    if (!users.length) {
+      console.log("[CRON] aktif session yok, çıkılıyor.");
+      return;
+    }
+
+    for (const user of users) {
       try {
         const s = sessions[user];
 
+        // -----------------------------------------------------
         // ÇÖKMEYİ ÖNLEYEN KRİTİK KONTROLLER
-        if (!s || typeof s !== "object") continue;
-        if (!s.lastMessageTime) continue;
-
-        const diffHours = (now - s.lastMessageTime) / (1000 * 60 * 60);
-        const topics = Array.isArray(s.topics) ? s.topics : [];
-        const lastTopic = topics.length ? topics[topics.length - 1] : "general";
-        const lang = s.lang || "en";
-
-        let message = null;
-
-        // -------------------------------
-        // 3 SAAT FOLLOW-UP
-        // -------------------------------
-        if (diffHours >= 3 && !s.followUpSent3h) {
-          const followUp3hMessages = {
-            tr: "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum.",
-            en: "Hello, I noticed we haven't been in touch for a while. If you need any information or support, I’m here to help.",
-            ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة. إذا كنت بحاجة إلى أي معلومات أو دعم، يسعدني مساعدتك."
-          };
-
-          const msg = followUp3hMessages[lang] || followUp3hMessages.en;
-          try {
-            await sendMessage(user, msg);
-          } catch (e) {
-            console.error("[CRON] sendMessage 3h error:", e && e.stack ? e.stack : e);
-          }
-          s.followUpSent3h = true;
+        // -----------------------------------------------------
+        if (!s || typeof s !== "object") {
+          console.log("[CRON] session nesnesi geçersiz, user:", user);
           continue;
         }
 
-        // -------------------------------
-       // 24 SAAT HATIRLATMA
-// -------------------------------
-if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 48) {
+        if (!s.lastMessageTime || isNaN(s.lastMessageTime)) {
+          console.log("[CRON] lastMessageTime yok veya geçersiz, user:", user);
+          continue;
+        }
 
-  let message = "";
+        const diffMinutes = (now - s.lastMessageTime) / (1000 * 60);
+        if (!isFinite(diffMinutes) || diffMinutes < 0) {
+          console.log("[CRON] diffMinutes geçersiz, user:", user);
+          continue;
+        }
 
-  // Dil seçimi
-  if (lang === "tr") {
-    if (lastTopic === "company") {
-      message =
-        "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum. Size en uygun şirket modeli, maliyet yapısı ve serbest bölge seçeneklerini netleştirmeye hazırız.";
-    } else if (lastTopic === "residency") {
-      message =
-        "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. Sizin için en uygun oturum modelini netleştirebiliriz.";
-    } else if (lastTopic === "ai") {
-      message =
-        "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum. İş modelinize uygun yapay zekâ otomasyonlarını netleştirebiliriz.";
-    } else if (lastTopic === "cost") {
-      message =
-        "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere tekrar iletişime geçiyorum. Size en uygun fiyat yapısını netleştirebiliriz.";
-    } else {
-      message =
-        "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum. Hazır olduğunuzda kaldığımız noktadan profesyonel şekilde devam edebiliriz.";
-    }
+        const diffHours = diffMinutes / 60;
 
-  } else if (lang === "en") {
-    if (lastTopic === "company") {
-      message =
-        "Hello again. I’m following up on our previous discussion about setting up a company in Dubai. We’re ready to clarify the most suitable company structure, cost model, and free zone options for you.";
-    } else if (lastTopic === "residency") {
-      message =
-        "Hello again. I’m following up on our previous conversation about Dubai residency and visa options. We can help you clarify the most suitable residency model for your situation.";
-    } else if (lastTopic === "ai") {
-      message =
-        "Hello again. I’m following up on our previous discussion about AI solutions and chatbot systems. We can define automation solutions tailored to your business model.";
-    } else if (lastTopic === "cost") {
-      message =
-        "Hello again. I’m following up on our previous discussion about costs and budgeting. We can clarify the most suitable pricing structure for you.";
-    } else {
-      message =
-        "Hello again. I’m reaching out to review our previous conversation and see if you’d like to move forward from where we left off.";
-    }
+        const topics = Array.isArray(s.topics) ? s.topics : [];
+        const lastTopic = topics.length ? topics[topics.length - 1] : "general";
+        const lang = typeof s.lang === "string" ? s.lang : "en";
 
-  } else if (lang === "ar") {
-    if (lastTopic === "company") {
-      message =
-        "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول تأسيس شركة في دبي. يمكننا توضيح أنسب هيكل للشركة وتكاليفها وخيارات المناطق الحرة المناسبة لك.";
-    } else if (lastTopic === "residency") {
-      message =
-        "مرحبًا، أتواصل معك بخصوص حديثنا السابق حول الإقامة والتأشيرات في دبي. يمكننا مساعدتك في اختيار أنسب نموذج إقامة لوضعك.";
-    } else if (lastTopic === "ai") {
-      message =
-        "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول حلول الذكاء الاصطناعي وأنظمة الشات بوت. يمكننا تصميم حلول أتمتة تناسب نموذج عملك.";
-    } else if (lastTopic === "cost") {
-      message =
-        "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول التكاليف وخطط الميزانية. يمكننا توضيح هيكل التسعير الأنسب لك.";
-    } else {
-      message =
-        "مرحبًا، أتواصل معك لمراجعة حديثنا السابق ومعرفة ما إذا كنت ترغب في المتابعة من حيث توقفنا.";
-    }
-  }
+        // -----------------------------------------------------
+        // 10 DAKİKA PING — HER SESSİZLİKTE TEKRAR
+        // followUpStage'i ETKİLEMEZ
+        // -----------------------------------------------------
+        if (diffMinutes >= 10) {
+          const lastPing = s.lastPingSentAt && !isNaN(s.lastPingSentAt) ? s.lastPingSentAt : null;
 
-  // Mesaj varsa gönder
-  if (message) {
-    try {
-      await sendMessage(user, message);
-    } catch (e) {
-      console.error("[CRON] sendMessage 24h error:", e?.stack || e);
-    }
-  }
+          if (!lastPing || (now - lastPing) > 10 * 60 * 1000) {
+            const pingMessage = getPingMessage(lang, lastTopic);
 
-  // 24 saatlik hatırlatma tamamlandı
-  s.followUpStage = 1;
-  continue;
-}
-        // -------------------------------
-       // 72 SAAT HATIRLATMA
-// -------------------------------
-if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 96) {
+            if (pingMessage && typeof pingMessage === "string") {
+              try {
+                await sendMessage(user, pingMessage);
+              } catch (e) {
+                console.error("[CRON] sendMessage 10min error:", e);
+              }
+              s.lastPingSentAt = now;
+            } else {
+              console.log("[CRON] pingMessage geçersiz, user:", user);
+            }
 
-  let message = "";
+            continue;
+          }
+        } else {
+          // Kullanıcı yazdı → ping reset
+          if (s.lastPingSentAt) s.lastPingSentAt = null;
+        }
 
-  // Dil seçimi
-  if (lang === "tr") {
-    if (lastTopic === "company") {
-      message =
-        "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki görüşmemiz üzerinden bir süre geçti. Hazırsanız süreçle ilgili tüm adımları netleştirip hızlıca ilerleyebiliriz.";
-    } else if (lastTopic === "residency") {
-      message =
-        "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemiz üzerinden zaman geçti. Hazırsanız sizin için en uygun oturum modelini belirleyebiliriz.";
-    } else if (lastTopic === "ai") {
-      message =
-        "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemiz üzerinden zaman geçti. İş modelinize uygun otomasyon çözümlerini netleştirmeye hazırım.";
-    } else if (lastTopic === "cost") {
-      message =
-        "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemiz üzerinden zaman geçti. Hazırsanız size en uygun fiyat yapısını netleştirebiliriz.";
-    } else {
-      message =
-        "Merhaba, önceki görüşmemiz üzerinden zaman geçti. Hazırsanız kaldığımız yerden profesyonel şekilde devam edebiliriz.";
-    }
+        // -----------------------------------------------------
+        // 3 SAAT FOLLOW-UP (3–6 saat)
+        // -----------------------------------------------------
+        if (!s.followUpSent3h && diffHours >= 3 && diffHours < 6) {
+          const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
-  } else if (lang === "en") {
-    if (lastTopic === "company") {
-      message =
-        "Hello again. It has been a while since our last discussion about setting up a company in Dubai. If you're ready, we can clarify all steps and move forward quickly.";
-    } else if (lastTopic === "residency") {
-      message =
-        "Hello again. It has been some time since our last conversation about Dubai residency and visa options. If you're ready, we can define the most suitable residency model for you.";
-    } else if (lastTopic === "ai") {
-      message =
-        "Hello again. It has been a while since we discussed AI solutions and chatbot systems. If you're ready, we can finalize automation solutions tailored to your business.";
-    } else if (lastTopic === "cost") {
-      message =
-        "Hello again. It has been some time since we discussed costs and budgeting. If you're ready, we can clarify the most suitable pricing structure for you.";
-    } else {
-      message =
-        "Hello again. It has been a while since our last conversation. If you're ready, we can continue from where we left off.";
-    }
+          if (msg && typeof msg === "string") {
+            try {
+              await sendMessage(user, msg);
+            } catch (e) {
+              console.error("[CRON] sendMessage 3h error:", e);
+            }
+            s.followUpSent3h = true;
+            s.followUpStage = 0;
+          } else {
+            console.log("[CRON] 3h followUpMessage geçersiz, user:", user);
+          }
 
-  } else if (lang === "ar") {
-    if (lastTopic === "company") {
-      message =
-        "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول تأسيس شركة في دبي. إذا كنت مستعدًا، يمكننا توضيح جميع الخطوات والمضي قدمًا بسرعة.";
-    } else if (lastTopic === "residency") {
-      message =
-        "مرحبًا، لقد مر بعض الوقت منذ حديثنا الأخير حول الإقامة والتأشيرات في دبي. إذا كنت مستعدًا، يمكننا تحديد أنسب نموذج إقامة لك.";
-    } else if (lastTopic === "ai") {
-      message =
-        "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول حلول الذكاء الاصطناعي وأنظمة الشات بوت. إذا كنت مستعدًا، يمكننا إنهاء حلول الأتمتة المناسبة لعملك.";
-    } else if (lastTopic === "cost") {
-      message =
-        "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول التكاليف وخطط الميزانية. إذا كنت مستعدًا، يمكننا توضيح هيكل التسعير الأنسب لك.";
-    } else {
-      message =
-        "مرحبًا، لقد مر بعض الوقت منذ حديثنا الأخير. إذا كنت مستعدًا، يمكننا المتابعة من حيث توقفنا.";
-    }
-  }
+          continue;
+        }
 
-  // Mesaj gönder
-  if (message) {
-    try {
-      await sendMessage(user, message);
-    } catch (e) {
-      console.error("[CRON] sendMessage 72h error:", e?.stack || e);
-    }
-  }
+        // -----------------------------------------------------
+        // 24 SAAT FOLLOW-UP (24–25 saat)
+        // -----------------------------------------------------
+        if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 25) {
+          const msg = getFollowUpMessage(lang, lastTopic, "24h");
 
-  // 72 saatlik hatırlatma tamamlandı
-  s.followUpStage = 2;
-  continue;
-}
-        // -------------------------------
-       // 7 GÜN (168 SAAT) HATIRLATMA
-// -------------------------------
-if (s.followUpStage === 2 && diffHours >= 168 && diffHours < 192) {
+          if (msg && typeof msg === "string") {
+            try {
+              await sendMessage(user, msg);
+            } catch (e) {
+              console.error("[CRON] sendMessage 24h error:", e);
+            }
+            s.followUpStage = 1;
+          } else {
+            console.log("[CRON] 24h followUpMessage geçersiz, user:", user);
+          }
 
-  let message = "";
+          continue;
+        }
 
-  // Dil seçimi
-  if (lang === "tr") {
-    if (lastTopic === "company") {
-      message =
-        "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki görüşmemizin üzerinden bir hafta geçti. Hazırsanız şirket kurulum sürecini başlatabilir veya tüm seçenekleri yeniden değerlendirebiliriz.";
-    } else if (lastTopic === "residency") {
-      message =
-        "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız sizin için en uygun oturum modelini belirleyebiliriz.";
-    } else if (lastTopic === "ai") {
-      message =
-        "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız iş modelinize uygun otomasyon çözümlerini netleştirebiliriz.";
-    } else if (lastTopic === "cost") {
-      message =
-        "Merhaba, maliyet ve bütçe planlamasıyla ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız size en uygun fiyat yapısını netleştirebiliriz.";
-    } else {
-      message =
-        "Merhaba, önceki görüşmemizin üzerinden bir hafta geçti. Hazırsanız kaldığımız yerden profesyonel şekilde devam edebiliriz.";
-    }
+        // -----------------------------------------------------
+        // 72 SAAT FOLLOW-UP (72–73 saat)
+        // -----------------------------------------------------
+        if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 73) {
+          const msg = getFollowUpMessage(lang, lastTopic, "72h");
 
-  } else if (lang === "en") {
-    if (lastTopic === "company") {
-      message =
-        "Hello again. It has been a week since our last discussion about setting up a company in Dubai. If you're ready, we can start the process or review all available options.";
-    } else if (lastTopic === "residency") {
-      message =
-        "Hello again. It has been a week since we discussed Dubai residency and visa options. If you're ready, we can define the most suitable residency model for you.";
-    } else if (lastTopic === "ai") {
-      message =
-        "Hello again. It has been a week since we talked about AI solutions and chatbot systems. If you're ready, we can finalize automation solutions tailored to your business.";
-    } else if (lastTopic === "cost") {
-      message =
-        "Hello again. It has been a week since we discussed costs and budgeting. If you're ready, we can clarify the most suitable pricing structure for you.";
-    } else {
-      message =
-        "Hello again. It has been a week since our last conversation. If you're ready, we can continue from where we left off.";
-    }
+          if (msg && typeof msg === "string") {
+            try {
+              await sendMessage(user, msg);
+            } catch (e) {
+              console.error("[CRON] sendMessage 72h error:", e);
+            }
+            s.followUpStage = 2;
+          } else {
+            console.log("[CRON] 72h followUpMessage geçersiz, user:", user);
+          }
 
-  } else if (lang === "ar") {
-    if (lastTopic === "company") {
-      message =
-        "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول تأسيس شركة في دبي. إذا كنت مستعدًا، يمكننا بدء العملية أو مراجعة جميع الخيارات المتاحة.";
-    } else if (lastTopic === "residency") {
-      message =
-        "مرحبًا، لقد مر أسبوع منذ حديثنا الأخير حول الإقامة والتأشيرات في دبي. إذا كنت مستعدًا، يمكننا تحديد أنسب نموذج إقامة لك.";
-    } else if (lastTopic === "ai") {
-      message =
-        "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول حلول الذكاء الاصطناعي وأنظمة الشات بوت. إذا كنت مستعدًا، يمكننا إنهاء حلول الأتمتة المناسبة لعملك.";
-    } else if (lastTopic === "cost") {
-      message =
-        "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول التكاليف وخطط الميزانية. إذا كنت مستعدًا، يمكننا توضيح هيكل التسعير الأنسب لك.";
-    } else {
-      message =
-        "مرحبًا، لقد مر أسبوع منذ حديثنا الأخير. إذا كنت مستعدًا، يمكننا المتابعة من حيث توقفنا.";
-    }
-  }
+          continue;
+        }
 
-  // Mesaj gönder
-  if (message) {
-    try {
-      await sendMessage(user, message);
-    } catch (e) {
-      console.error("[CRON] sendMessage 7days error:", e?.stack || e);
-    }
-  }
+        // -----------------------------------------------------
+        // 7 GÜN FOLLOW-UP (168–169 saat)
+        // -----------------------------------------------------
+        if (s.followUpStage === 2 && diffHours >= 168 && diffHours < 169) {
+          const msg = getFollowUpMessage(lang, lastTopic, "7d");
 
-  // 7 günlük hatırlatma tamamlandı
-  s.followUpStage = 3;
-  continue;
-}
+          if (msg && typeof msg === "string") {
+            try {
+              await sendMessage(user, msg);
+            } catch (e) {
+              console.error("[CRON] sendMessage 7d error:", e);
+            }
+            s.followUpStage = 3;
+          } else {
+            console.log("[CRON] 7d followUpMessage geçersiz, user:", user);
+          }
+
+          continue;
+        }
 
       } catch (innerErr) {
-        console.error("[CRON] user loop error:", innerErr && innerErr.stack ? innerErr.stack : innerErr);
-        // Bu kullanıcıyı atla, diğerlerine devam et
+        console.error("[CRON] user loop error:", innerErr);
         continue;
       }
-    } // for loop end
+    }
 
   } catch (err) {
-    console.error("[CRON] TOP-LEVEL error:", err && err.stack ? err.stack : err);
+    console.error("[CRON] TOP-LEVEL error:", err);
   }
+});
+
+
+// -----------------------------------------------------
+// 10 DAKİKA PING MESAJLARI
+// -----------------------------------------------------
+function getPingMessage(lang, topic) {
+  const messages = {
+    tr: {
+      company: "Dubai’de şirket kurulumuyla ilgili devam edelim mi?",
+      residency: "Dubai oturum ve vize süreciyle ilgili devam edelim mi?",
+      ai: "AI çözümleri ve otomasyonlarla ilgili devam edelim mi?",
+      cost: "Maliyet ve bütçe planlamasıyla ilgili devam edelim mi?",
+      general: "Devam edelim mi?"
+    },
+    en: {
+      company: "Shall we continue with your Dubai company setup?",
+      residency: "Shall we continue with your Dubai residency process?",
+      ai: "Shall we continue with your AI automation plan?",
+      cost: "Shall we continue with your budgeting discussion?",
+      general: "Shall we continue?"
+    },
+    ar: {
+      company: "هل نتابع إجراءات تأسيس الشركة في دبي؟",
+      residency: "هل نتابع إجراءات الإقامة في دبي؟",
+      ai: "هل نتابع حلول الذكاء الاصطناعي؟",
+      cost: "هل نتابع مناقشة التكاليف؟",
+      general: "هل نتابع؟"
+    }
+  };
+
+  const langSet = messages[lang] || messages["en"];
+  return langSet[topic] || langSet["general"];
+}
+
+
+// -----------------------------------------------------
+// FOLLOW-UP MESAJLARI (3h – 24h – 72h – 7d)
+// -----------------------------------------------------
+function getFollowUpMessage(lang, topic, stage) {
+  const messages = {
+    "3h": {
+      tr: "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum.",
+      en: "Hello, I noticed we haven't been in touch for a while. If you need any information or support, I’m here to help.",
+      ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة. إذا كنت بحاجة إلى أي معلومات أو دعم، يسعدني مساعدتك."
+    },
+
+    "24h": {
+      tr: {
+        company: "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum.",
+        residency: "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum.",
+        ai: "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum.",
+        cost: "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere tekrar iletişime geçiyorum.",
+        general: "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum."
+      },
+      en: {
+        company: "Hello again. I’m following up on our previous discussion about setting up a company in Dubai.",
+        residency: "Hello again. I’m following up on our previous conversation about Dubai residency and visa options.",
+        ai: "Hello again. I’m following up on our previous discussion about AI solutions.",
+        cost: "Hello again. I’m following up on our previous discussion about costs and budgeting.",
+        general: "Hello again. I’m reaching out to review our previous conversation."
+      },
+      ar: {
+        company: "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول تأسيس شركة في دبي.",
+        residency: "مرحبًا، أتواصل معك بخصوص حديثنا السابق حول الإقامة والتأشيرات.",
+        ai: "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول حلول الذكاء الاصطناعي.",
+        cost: "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول التكاليف.",
+        general: "مرحبًا، أتواصل معك لمراجعة حديثنا السابق."
+      }
+    },
+
+    "72h": {
+      tr: {
+        company: "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki görüşmemiz üzerinden bir süre geçti.",
+        residency: "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemiz üzerinden zaman geçti.",
+        ai: "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemiz üzerinden zaman geçti.",
+        cost: "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemiz üzerinden zaman geçti.",
+        general: "Merhaba, önceki görüşmemiz üzerinden zaman geçti."
+      },
+      en: {
+        company: "Hello again. It has been a while since our last discussion about setting up a company in Dubai.",
+        residency: "Hello again. It has been some time since our last conversation about Dubai residency.",
+        ai: "Hello again. It has been a while since we discussed AI solutions.",
+        cost: "Hello again. It has been some time since we discussed costs.",
+        general: "Hello again. It has been a while since our last conversation."
+      },
+      ar: {
+        company: "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول تأسيس شركة في دبي.",
+        residency: "مرحبًا، لقد مر بعض الوقت منذ حديثنا الأخير حول الإقامة.",
+        ai: "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول حلول الذكاء الاصطناعي.",
+        cost: "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول التكاليف.",
+        general: "مرحبًا، لقد مر بعض الوقت منذ حديثنا الأخير."
+      }
+    },
+
+    "7d": {
+      tr: {
+        company: "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki görüşmemizin üzerinden bir hafta geçti.",
+        residency: "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden bir hafta geçti.",
+        ai: "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili görüşmemizin üzerinden bir hafta geçti.",
+        cost: "Merhaba, maliyet ve bütçe planlamasıyla ilgili görüşmemizin üzerinden bir hafta geçti.",
+        general: "Merhaba, önceki görüşmemizin üzerinden bir hafta geçti."
+      },
+      en: {
+        company: "Hello again. It has been a week since our last discussion about setting up a company in Dubai.",
+        residency: "Hello again. It has been a week since we discussed Dubai residency.",
+        ai: "Hello again. It has been a week since we talked about AI solutions.",
+        cost: "Hello again. It has been a week since we discussed costs.",
+        general: "Hello again. It has been a week since our last conversation."
+      },
+      ar: {
+        company: "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول تأسيس شركة في دبي.",
+        residency: "مرحبًا، لقد مر أسبوع منذ حديثنا الأخير حول الإقامة.",
+        ai: "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول حلول الذكاء الاصطناعي.",
+        cost: "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول التكاليف.",
+        general: "مرحبًا، لقد مر أسبوع منذ حديثنا الأخير."
+      }
+    }
+  };
+
+  const stageSet = messages[stage];
+  if (!stageSet) return "";
+
+  // 3h düz string, diğerleri topic bazlı
+  if (stage === "3h") {
+    const langSet = stageSet[lang] || stageSet["en"];
+    return langSet || "";
+  }
+
+  const langSet = stageSet[lang] || stageSet["en"];
+  if (!langSet) return "";
+
+  return langSet[topic] || langSet["general"] || "";
+}
 });
 
 // -------------------------------
