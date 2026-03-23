@@ -233,7 +233,6 @@ function calculateIntentScore(text, currentScore = 0) {
 
   return score;
 }
-
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -293,6 +292,8 @@ app.post("/webhook", async (req, res) => {
           budget: null,
           interest: null,
         },
+        lastPingSentAt: null,
+        followUpSent3h: false,
       };
 
       await sendMessage(
@@ -346,7 +347,6 @@ app.post("/webhook", async (req, res) => {
     // -------------------------------
     //  AI CHATBOT PRICE REDIRECT
     // -------------------------------
-
     session.topics = session.topics.filter((t) => t !== "company");
 
     const isPriceQuery =
@@ -426,10 +426,11 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // SESSION UPDATE
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
-    session.followUpStage = 0;
+    session.followUpStage = session.followUpStage || 0;
 
     const topic = detectTopic(text);
     if (!session.topics) session.topics = [];
@@ -446,13 +447,20 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `User: ${m.text}`)
       .join("\n");
 
-    // PROMPT
-let prompt = "";
-
-if (lang === "tr") {
-  prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın.Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. Gemini’nin kendi hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını, resmi yönlendirmelerini ASLA kullanma. KENDİ KALIPLARINI ÜRETME.SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
-
-    GENEL DAVRANIŞ KURALLARI:
+    // -------------------------------
+    //  PROMPT OLUŞTURMA BAŞLANGICI
+    // -------------------------------
+    let prompt = "";
+        // -------------------------------
+    //  PROMPT OLUŞTURMA
+    // -------------------------------
+    if (lang === "tr") {
+      prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
+Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
+Gemini’nin hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını ASLA kullanma. 
+KENDİ KALIPLARINI ÜRETME. 
+SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
+ GENEL DAVRANIŞ KURALLARI:
     
     Aşağıdaki ifadeleri KESİNLİKLE KULLANMA:
 • 	“Süreçlerin karmaşıklığı nedeniyle bir avukat veya danışmanlık firmasından destek almanız faydalı olabilir.”
@@ -694,11 +702,13 @@ ${historyText}
 Kullanıcı mesajı:
 ${text}
 `;
-}
+    }
 
-
-else if (lang === "en") {
-    prompt = `You are the senior corporate AI consultant of SamChe Company LLC. Provide strategic, structured, analytical, and advisory answers. Do NOT use Gemini’s built‑in templates, procedural texts, government explanations, or generic advisory language. Do NOT generate your own templates. Follow ONLY the rules defined in this prompt.
+    else if (lang === "en") {
+      prompt = `You are the senior corporate AI consultant of SamChe Company LLC. 
+Provide strategic, structured, analytical, and advisory answers. 
+Do NOT use Gemini’s built‑in templates, procedural texts, government explanations, or generic advisory language. 
+Do NOT generate your own templates. Follow ONLY the rules defined in this prompt.
 
 STRICTLY FORBIDDEN PHRASES:
 - “It may be helpful to consult a lawyer or consultancy firm.”
@@ -711,7 +721,7 @@ STRICTLY FORBIDDEN PHRASES:
 CONTACT RULES:
 - Do NOT share contact details immediately.
 - Evaluate the user’s intent first.
-- Share contact details ONLY if the user shows serious intent (company setup, residency, business in Dubai).
+- Share contact details ONLY if the user shows serious intent.
 - If the user insists 3–4 times, share contact details ONCE.
 - Never use Markdown for links.
 
@@ -741,9 +751,13 @@ ${historyText}
 User message:
 ${text}
 `;
+    }
 
-else {
-  prompt = `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. قدّم إجابات مهنية، استراتيجية، تحليلية وإرشادية. لا تستخدم أي قوالب جاهزة أو نصوص حكومية أو إجراءات رسمية أو نصائح عامة. لا تُنشئ قوالب من نفسك. التزم فقط بالقواعد المذكورة في هذا التوجيه.
+    else {
+      prompt = `أنت المستشار الذكي الرسمي لشركة SamChe Company LLC. 
+قدّم إجابات مهنية، استراتيجية، تحليلية وإرشادية. 
+لا تستخدم أي قوالب جاهزة أو نصوص حكومية أو إجراءات رسمية أو نصائح عامة. 
+لا تُنشئ قوالب من نفسك. التزم فقط بالقواعد المذكورة في هذا التوجيه.
 
 ممنوع تمامًا استخدام العبارات التالية:
 - “قد يكون من المفيد استشارة محامٍ أو شركة استشارات.”
@@ -786,23 +800,28 @@ ${historyText}
 رسالة المستخدم:
 ${text}
 `;
-const reply = await callGemini(prompt);
+    }
 
-if (!reply) {
-  await sendMessage(from, corporateFallback(lang));
-  res.sendStatus(200);
-} else {
-  session.history.push({ role: "assistant", text: reply });
-  await sendMessage(from, reply);
-  res.sendStatus(200);
-}
+    // -------------------------------
+    //  GEMINI CEVABI
+    // -------------------------------
+    const reply = await callGemini(prompt);
 
-} catch (err) {
-  console.error("Webhook error:", err);
-  res.sendStatus(500);
-}
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
+    }
+
+    session.history.push({ role: "assistant", text: reply });
+    await sendMessage(from, reply);
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
 });
-
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
 // -----------------------------------------------------
@@ -813,42 +832,18 @@ cron.schedule("*/10 * * * *", async () => {
   try {
     const now = Date.now();
 
-    // -----------------------------------------------------
-    // SESSIONS GÜVENLİK KONTROLÜ
-    // -----------------------------------------------------
-    if (!sessions || typeof sessions !== "object") {
-      console.log("[CRON] sessions geçersiz, işlem yapılmadı.");
-      return;
-    }
-
+    if (!sessions || typeof sessions !== "object") return;
     const users = Object.keys(sessions);
-    if (!users.length) {
-      console.log("[CRON] aktif session yok, çıkılıyor.");
-      return;
-    }
+    if (!users.length) return;
 
     for (const user of users) {
       try {
         const s = sessions[user];
-
-        // -----------------------------------------------------
-        // ÇÖKMEYİ ÖNLEYEN KRİTİK KONTROLLER
-        // -----------------------------------------------------
-        if (!s || typeof s !== "object") {
-          console.log("[CRON] session nesnesi geçersiz, user:", user);
-          continue;
-        }
-
-        if (!s.lastMessageTime || isNaN(s.lastMessageTime)) {
-          console.log("[CRON] lastMessageTime yok veya geçersiz, user:", user);
-          continue;
-        }
+        if (!s || typeof s !== "object") continue;
+        if (!s.lastMessageTime || isNaN(s.lastMessageTime)) continue;
 
         const diffMinutes = (now - s.lastMessageTime) / (1000 * 60);
-        if (!isFinite(diffMinutes) || diffMinutes < 0) {
-          console.log("[CRON] diffMinutes geçersiz, user:", user);
-          continue;
-        }
+        if (!isFinite(diffMinutes) || diffMinutes < 0) continue;
 
         const diffHours = diffMinutes / 60;
 
@@ -857,31 +852,25 @@ cron.schedule("*/10 * * * *", async () => {
         const lang = typeof s.lang === "string" ? s.lang : "en";
 
         // -----------------------------------------------------
-        // 10 DAKİKA PING — HER SESSİZLİKTE TEKRAR
-        // followUpStage'i ETKİLEMEZ
+        // 10 DAKİKA PING — SADECE 1 KERE GÖNDERİLİR
         // -----------------------------------------------------
-        if (diffMinutes >= 10) {
-          const lastPing = s.lastPingSentAt && !isNaN(s.lastPingSentAt) ? s.lastPingSentAt : null;
+        if (diffMinutes >= 10 && !s.pingSentOnce) {
+          const pingMessage = getPingMessage(lang, lastTopic);
 
-          if (!lastPing || (now - lastPing) > 10 * 60 * 1000) {
-            const pingMessage = getPingMessage(lang, lastTopic);
-
-            if (pingMessage && typeof pingMessage === "string") {
-              try {
-                await sendMessage(user, pingMessage);
-              } catch (e) {
-                console.error("[CRON] sendMessage 10min error:", e);
-              }
-              s.lastPingSentAt = now;
-            } else {
-              console.log("[CRON] pingMessage geçersiz, user:", user);
+          if (pingMessage) {
+            try {
+              await sendMessage(user, pingMessage);
+            } catch (e) {
+              console.error("[CRON] sendMessage 10min error:", e);
             }
-
-            continue;
+            s.pingSentOnce = true;
           }
-        } else {
-          // Kullanıcı yazdı → ping reset
-          if (s.lastPingSentAt) s.lastPingSentAt = null;
+
+          continue;
+        }
+
+        if (diffMinutes < 10 && s.pingSentOnce) {
+          s.pingSentOnce = false;
         }
 
         // -----------------------------------------------------
@@ -890,7 +879,7 @@ cron.schedule("*/10 * * * *", async () => {
         if (!s.followUpSent3h && diffHours >= 3 && diffHours < 6) {
           const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
-          if (msg && typeof msg === "string") {
+          if (msg) {
             try {
               await sendMessage(user, msg);
             } catch (e) {
@@ -898,8 +887,6 @@ cron.schedule("*/10 * * * *", async () => {
             }
             s.followUpSent3h = true;
             s.followUpStage = 0;
-          } else {
-            console.log("[CRON] 3h followUpMessage geçersiz, user:", user);
           }
 
           continue;
@@ -911,15 +898,13 @@ cron.schedule("*/10 * * * *", async () => {
         if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 25) {
           const msg = getFollowUpMessage(lang, lastTopic, "24h");
 
-          if (msg && typeof msg === "string") {
+          if (msg) {
             try {
               await sendMessage(user, msg);
             } catch (e) {
               console.error("[CRON] sendMessage 24h error:", e);
             }
             s.followUpStage = 1;
-          } else {
-            console.log("[CRON] 24h followUpMessage geçersiz, user:", user);
           }
 
           continue;
@@ -931,15 +916,13 @@ cron.schedule("*/10 * * * *", async () => {
         if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 73) {
           const msg = getFollowUpMessage(lang, lastTopic, "72h");
 
-          if (msg && typeof msg === "string") {
+          if (msg) {
             try {
               await sendMessage(user, msg);
             } catch (e) {
               console.error("[CRON] sendMessage 72h error:", e);
             }
             s.followUpStage = 2;
-          } else {
-            console.log("[CRON] 72h followUpMessage geçersiz, user:", user);
           }
 
           continue;
@@ -951,15 +934,13 @@ cron.schedule("*/10 * * * *", async () => {
         if (s.followUpStage === 2 && diffHours >= 168 && diffHours < 169) {
           const msg = getFollowUpMessage(lang, lastTopic, "7d");
 
-          if (msg && typeof msg === "string") {
+          if (msg) {
             try {
               await sendMessage(user, msg);
             } catch (e) {
               console.error("[CRON] sendMessage 7d error:", e);
             }
             s.followUpStage = 3;
-          } else {
-            console.log("[CRON] 7d followUpMessage geçersiz, user:", user);
           }
 
           continue;
@@ -976,49 +957,48 @@ cron.schedule("*/10 * * * *", async () => {
   }
 });
 
-
 // -----------------------------------------------------
-// 10 DAKİKA PING MESAJLARI (KURUMSAL – SATIŞ ODAKLI – İNSANİ)
+// 10 DAKİKA PING MESAJLARI (KURUMSAL – PROFESYONEL – SATIŞ ODAKLI)
 // -----------------------------------------------------
 function getPingMessage(lang, topic) {
   const messages = {
     tr: {
       company:
-        "Şirket kurulum sürecinizle ilgili paylaştığım bilgiler doğrultusunda ilerlemek ister misiniz? Hazırsanız süreci sizin için başlatabilirim.",
+        "Şirket kuruluşu sürecinizle ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz, sizin için en doğru yapıyı birlikte planlayabiliriz.",
       residency:
-        "Oturum ve vize sürecinizle ilgili aktardığım bilgiler doğrultusunda devam etmeyi düşünüyor musunuz? Uygunsanız bir sonraki adımı planlayabiliriz.",
+        "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler doğrultusunda bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
       ai:
-        "AI ve otomasyon çözümleriyle ilgili paylaştığım bilgiler doğrultusunda ilerlemek ister misiniz? Projenizi bir üst seviyeye taşımaya hazırım.",
+        "AI ve otomasyon çözümleriyle ilgili paylaştığım öneriler doğrultusunda projenizi bir üst seviyeye taşımaya hazırım.",
       cost:
-        "Maliyet ve süreç detaylarıyla ilgili paylaştığım bilgiler doğrultusunda devam etmeyi düşünüyor musunuz? Hazırsanız ilerleyebiliriz.",
+        "Maliyet ve süreç detaylarıyla ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz bütçe ve adımları birlikte netleştirebiliriz.",
       general:
-        "Paylaştığım bilgiler doğrultusunda hangi süreçte ilerlemeyi düşünürsünüz? Hazır olduğunuzda süreçlerle ilgili adımları birlikte netleştirebiliriz."
+        "Paylaştığım bilgiler doğrultusunda hangi süreçte ilerlemek istediğinizi konuşabiliriz. Hazırsanız bir sonraki adımı birlikte belirleyebiliriz."
     },
 
     en: {
       company:
-        "Would you like to proceed based on the information I shared regarding your company setup? I can initiate the next steps whenever you're ready.",
+        "If you'd like to move forward with your company setup, I can help you structure the next steps clearly and efficiently.",
       residency:
-        "Would you like to move forward based on the residency and visa details I provided? We can plan the next step whenever it suits you.",
+        "If you’d like to proceed with the residency and visa options we discussed, I’m here to guide you through the next steps.",
       ai:
-        "Would you like to proceed with the AI and automation options I shared? I’m ready to help you move forward whenever you are.",
+        "If you're ready to move forward with the AI and automation solutions we discussed, I’m here to support you.",
       cost:
-        "Would you like to continue based on the cost and process details I shared? I can assist further whenever you're ready.",
+        "If you'd like to continue based on the cost and process details I shared, we can finalize the most suitable plan together.",
       general:
-        "Based on the information I shared, which direction would you like to move forward with? Whenever you're ready, we can clarify the next steps together."
+        "Whenever you're ready, we can clarify the next steps based on the information I shared earlier."
     },
 
     ar: {
       company:
-        "هل ترغبون بالمتابعة بناءً على المعلومات التي قدمتها حول تأسيس الشركة؟ يمكنني البدء بالإجراءات متى ما كنتم جاهزين.",
+        "إذا كنتم ترغبون بالمتابعة في تأسيس الشركة، يمكنني مساعدتكم في تحديد الخطوات التالية بوضوح.",
       residency:
-        "هل ترغبون بالمتابعة بناءً على تفاصيل الإقامة والتأشيرة التي شاركتها معكم؟ يمكننا تحديد الخطوة التالية في الوقت المناسب لكم.",
+        "إذا رغبتم بالمتابعة في خيارات الإقامة والتأشيرات، يسعدني توجيهكم للخطوة التالية.",
       ai:
-        "هل تودون المتابعة بناءً على خيارات الذكاء الاصطناعي والأتمتة التي قدمتها؟ أنا جاهز لمساعدتكم في أي وقت.",
+        "إذا كنتم جاهزين للمتابعة في حلول الذكاء الاصطناعي، فأنا هنا لدعمكم.",
       cost:
-        "هل ترغبون بالمتابعة بناءً على تفاصيل التكاليف والإجراءات التي قدمتها؟ يمكنني مساعدتكم متى ما كنتم جاهزين.",
+        "إذا رغبتم بالمتابعة بناءً على تفاصيل التكاليف، يمكننا تحديد الخطة الأنسب لكم.",
       general:
-        "استنادًا إلى المعلومات التي قدمتها، في أي مسار تودون المتابعة؟ عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية معًا."
+        "عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية بناءً على المعلومات التي شاركتها."
     }
   };
 
@@ -1032,80 +1012,80 @@ function getPingMessage(lang, topic) {
 function getFollowUpMessage(lang, topic, stage) {
   const messages = {
     "3h": {
-      tr: "Merhaba, bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum.",
-      en: "Hello, I noticed we haven't been in touch for a while. If you need any information or support, I’m here to help.",
-      ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة. إذا كنت بحاجة إلى أي معلومات أو دعم، يسعدني مساعدتك."
+      tr: "Merhaba, kısa bir süre iletişimde olamadık. Paylaştığım bilgilerle ilgili aklınıza takılan bir nokta varsa memnuniyetle yardımcı olurum.",
+      en: "Hello, we haven’t been in touch for a little while. If anything I shared raised questions, I’m here to help.",
+      ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة قصيرة. إذا كان لديكم أي استفسار، يسعدني مساعدتكم."
     },
 
     "24h": {
       tr: {
-        company: "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki değerlendirmemizi gözden geçirmek üzere tekrar iletişime geçiyorum.",
-        residency: "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum.",
-        ai: "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemizi değerlendirmek üzere iletişime geçiyorum.",
-        cost: "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemizi değerlendirmek üzere tekrar iletişime geçiyorum.",
-        general: "Merhaba, önceki görüşmemiz kapsamında ilerlemeyi değerlendirmek üzere tekrar iletişime geçiyorum."
+        company: "Merhaba, dün Dubai’de şirket kuruluşuyla ilgili yaptığımız değerlendirmeyi tekrar gözden geçirmek istedim. Hazırsanız süreci adım adım planlayabiliriz.",
+        residency: "Merhaba, dün oturum ve vize seçenekleriyle ilgili yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun yolu netleştirebiliriz.",
+        ai: "Merhaba, dün AI çözümleriyle ilgili yaptığımız görüşmeyi tekrar ele almak istedim. Projenizi bir üst seviyeye taşımaya hazırım.",
+        cost: "Merhaba, dün maliyet planlamasıyla ilgili yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun planı netleştirebiliriz.",
+        general: "Merhaba, dün yaptığımız görüşmeyi tekrar değerlendirmek istedim. Hazırsanız devam edebiliriz."
       },
       en: {
-        company: "Hello again. I’m following up on our previous discussion about setting up a company in Dubai.",
-        residency: "Hello again. I’m following up on our previous conversation about Dubai residency and visa options.",
-        ai: "Hello again. I’m following up on our previous discussion about AI solutions.",
-        cost: "Hello again. I’m following up on our previous discussion about costs and budgeting.",
-        general: "Hello again. I’m reaching out to review our previous conversation."
+        company: "Hello again. Following up on our discussion yesterday about your Dubai company setup. If you're ready, we can outline the next steps.",
+        residency: "Hello again. Following up on our conversation about Dubai residency options. I can help you identify the best path.",
+        ai: "Hello again. Following up on our discussion about AI solutions. I’m ready to help you move forward.",
+        cost: "Hello again. Following up on our budgeting discussion. We can finalize the most suitable plan.",
+        general: "Hello again. I wanted to reconnect regarding our previous conversation."
       },
       ar: {
-        company: "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول تأسيس شركة في دبي.",
-        residency: "مرحبًا، أتواصل معك بخصوص حديثنا السابق حول الإقامة والتأشيرات.",
-        ai: "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول حلول الذكاء الاصطناعي.",
-        cost: "مرحبًا، أتواصل معك بخصوص مناقشتنا السابقة حول التكاليف.",
-        general: "مرحبًا، أتواصل معك لمراجعة حديثنا السابق."
+        company: "مرحبًا مجددًا. أتابع مناقشتنا أمس حول تأسيس شركة في دبي. عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية.",
+        residency: "مرحبًا مجددًا. أتابع حديثنا حول خيارات الإقامة. يمكنني مساعدتكم في اختيار المسار الأنسب.",
+        ai: "مرحبًا مجددًا. أتابع مناقشتنا حول حلول الذكاء الاصطناعي. أنا جاهز لمساعدتكم.",
+        cost: "مرحبًا مجددًا. أتابع مناقشتنا حول التكاليف. يمكننا تحديد الخطة الأنسب لكم.",
+        general: "مرحبًا مجددًا. أردت متابعة حديثنا السابق."
       }
     },
 
     "72h": {
       tr: {
-        company: "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki görüşmemiz üzerinden bir süre geçti.",
-        residency: "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili önceki görüşmemiz üzerinden zaman geçti.",
-        ai: "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili önceki görüşmemiz üzerinden zaman geçti.",
-        cost: "Merhaba, maliyet ve bütçe planlamasıyla ilgili önceki görüşmemiz üzerinden zaman geçti.",
-        general: "Merhaba, önceki görüşmemiz üzerinden zaman geçti."
+        company: "Merhaba, şirket kuruluşuyla ilgili görüşmemizin üzerinden birkaç gün geçti. Hazırsanız süreci başlatabiliriz.",
+        residency: "Merhaba, oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden birkaç gün geçti. Sizin için en uygun yolu netleştirebilirim.",
+        ai: "Merhaba, AI çözümleriyle ilgili görüşmemizin üzerinden birkaç gün geçti. Projenizi hayata geçirmek için ilerleyebiliriz.",
+        cost: "Merhaba, maliyet planlamasıyla ilgili görüşmemizin üzerinden birkaç gün geçti. Hazırsanız detayları finalize edebiliriz.",
+        general: "Merhaba, görüşmemizin üzerinden birkaç gün geçti. Dilerseniz güncel bilgilerle görüşmemize kaldığımız yerden devam edebiliriz."
       },
       en: {
-        company: "Hello again. It has been a while since our last discussion about setting up a company in Dubai.",
-        residency: "Hello again. It has been some time since our last conversation about Dubai residency.",
-        ai: "Hello again. It has been a while since we discussed AI solutions.",
-        cost: "Hello again. It has been some time since we discussed costs.",
-        general: "Hello again. It has been a while since our last conversation."
+        company: "Hello again. It has been a few days since our company setup discussion. If you're ready, we can begin.",
+        residency: "Hello again. It has been a few days since we discussed residency options. I’m here to help.",
+        ai: "Hello again. It has been a few days since we discussed AI solutions. We can plan the next step.",
+        cost: "Hello again. It has been a few days since our budgeting conversation. I can help finalize the details.",
+        general: "Hello again. It has been a few days since our last conversation."
       },
       ar: {
-        company: "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول تأسيس شركة في دبي.",
-        residency: "مرحبًا، لقد مر بعض الوقت منذ حديثنا الأخير حول الإقامة.",
-        ai: "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول حلول الذكاء الاصطناعي.",
-        cost: "مرحبًا، لقد مر بعض الوقت منذ مناقشتنا الأخيرة حول التكاليف.",
-        general: "مرحبًا، لقد مر بعض الوقت منذ حديثنا الأخير."
+        company: "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول تأسيس شركة. يمكننا البدء عندما تكونون جاهزين.",
+        residency: "مرحبًا مجددًا. لقد مر بضعة أيام منذ حديثنا حول الإقامة. أنا هنا لمساعدتكم.",
+        ai: "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول الذكاء الاصطناعي. يمكننا تحديد الخطوة التالية.",
+        cost: "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول التكاليف. يمكننا إنهاء التفاصيل.",
+        general: "مرحبًا مجددًا. لقد مر بضعة أيام منذ حديثنا الأخير."
       }
     },
 
     "7d": {
       tr: {
-        company: "Merhaba, Dubai’de şirket kurulumuyla ilgili önceki görüşmemizin üzerinden bir hafta geçti.",
-        residency: "Merhaba, Dubai oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden bir hafta geçti.",
-        ai: "Merhaba, AI çözümleri ve chatbot sistemleriyle ilgili görüşmemizin üzerinden bir hafta geçti.",
-        cost: "Merhaba, maliyet ve bütçe planlamasıyla ilgili görüşmemizin üzerinden bir hafta geçti.",
-        general: "Merhaba, önceki görüşmemizin üzerinden bir hafta geçti."
+        company: "Merhaba, şirket kuruluşuyla ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız süreci başlatabilir ve tüm adımları netleştirebilirim.",
+        residency: "Merhaba, oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden bir hafta geçti. Sizin için en doğru planı oluşturabiliriz.",
+        ai: "Merhaba, AI çözümleriyle ilgili görüşmemizin üzerinden bir hafta geçti. Projenizi hayata geçirmek için ilerleyebiliriz.",
+        cost: "Merhaba, maliyet planlamasıyla ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız detayları finalize edebiliriz.",
+        general: "Merhaba, görüşmemizin üzerinden bir hafta geçti. Hazırsanız güncel bilgilerle görüşmemize kaldığımız yerden devam edebiliriz."
       },
       en: {
-        company: "Hello again. It has been a week since our last discussion about setting up a company in Dubai.",
-        residency: "Hello again. It has been a week since we discussed Dubai residency.",
-        ai: "Hello again. It has been a week since we talked about AI solutions.",
-        cost: "Hello again. It has been a week since we discussed costs.",
+        company: "Hello again. It has been a week since our company setup discussion. If you're ready, I can help you move forward.",
+        residency: "Hello again. It has been a week since we discussed residency options. I’m here to support you.",
+        ai: "Hello again. It has been a week since we talked about AI solutions. We can move forward whenever you're ready.",
+        cost: "Hello again. It has been a week since our budgeting discussion. I can help finalize everything.",
         general: "Hello again. It has been a week since our last conversation."
       },
       ar: {
-        company: "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول تأسيس شركة في دبي.",
-        residency: "مرحبًا، لقد مر أسبوع منذ حديثنا الأخير حول الإقامة.",
-        ai: "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول حلول الذكاء الاصطناعي.",
-        cost: "مرحبًا، لقد مر أسبوع منذ مناقشتنا الأخيرة حول التكاليف.",
-        general: "مرحبًا، لقد مر أسبوع منذ حديثنا الأخير."
+        company: "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول تأسيس شركة. يمكنني مساعدتكم في بدء الإجراءات.",
+        residency: "مرحبًا مجددًا. لقد مر أسبوع منذ حديثنا حول الإقامة. أنا هنا لدعمكم.",
+        ai: "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول الذكاء الاصطناعي. يمكننا المتابعة.",
+        cost: "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول التكاليف. يمكنني مساعدتكم في إنهاء التفاصيل.",
+        general: "مرحبًا مجددًا. لقد مر أسبوع منذ حديثنا الأخير."
       }
     }
   };
@@ -1113,15 +1093,12 @@ function getFollowUpMessage(lang, topic, stage) {
   const stageSet = messages[stage];
   if (!stageSet) return "";
 
-  // 3h düz string, diğerleri topic bazlı
   if (stage === "3h") {
     const langSet = stageSet[lang] || stageSet["en"];
     return langSet || "";
   }
 
   const langSet = stageSet[lang] || stageSet["en"];
-  if (!langSet) return "";
-
   return langSet[topic] || langSet["general"] || "";
 }
 
@@ -1129,16 +1106,6 @@ function getFollowUpMessage(lang, topic, stage) {
 //  SERVER
 // -------------------------------
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log("SamChe Bot running on port " + port));
-
-
-
-
-
-
-
-
-
-
-
-
+app.listen(port, () =>
+  console.log("SamChe Bot running on port " + port)
+);
