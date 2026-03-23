@@ -344,87 +344,97 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // -------------------------------
-    //  AI CHATBOT PRICE REDIRECT
-    // -------------------------------
-    session.topics = session.topics.filter((t) => t !== "company");
+  // -------------------------------
+//  AI CHATBOT PRICE REDIRECT
+// -------------------------------
+session.topics = session.topics.filter((t) => t !== "company");
 
-    const isPriceQuery =
-      lower.includes("fiyat") ||
-      lower.includes("ücret") ||
-      lower.includes("ucret") ||
-      lower.includes("maliyet") ||
-      lower.includes("ne kadar") ||
-      lower.includes("fiyat ver") ||
-      lower.includes("fiyat bilgisi") ||
-      lower.includes("fiyatlar") ||
-      lower.includes("fiyat listesi") ||
-      lower.includes("ücretlendirme") ||
-      lower.includes("cost") ||
-      lower.includes("price");
+const isPriceQuery =
+  lower.includes("fiyat") ||
+  lower.includes("ücret") ||
+  lower.includes("ucret") ||
+  lower.includes("maliyet") ||
+  lower.includes("ne kadar") ||
+  lower.includes("fiyat ver") ||
+  lower.includes("fiyat bilgisi") ||
+  lower.includes("fiyatlar") ||
+  lower.includes("fiyat listesi") ||
+  lower.includes("ücretlendirme") ||
+  lower.includes("cost") ||
+  lower.includes("price");
 
-    const isAIInMessage =
-      lower.includes("ai") ||
-      lower.includes("chatbot") ||
-      lower.includes("yapay zeka") ||
-      lower.includes("ai bot") ||
-      lower.includes("bot yazılım");
+const isAIInMessage =
+  lower.includes("ai") ||
+  lower.includes("chatbot") ||
+  lower.includes("yapay zeka") ||
+  lower.includes("ai bot") ||
+  lower.includes("bot yazılım");
 
-    const isCompanyInMessage =
-      lower.includes("şirket") ||
-      lower.includes("company") ||
-      lower.includes("firma") ||
-      lower.includes("business setup") ||
-      lower.includes("company setup") ||
-      lower.includes("freezone") ||
-      lower.includes("free zone") ||
-      lower.includes("mainland") ||
-      lower.includes("license") ||
-      lower.includes("trade license") ||
-      lower.includes("vize") ||
-      lower.includes("oturum") ||
-      lower.includes("residence") ||
-      lower.includes("immigration");
+const isCompanyInMessage =
+  lower.includes("şirket") ||
+  lower.includes("company") ||
+  lower.includes("firma") ||
+  lower.includes("business setup") ||
+  lower.includes("company setup") ||
+  lower.includes("freezone") ||
+  lower.includes("free zone") ||
+  lower.includes("mainland") ||
+  lower.includes("license") ||
+  lower.includes("trade license") ||
+  lower.includes("vize") ||
+  lower.includes("oturum") ||
+  lower.includes("residence") ||
+  lower.includes("immigration");
 
-    const isAIInHistory = session.history.some((m) => {
-      const t = m.text?.toLowerCase() || "";
-      return (
-        t.includes("ai") ||
-        t.includes("chatbot") ||
-        t.includes("yapay zeka")
-      );
-    });
+const isAIInHistory = session.history.some((m) => {
+  const t = m.text?.toLowerCase() || "";
+  return (
+    t.includes("ai") ||
+    t.includes("chatbot") ||
+    t.includes("yapay zeka")
+  );
+});
 
-    const isCompanyInHistory = session.history.some((m) => {
-      const t = m.text?.toLowerCase() || "";
-      return (
-        t.includes("şirket") ||
-        t.includes("company") ||
-        t.includes("firma") ||
-        t.includes("business setup") ||
-        t.includes("company setup") ||
-        t.includes("freezone") ||
-        t.includes("free zone") ||
-        t.includes("mainland") ||
-        t.includes("license") ||
-        t.includes("trade license") ||
-        t.includes("vize") ||
-        t.includes("oturum") ||
-        t.includes("residence") ||
-        t.includes("immigration")
-      );
-    });
+const isCompanyInHistory = session.history.some((m) => {
+  const t = m.text?.toLowerCase() || "";
+  return (
+    t.includes("şirket") ||
+    t.includes("company") ||
+    t.includes("firma") ||
+    t.includes("business setup") ||
+    t.includes("company setup") ||
+    t.includes("freezone") ||
+    t.includes("free zone") ||
+    t.includes("mainland") ||
+    t.includes("license") ||
+    t.includes("trade license") ||
+    t.includes("vize") ||
+    t.includes("oturum") ||
+    t.includes("residence") ||
+    t.includes("immigration")
+  );
+});
 
-    const isAIContext = isAIInMessage || isAIInHistory;
-    const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
+const isAIContext = isAIInMessage || isAIInHistory;
+const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
 
-    if (isAIContext && !isCompanyContext && isPriceQuery) {
-      await sendMessage(
-        from,
-        "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com"
-      );
-      return res.sendStatus(200);
-    }
+if (isAIContext && !isCompanyContext && isPriceQuery) {
+  let priceMsg = "";
+
+  if (lang === "tr") {
+    priceMsg =
+      "AI chatbot fiyat ve planları için şu sayfayı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com";
+  } else if (lang === "en") {
+    priceMsg =
+      "You can check AI chatbot pricing and plans here:\nhttps://aichatbot.samchecompany.com";
+  } else {
+    priceMsg =
+      "يمكنك الاطلاع على أسعار وخطط روبوت الدردشة بالذكاء الاصطناعي من خلال الرابط التالي:\nhttps://aichatbot.samchecompany.com";
+  }
+
+  await sendMessage(from, priceMsg);
+  return res.sendStatus(200);
+}
 
     // SESSION UPDATE
     session.history.push({ role: "user", text });
