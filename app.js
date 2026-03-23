@@ -264,12 +264,11 @@ app.post("/webhook", async (req, res) => {
     const text = message.text?.body || "";
     const lower = text.toLowerCase();
 
+    const isFirstMessage = !sessions[from];
 
     // -------------------------------
     //  SESSION OLUŞTURMA / GÜNCELLEME
     // -------------------------------
-    const isFirstMessage = !sessions[from];
-
     if (!sessions[from]) {
       sessions[from] = {
         lang: "tr",
@@ -282,7 +281,6 @@ app.post("/webhook", async (req, res) => {
     } else {
       sessions[from].lastMessageTime = Date.now();
     }
-
 
     // -------------------------------
     //  KONU TESPİTİ
@@ -303,7 +301,6 @@ app.post("/webhook", async (req, res) => {
       sessions[from].topics.push("general");
     }
 
-
     // -------------------------------
     //  İLK MESAJ İÇİN WELCOME MESAJI
     // -------------------------------
@@ -323,9 +320,6 @@ app.post("/webhook", async (req, res) => {
           "3️⃣ Arapça"
       );
     }
-
-    // ❗ OTOMATİK HER MESAJDA CEVAP YOK
-    // Sadece ilk mesajda welcome, sonrası sessizlik → CRON ping/follow-up
 
     return res.sendStatus(200);
 
