@@ -301,9 +301,7 @@ app.post("/webhook", async (req, res) => {
       sessions[from].topics.push("general");
     }
 
-    // ❗ DİKKAT: BURADA ARTIK OTOMATİK CEVAP YOK
-    // ❗ Bot sadece sessizlik olursa ping/follow-up gönderecek
-
+    // ❗ OTOMATİK CEVAP YOK
     return res.sendStatus(200);
 
   } catch (err) {
