@@ -981,9 +981,9 @@ function getPingMessage(lang, topic) {
       company:
         "Şirket kuruluşu sürecinizle ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz, sizin için en doğru yapıyı birlikte planlayabiliriz.",
       residency:
-        "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler ışığında bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
+        "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler doğrultusunda bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
       ai:
-        "AI ve otomasyon çözümleriyle ilgili paylaştığım öneriler doğrultusunda projenizi bir üst seviyeye taşımaya hazırım.",
+      "AI ve otomasyon çözümleriyle ilgili paylaştığım öneri ve bilgiler doğrultusunda projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.\n\nAI Chatbot planlarımıza göz atmak isterseniz aşağıdaki bağlantıyı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com/#pricing"
       cost:
         "Maliyet ve süreç detaylarıyla ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz bütçe ve adımları birlikte netleştirebiliriz.",
       general:
@@ -994,9 +994,9 @@ function getPingMessage(lang, topic) {
       company:
         "If you'd like to move forward with your company setup, I can help you structure the next steps clearly and efficiently.",
       residency:
-        "If you’d like to proceed with the residency and visa options we discussed, I’m here to guide you through the next steps.",
+      "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing"
       ai:
-        "If you're ready to move forward with the AI and automation solutions we discussed, I’m here to support you.",
+       "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing"
       cost:
         "If you'd like to continue based on the cost and process details I shared, we can finalize the most suitable plan together.",
       general:
@@ -1009,7 +1009,7 @@ function getPingMessage(lang, topic) {
       residency:
         "إذا رغبتم بالمتابعة في خيارات الإقامة والتأشيرات، يسعدني توجيهكم للخطوة التالية.",
       ai:
-        "إذا كنتم جاهزين للمتابعة في حلول الذكاء الاصطناعي، فأنا هنا لدعمكم.",
+      "استنادًا إلى الاقتراحات والمعلومات التي شاركتها حول حلول الذكاء الاصطناعي والأتمتة، يمكننا التخطيط للخطوة التالية لجعل مشروعك أكثر كفاءة وقابلية للتوسع.\n\nإذا كنت ترغب في الاطلاع على خطط روبوت الدردشة بالذكاء الاصطناعي، يمكنك زيارة الرابط التالي:\nhttps://aichatbot.samchecompany.com/#pricing"
       cost:
         "إذا رغبتم بالمتابعة بناءً على تفاصيل التكاليف، يمكننا تحديد الخطة الأنسب لكم.",
       general:
@@ -1045,7 +1045,7 @@ function getFollowUpMessage(lang, topic, stage) {
         residency:
           "Merhaba, dün oturum ve vize seçenekleri üzerine yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun oturum yolunu belirleyip süreci başlatmaya hazırım.",
         ai:
-          "Merhaba, dün AI çözümleri üzerine yaptığımız görüşmeyi tekrar ele almak istedim. Projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.",
+          "Merhaba, dün AI çözümleri üzerine yaptığımız görüşmeyi tekrar ele almak istedim. Projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.\n\nAI Chatbot planlarımıza göz atmak isterseniz aşağıdaki bağlantıyı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com/#pricing",
         cost:
           "Merhaba, dün maliyet ve bütçe planlaması üzerine yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun maliyet yapısını netleştirebiliriz.",
         general:
