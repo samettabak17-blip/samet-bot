@@ -822,6 +822,7 @@ ${text}
     return res.sendStatus(500);
   }
 });
+
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
 // -----------------------------------------------------
@@ -966,7 +967,7 @@ function getPingMessage(lang, topic) {
       company:
         "Şirket kuruluşu sürecinizle ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz, sizin için en doğru yapıyı birlikte planlayabiliriz.",
       residency:
-        "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler doğrultusunda bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
+        "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler ışığında bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
       ai:
         "AI ve otomasyon çözümleriyle ilgili paylaştığım öneriler doğrultusunda projenizi bir üst seviyeye taşımaya hazırım.",
       cost:
@@ -1011,81 +1012,138 @@ function getPingMessage(lang, topic) {
 // -----------------------------------------------------
 function getFollowUpMessage(lang, topic, stage) {
   const messages = {
+    // -------------------------
+    // 3 SAAT — SENİN İSTEDİĞİN METİN
+    // -------------------------
     "3h": {
-      tr: "Merhaba, kısa bir süre iletişimde olamadık. Paylaştığım bilgilerle ilgili aklınıza takılan bir nokta varsa memnuniyetle yardımcı olurum.",
-      en: "Hello, we haven’t been in touch for a little while. If anything I shared raised questions, I’m here to help.",
-      ar: "مرحبًا، لاحظت أننا لم نتواصل منذ فترة قصيرة. إذا كان لديكم أي استفسار، يسعدني مساعدتكم."
+      tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim. İhtiyaç duyduğunuz herhangi bir bilgi veya destek olursa memnuniyetle yardımcı olurum.",
+      en: "Hello. I noticed we haven’t been in touch for a while. If you need any information or support, I’m here to assist you.",
+      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة. إذا كنتم بحاجة لأي مساعدة أو معلومات، يسعدني دعمكم."
     },
 
+    // -------------------------
+    // 24 SAAT — KURUMSAL & SATIŞ ODAKLI
+    // -------------------------
     "24h": {
       tr: {
-        company: "Merhaba, dün Dubai’de şirket kuruluşuyla ilgili yaptığımız değerlendirmeyi tekrar gözden geçirmek istedim. Hazırsanız süreci adım adım planlayabiliriz.",
-        residency: "Merhaba, dün oturum ve vize seçenekleriyle ilgili yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun yolu netleştirebiliriz.",
-        ai: "Merhaba, dün AI çözümleriyle ilgili yaptığımız görüşmeyi tekrar ele almak istedim. Projenizi bir üst seviyeye taşımaya hazırım.",
-        cost: "Merhaba, dün maliyet planlamasıyla ilgili yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun planı netleştirebiliriz.",
-        general: "Merhaba, dün yaptığımız görüşmeyi tekrar değerlendirmek istedim. Hazırsanız devam edebiliriz."
+        company:
+          "Merhaba, dün Dubai’de şirket kuruluşu üzerine yaptığımız değerlendirmeyi tekrar gözden geçirmek istedim. Hazırsanız şirket yapınızı, lisans türünü ve en doğru maliyet planını birlikte netleştirebiliriz.",
+        residency:
+          "Merhaba, dün oturum ve vize seçenekleri üzerine yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun oturum yolunu belirleyip süreci başlatmaya hazırım.",
+        ai:
+          "Merhaba, dün AI çözümleri üzerine yaptığımız görüşmeyi tekrar ele almak istedim. Projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.",
+        cost:
+          "Merhaba, dün maliyet ve bütçe planlaması üzerine yaptığımız görüşmeyi tekrar değerlendirmek istedim. Sizin için en uygun maliyet yapısını netleştirebiliriz.",
+        general:
+          "Merhaba, dün yaptığımız görüşmeyi tekrar değerlendirmek istedim. Hazırsanız bir sonraki adımı birlikte belirleyebiliriz."
       },
       en: {
-        company: "Hello again. Following up on our discussion yesterday about your Dubai company setup. If you're ready, we can outline the next steps.",
-        residency: "Hello again. Following up on our conversation about Dubai residency options. I can help you identify the best path.",
-        ai: "Hello again. Following up on our discussion about AI solutions. I’m ready to help you move forward.",
-        cost: "Hello again. Following up on our budgeting discussion. We can finalize the most suitable plan.",
-        general: "Hello again. I wanted to reconnect regarding our previous conversation."
+        company:
+          "Hello again. I wanted to revisit our discussion about your Dubai company setup. If you're ready, we can define the structure, licensing model, and full cost breakdown together.",
+        residency:
+          "Hello again. I wanted to follow up on our conversation about residency and visa options. I can help you identify the most suitable path and initiate the process.",
+        ai:
+          "Hello again. I wanted to revisit our discussion about AI solutions. We can outline the next steps to enhance your project’s efficiency and scalability.",
+        cost:
+          "Hello again. I wanted to follow up on our budgeting discussion. We can finalize the most suitable financial plan whenever you're ready.",
+        general:
+          "Hello again. I wanted to reconnect regarding our previous conversation. Let me know when you'd like to continue."
       },
       ar: {
-        company: "مرحبًا مجددًا. أتابع مناقشتنا أمس حول تأسيس شركة في دبي. عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية.",
-        residency: "مرحبًا مجددًا. أتابع حديثنا حول خيارات الإقامة. يمكنني مساعدتكم في اختيار المسار الأنسب.",
-        ai: "مرحبًا مجددًا. أتابع مناقشتنا حول حلول الذكاء الاصطناعي. أنا جاهز لمساعدتكم.",
-        cost: "مرحبًا مجددًا. أتابع مناقشتنا حول التكاليف. يمكننا تحديد الخطة الأنسب لكم.",
-        general: "مرحبًا مجددًا. أردت متابعة حديثنا السابق."
+        company:
+          "مرحبًا مجددًا. أردت متابعة مناقشتنا حول تأسيس شركة في دبي. عندما تكونون جاهزين، يمكننا تحديد الهيكل المناسب والتكاليف بدقة.",
+        residency:
+          "مرحبًا مجددًا. أردت متابعة حديثنا حول خيارات الإقامة. يمكنني مساعدتكم في اختيار المسار الأنسب وبدء الإجراءات.",
+        ai:
+          "مرحبًا مجددًا. أردت متابعة مناقشتنا حول حلول الذكاء الاصطناعي. يمكننا تحديد الخطوات التالية لتطوير مشروعكم.",
+        cost:
+          "مرحبًا مجددًا. أردت متابعة مناقشتنا حول التكاليف. يمكننا تحديد الخطة المالية الأنسب لكم.",
+        general:
+          "مرحبًا مجددًا. أردت متابعة حديثنا السابق. يسعدني الاستمرار معكم."
       }
     },
 
+    // -------------------------
+    // 72 SAAT — DAHA KURUMSAL & NET
+    // -------------------------
     "72h": {
       tr: {
-        company: "Merhaba, şirket kuruluşuyla ilgili görüşmemizin üzerinden birkaç gün geçti. Hazırsanız süreci başlatabiliriz.",
-        residency: "Merhaba, oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden birkaç gün geçti. Sizin için en uygun yolu netleştirebilirim.",
-        ai: "Merhaba, AI çözümleriyle ilgili görüşmemizin üzerinden birkaç gün geçti. Projenizi hayata geçirmek için ilerleyebiliriz.",
-        cost: "Merhaba, maliyet planlamasıyla ilgili görüşmemizin üzerinden birkaç gün geçti. Hazırsanız detayları finalize edebiliriz.",
-        general: "Merhaba, görüşmemizin üzerinden birkaç gün geçti. Dilerseniz güncel bilgilerle görüşmemize kaldığımız yerden devam edebiliriz."
+        company:
+          "Merhaba, şirket kuruluşu üzerine yaptığımız görüşmenin üzerinden birkaç gün geçti. Hazırsanız şirket yapınızı, lisans sürecini ve gerekli adımları birlikte başlatabiliriz.",
+        residency:
+          "Merhaba, oturum ve vize seçenekleri üzerine yaptığımız görüşmenin üzerinden birkaç gün geçti. Sizin için en doğru oturum planını oluşturmaya hazırım.",
+        ai:
+          "Merhaba, AI çözümleri üzerine yaptığımız görüşmenin üzerinden birkaç gün geçti. Projenizi hayata geçirmek için bir sonraki adımı planlayabiliriz.",
+        cost:
+          "Merhaba, maliyet planlaması üzerine yaptığımız görüşmenin üzerinden birkaç gün geçti. Hazırsanız bütçe ve süreç detaylarını finalize edebiliriz.",
+        general:
+          "Merhaba, görüşmemizin üzerinden birkaç gün geçti. Hazırsanız kaldığımız yerden devam edebiliriz."
       },
       en: {
-        company: "Hello again. It has been a few days since our company setup discussion. If you're ready, we can begin.",
-        residency: "Hello again. It has been a few days since we discussed residency options. I’m here to help.",
-        ai: "Hello again. It has been a few days since we discussed AI solutions. We can plan the next step.",
-        cost: "Hello again. It has been a few days since our budgeting conversation. I can help finalize the details.",
-        general: "Hello again. It has been a few days since our last conversation."
+        company:
+          "Hello again. It has been a few days since our company setup discussion. If you're ready, we can begin structuring the process.",
+        residency:
+          "Hello again. It has been a few days since we discussed residency options. I’m here to help you move forward.",
+        ai:
+          "Hello again. It has been a few days since we discussed AI solutions. We can plan the next step whenever it suits you.",
+        cost:
+          "Hello again. It has been a few days since our budgeting conversation. I can help finalize the details whenever you're ready.",
+        general:
+          "Hello again. It has been a few days since our last conversation. Let me know when you'd like to continue."
       },
       ar: {
-        company: "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول تأسيس شركة. يمكننا البدء عندما تكونون جاهزين.",
-        residency: "مرحبًا مجددًا. لقد مر بضعة أيام منذ حديثنا حول الإقامة. أنا هنا لمساعدتكم.",
-        ai: "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول الذكاء الاصطناعي. يمكننا تحديد الخطوة التالية.",
-        cost: "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول التكاليف. يمكننا إنهاء التفاصيل.",
-        general: "مرحبًا مجددًا. لقد مر بضعة أيام منذ حديثنا الأخير."
+        company:
+          "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول تأسيس شركة. يمكننا البدء عندما تكونون جاهزين.",
+        residency:
+          "مرحبًا مجددًا. لقد مر بضعة أيام منذ حديثنا حول الإقامة. أنا هنا لمساعدتكم.",
+        ai:
+          "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول الذكاء الاصطناعي. يمكننا تحديد الخطوة التالية.",
+        cost:
+          "مرحبًا مجددًا. لقد مر بضعة أيام منذ مناقشتنا حول التكاليف. يمكننا إنهاء التفاصيل.",
+        general:
+          "مرحبًا مجددًا. لقد مر بضعة أيام منذ حديثنا الأخير."
       }
     },
 
+    // -------------------------
+    // 7 GÜN — EN KURUMSAL & SATIŞA YÖNLENDİREN
+    // -------------------------
     "7d": {
       tr: {
-        company: "Merhaba, şirket kuruluşuyla ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız süreci başlatabilir ve tüm adımları netleştirebilirim.",
-        residency: "Merhaba, oturum ve vize seçenekleriyle ilgili görüşmemizin üzerinden bir hafta geçti. Sizin için en doğru planı oluşturabiliriz.",
-        ai: "Merhaba, AI çözümleriyle ilgili görüşmemizin üzerinden bir hafta geçti. Projenizi hayata geçirmek için ilerleyebiliriz.",
-        cost: "Merhaba, maliyet planlamasıyla ilgili görüşmemizin üzerinden bir hafta geçti. Hazırsanız detayları finalize edebiliriz.",
-        general: "Merhaba, görüşmemizin üzerinden bir hafta geçti. Hazırsanız güncel bilgilerle görüşmemize kaldığımız yerden devam edebiliriz."
+        company:
+          "Merhaba, şirket kuruluşu üzerine yaptığımız görüşmenin üzerinden bir hafta geçti. Hazırsanız süreci başlatabilir ve tüm adımları sizin için netleştirebilirim.",
+        residency:
+          "Merhaba, oturum ve vize seçenekleri üzerine yaptığımız görüşmenin üzerinden bir hafta geçti. Sizin için en doğru oturum planını oluşturmaya hazırım.",
+        ai:
+          "Merhaba, AI çözümleri üzerine yaptığımız görüşmenin üzerinden bir hafta geçti. Projenizi hayata geçirmek için birlikte ilerleyebiliriz.",
+        cost:
+          "Merhaba, maliyet planlaması üzerine yaptığımız görüşmenin üzerinden bir hafta geçti. Hazırsanız bütçe ve süreç detaylarını finalize edebiliriz.",
+        general:
+          "Merhaba, görüşmemizin üzerinden bir hafta geçti. Hazırsanız kaldığımız yerden devam edebiliriz."
       },
       en: {
-        company: "Hello again. It has been a week since our company setup discussion. If you're ready, I can help you move forward.",
-        residency: "Hello again. It has been a week since we discussed residency options. I’m here to support you.",
-        ai: "Hello again. It has been a week since we talked about AI solutions. We can move forward whenever you're ready.",
-        cost: "Hello again. It has been a week since our budgeting discussion. I can help finalize everything.",
-        general: "Hello again. It has been a week since our last conversation."
+        company:
+          "Hello again. It has been a week since our company setup discussion. If you're ready, I can help you move forward with a clear and structured plan.",
+        residency:
+          "Hello again. It has been a week since we discussed residency options. I’m here to support you whenever you're ready.",
+        ai:
+          "Hello again. It has been a week since we talked about AI solutions. We can move forward whenever it suits you.",
+        cost:
+          "Hello again. It has been a week since our budgeting discussion. I can help finalize everything when you're ready.",
+        general:
+          "Hello again. It has been a week since our last conversation. Let me know when you'd like to continue."
       },
       ar: {
-        company: "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول تأسيس شركة. يمكنني مساعدتكم في بدء الإجراءات.",
-        residency: "مرحبًا مجددًا. لقد مر أسبوع منذ حديثنا حول الإقامة. أنا هنا لدعمكم.",
-        ai: "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول الذكاء الاصطناعي. يمكننا المتابعة.",
-        cost: "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول التكاليف. يمكنني مساعدتكم في إنهاء التفاصيل.",
-        general: "مرحبًا مجددًا. لقد مر أسبوع منذ حديثنا الأخير."
+        company:
+          "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول تأسيس شركة. يمكنني مساعدتكم في بدء الإجراءات.",
+        residency:
+          "مرحبًا مجددًا. لقد مر أسبوع منذ حديثنا حول الإقامة. أنا هنا لدعمكم.",
+        ai:
+          "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول الذكاء الاصطناعي. يمكننا المتابعة.",
+        cost:
+          "مرحبًا مجددًا. لقد مر أسبوع منذ مناقشتنا حول التكاليف. يمكنني مساعدتكم في إنهاء التفاصيل.",
+        general:
+          "مرحبًا مجددًا. لقد مر أسبوع منذ حديثنا الأخير."
       }
     }
   };
