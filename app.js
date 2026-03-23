@@ -310,23 +310,6 @@ app.post("/webhook", async (req, res) => {
   }
 });
 
-    // 2) İLK MESAJ (SESSION OLUŞTURMA)
-    if (!sessions[from]) {
-      sessions[from] = {
-        lang: null,
-        history: [],
-        lastMessageTime: Date.now(),
-        followUpStage: 0,
-        intentScore: 0,
-        topics: [],
-        profile: {
-          name: null,
-          country: null,
-          budget: null,
-          interest: null,
-        },
-      };
-
       await sendMessage(
         from,
         "Welcome to SamChe Company LLC.\n" +
