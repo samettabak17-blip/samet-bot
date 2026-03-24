@@ -348,39 +348,49 @@ app.post("/webhook", async (req, res) => {
 //  AI CHATBOT PRICE REDIRECT
 // -------------------------------
 
-// Şirket topic'lerini temizle (AI bağlamını korumak için)
-session.topics = session.topics.filter((t) => t !== "company");
+// Türkçe karakter normalizasyonu
+function normalize(str) {
+  return str
+    .toLowerCase()
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ç/g, "c")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u");
+}
+
+const n = normalize(lower);
 
 // -------------------------------
 //  PRICE QUERY DETECTION
 // -------------------------------
 const isPriceQuery =
-  lower.includes("fiyat") ||
-  lower.includes("ücret") ||
-  lower.includes("ucret") ||
-  lower.includes("maliyet") ||
-  lower.includes("ne kadar") ||
-  lower.includes("fiyat ver") ||
-  lower.includes("fiyat bilgisi") ||
-  lower.includes("fiyatlar") ||
-  lower.includes("fiyat listesi") ||
-  lower.includes("ücretlendirme") ||
-  lower.includes("cost") ||
-  lower.includes("price") ||
-  lower.includes("how much");
+  n.includes("fiyat") ||
+  n.includes("ucret") ||
+  n.includes("maliyet") ||
+  n.includes("ne kadar") ||
+  n.includes("fiyat ver") ||
+  n.includes("fiyat bilgisi") ||
+  n.includes("fiyatlar") ||
+  n.includes("fiyat listesi") ||
+  n.includes("ucretlendirme") ||
+  n.includes("cost") ||
+  n.includes("price") ||
+  n.includes("how much");
 
 // -------------------------------
 //  AI DETECTION
 // -------------------------------
 const isAIInMessage =
-  lower.includes("ai") ||
-  lower.includes("chatbot") ||
-  lower.includes("yapay zeka") ||
-  lower.includes("ai bot") ||
-  lower.includes("bot yazılım");
+  n.includes("ai") ||
+  n.includes("chatbot") ||
+  n.includes("yapay zeka") ||
+  n.includes("ai bot") ||
+  n.includes("bot yazilim");
 
 const isAIInHistory = session.history.some((m) => {
-  const t = m.text?.toLowerCase() || "";
+  const t = normalize(m.text?.toLowerCase() || "");
   return (
     t.includes("ai") ||
     t.includes("chatbot") ||
@@ -388,38 +398,33 @@ const isAIInHistory = session.history.some((m) => {
   );
 });
 
-// AI bağlamı = mesajda AI varsa → güçlü bağlam
-// AI bağlamı = geçmişte AI varsa → güçlü bağlam
 const isAIContext = isAIInMessage || isAIInHistory;
 
 // -------------------------------
-//  COMPANY DETECTION (ZAYIFLATILDI)
+//  COMPANY DETECTION (ARTIK DOĞRU ÇALIŞACAK)
 // -------------------------------
 const isCompanyInMessage =
-  lower.includes("şirket") ||
-  lower.includes("company") ||
-  lower.includes("firma") ||
-  lower.includes("business setup") ||
-  lower.includes("company setup") ||
-  lower.includes("freezone") ||
-  lower.includes("free zone") ||
-  lower.includes("mainland") ||
-  lower.includes("license") ||
-  lower.includes("trade license") ||
-  lower.includes("vize") ||
-  lower.includes("oturum") ||
-  lower.includes("residence") ||
-  lower.includes("immigration");
+  n.includes("sirket") ||
+  n.includes("company") ||
+  n.includes("firma") ||
+  n.includes("business setup") ||
+  n.includes("company setup") ||
+  n.includes("freezone") ||
+  n.includes("free zone") ||
+  n.includes("mainland") ||
+  n.includes("license") ||
+  n.includes("trade license") ||
+  n.includes("vize") ||
+  n.includes("oturum") ||
+  n.includes("residence") ||
+  n.includes("immigration");
 
-// Şirket bağlamı artık geçmişten tetiklenmez
+// Şirket bağlamı sadece mesajdan gelir (geçmişten değil)
 const isCompanyContext = isCompanyInMessage;
 
 // -------------------------------
 //  DOĞRU MANTIK: SADECE AI + FİYAT
 // -------------------------------
-// Kullanıcı şirketle ilgili konuşuyorsa → fiyat linki ASLA gönderilmez
-// Kullanıcı başka konuyla ilgili konuşuyorsa → fiyat linki ASLA gönderilmez
-// Kullanıcı AI bağlamındaysa + fiyat soruyorsa → link gönderilir
 if (isAIContext && !isCompanyContext && isPriceQuery) {
   let priceMsg = "";
 
