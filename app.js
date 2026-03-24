@@ -344,11 +344,16 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
- // -------------------------------
+// -------------------------------
 //  AI CHATBOT PRICE REDIRECT
 // -------------------------------
+
+// Şirket topic'lerini temizle (AI bağlamını korumak için)
 session.topics = session.topics.filter((t) => t !== "company");
 
+// -------------------------------
+//  PRICE QUERY DETECTION
+// -------------------------------
 const isPriceQuery =
   lower.includes("fiyat") ||
   lower.includes("ücret") ||
@@ -364,6 +369,9 @@ const isPriceQuery =
   lower.includes("price") ||
   lower.includes("how much");
 
+// -------------------------------
+//  AI DETECTION
+// -------------------------------
 const isAIInMessage =
   lower.includes("ai") ||
   lower.includes("chatbot") ||
@@ -371,6 +379,22 @@ const isAIInMessage =
   lower.includes("ai bot") ||
   lower.includes("bot yazılım");
 
+const isAIInHistory = session.history.some((m) => {
+  const t = m.text?.toLowerCase() || "";
+  return (
+    t.includes("ai") ||
+    t.includes("chatbot") ||
+    t.includes("yapay zeka")
+  );
+});
+
+// AI bağlamı = mesajda AI varsa → güçlü bağlam
+// AI bağlamı = geçmişte AI varsa → güçlü bağlam
+const isAIContext = isAIInMessage || isAIInHistory;
+
+// -------------------------------
+//  COMPANY DETECTION (ZAYIFLATILDI)
+// -------------------------------
 const isCompanyInMessage =
   lower.includes("şirket") ||
   lower.includes("company") ||
@@ -387,41 +411,15 @@ const isCompanyInMessage =
   lower.includes("residence") ||
   lower.includes("immigration");
 
-const isAIInHistory = session.history.some((m) => {
-  const t = m.text?.toLowerCase() || "";
-  return (
-    t.includes("ai") ||
-    t.includes("chatbot") ||
-    t.includes("yapay zeka")
-  );
-});
-
-const isCompanyInHistory = session.history.some((m) => {
-  const t = m.text?.toLowerCase() || "";
-  return (
-    t.includes("şirket") ||
-    t.includes("company") ||
-    t.includes("firma") ||
-    t.includes("business setup") ||
-    t.includes("company setup") ||
-    t.includes("freezone") ||
-    t.includes("free zone") ||
-    t.includes("mainland") ||
-    t.includes("license") ||
-    t.includes("trade license") ||
-    t.includes("vize") ||
-    t.includes("oturum") ||
-    t.includes("residence") ||
-    t.includes("immigration")
-  );
-});
-
-const isAIContext = isAIInMessage || isAIInHistory;
-const isCompanyContext = isCompanyInMessage || isCompanyInHistory;
+// Şirket bağlamı artık geçmişten tetiklenmez
+const isCompanyContext = isCompanyInMessage;
 
 // -------------------------------
 //  DOĞRU MANTIK: SADECE AI + FİYAT
 // -------------------------------
+// Kullanıcı şirketle ilgili konuşuyorsa → fiyat linki ASLA gönderilmez
+// Kullanıcı başka konuyla ilgili konuşuyorsa → fiyat linki ASLA gönderilmez
+// Kullanıcı AI bağlamındaysa + fiyat soruyorsa → link gönderilir
 if (isAIContext && !isCompanyContext && isPriceQuery) {
   let priceMsg = "";
 
