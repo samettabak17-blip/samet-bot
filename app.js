@@ -770,8 +770,13 @@ cron.schedule("*/10 * * * *", async () => {
         const lastTopic = topics.length ? topics[topics.length - 1] : "general";
         const lang = typeof s.lang === "string" ? s.lang : "en";
 
+        // followUpStage yoksa sıfırla
+        if (typeof s.followUpStage !== "number") {
+          s.followUpStage = 0;
+        }
+
         // -----------------------------------------------------
-        // 10 DAKİKA PING — SADECE 1 KERE GÖNDERİLİR
+        // 10 DAKİKA PING — SADECE 1 KERE
         // -----------------------------------------------------
         if (diffMinutes >= 10 && !s.pingSentOnce) {
           const pingMessage = getPingMessage(lang, lastTopic);
@@ -788,14 +793,15 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
+        // Kullanıcı geri dönerse resetle
         if (diffMinutes < 10 && s.pingSentOnce) {
           s.pingSentOnce = false;
         }
 
         // -----------------------------------------------------
-        // 3 SAAT FOLLOW-UP (3–6 saat)
+        // 3 SAAT FOLLOW-UP (>= 3 saat)
         // -----------------------------------------------------
-        if (!s.followUpSent3h && diffHours >= 3 && diffHours < 6) {
+        if (s.followUpStage === 0 && diffHours >= 3) {
           const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
           if (msg) {
@@ -804,17 +810,16 @@ cron.schedule("*/10 * * * *", async () => {
             } catch (e) {
               console.error("[CRON] sendMessage 3h error:", e);
             }
-            s.followUpSent3h = true;
-            s.followUpStage = 0;
+            s.followUpStage = 1;
           }
 
           continue;
         }
 
         // -----------------------------------------------------
-        // 24 SAAT FOLLOW-UP (24–25 saat)
+        // 24 SAAT FOLLOW-UP (>= 24 saat)
         // -----------------------------------------------------
-        if (s.followUpStage === 0 && diffHours >= 24 && diffHours < 25) {
+        if (s.followUpStage === 1 && diffHours >= 24) {
           const msg = getFollowUpMessage(lang, lastTopic, "24h");
 
           if (msg) {
@@ -823,16 +828,16 @@ cron.schedule("*/10 * * * *", async () => {
             } catch (e) {
               console.error("[CRON] sendMessage 24h error:", e);
             }
-            s.followUpStage = 1;
+            s.followUpStage = 2;
           }
 
           continue;
         }
 
         // -----------------------------------------------------
-        // 72 SAAT FOLLOW-UP (72–73 saat)
+        // 72 SAAT FOLLOW-UP (>= 72 saat)
         // -----------------------------------------------------
-        if (s.followUpStage === 1 && diffHours >= 72 && diffHours < 73) {
+        if (s.followUpStage === 2 && diffHours >= 72) {
           const msg = getFollowUpMessage(lang, lastTopic, "72h");
 
           if (msg) {
@@ -841,16 +846,16 @@ cron.schedule("*/10 * * * *", async () => {
             } catch (e) {
               console.error("[CRON] sendMessage 72h error:", e);
             }
-            s.followUpStage = 2;
+            s.followUpStage = 3;
           }
 
           continue;
         }
 
         // -----------------------------------------------------
-        // 7 GÜN FOLLOW-UP (168–169 saat)
+        // 7 GÜN FOLLOW-UP (>= 168 saat)
         // -----------------------------------------------------
-        if (s.followUpStage === 2 && diffHours >= 168 && diffHours < 169) {
+        if (s.followUpStage === 3 && diffHours >= 168) {
           const msg = getFollowUpMessage(lang, lastTopic, "7d");
 
           if (msg) {
@@ -859,7 +864,7 @@ cron.schedule("*/10 * * * *", async () => {
             } catch (e) {
               console.error("[CRON] sendMessage 7d error:", e);
             }
-            s.followUpStage = 3;
+            s.followUpStage = 4;
           }
 
           continue;
@@ -875,6 +880,7 @@ cron.schedule("*/10 * * * *", async () => {
     console.error("[CRON] TOP-LEVEL error:", err);
   }
 });
+
 
 // -----------------------------------------------------
 // 10 DAKİKA PING MESAJLARI (KURUMSAL – PROFESYONEL – SATIŞ ODAKLI)
