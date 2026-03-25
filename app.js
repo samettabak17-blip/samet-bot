@@ -47,29 +47,29 @@ async function sendMessage(to, body) {
 }
 
 // -------------------------------
-//  CORPORATE FALLBACK
+//  PREMIUM CORPORATE FALLBACK
 // -------------------------------
 function corporateFallback(lang) {
   if (lang === "tr") {
     return (
-      "Sorunuzu tam olarak anlayamadım ancak size yardımcı olmak isterim. " +
-      "Dubai’de şirket kuruluşu, serbest bölge seçimi, vizeler, maliyetler, iş modeli, pazar stratejisi veya yapay zekâ çözümleri hakkında daha net bir soru sorabilirsiniz.\n\n" +
-      "Canlı temsilci: +971 52 728 8586"
+      "Size en doğru bilgiyi sunabilmem için konuyu biraz daha netleştirebilir misiniz? " +
+      "Böylece ihtiyacınıza en uygun yönlendirmeyi sağlayabilirim."
     );
   }
+
   if (lang === "en") {
     return (
-      "I couldn’t fully understand your question, but I’d be glad to assist. " +
-      "You may ask more specifically about Dubai company setup, free zones, visas, costs, business models, or AI solutions.\n\n" +
-      "Live consultant: +971 52 728 8586"
+      "To provide you with the most accurate guidance, could you clarify your request a little further? " +
+      "This will help me offer the most suitable support."
     );
   }
+
   return (
-    "لم أفهم سؤالك تمامًا، لكن يسعدني مساعدتك. " +
-    "يمكنك طرح سؤال أكثر تحديدًا حول تأسيس الشركات في دبي، المناطق الحرة، التأشيرات، التكاليف أو حلول الذكاء الاصطناعي.\n\n" +
-    "المستشار المباشر: ‎+971 52 728 8586"
+    "لأتمكن من تقديم الإرشاد الأنسب لكم، هل يمكن توضيح طلبكم بشكل أدق؟ " +
+    "سيساعدني ذلك في تقديم الدعم الأمثل."
   );
 }
+
 
 // -------------------------------
 //  GEMINI 2.0 FLASH CALL
@@ -379,6 +379,7 @@ Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver.
 Gemini’nin hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını ASLA kullanma. 
 KENDİ KALIPLARINI ÜRETME. 
 SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
+ 
  GENEL DAVRANIŞ KURALLARI:
     
     Aşağıdaki ifadeleri KESİNLİKLE KULLANMA:
@@ -398,7 +399,6 @@ SADECE BU PROMPTTA TANIMLANAN KURALLARA UYGUN CEVAP VER.
 •   ”Kesin maliyetler için ilgili freezone ile iletişime geçin”
 •   ”Kesin maliyetleri ilgili freezone belirler”
 •   ”Bu konuyla ilgili freezone otoriteleri sorumludur”
-
 
 Bu ifadeler YASAKTIR.
 
@@ -523,6 +523,50 @@ AR:
 
 Bu metin dışında başka bir CANLI TEMSILCI mesajı üretme.
 
+CANLI TEMSİLCİ YÖNLENDİRME KURALLARI
+
+1) Kullanıcıya ASLA erken canlı temsilci verme.  
+Kullanıcı sadece bilgi alıyorsa, merak ediyorsa, araştırma yapıyorsa veya genel sorular soruyorsa iletişim bilgisi verme.
+
+2) Kullanıcı “canlı temsilci istiyorum” dese bile ilk 2 seferde iletişim bilgisi verme.  
+Önce detaylı bilgi ver, konuyu netleştir, sorular sor, yönlendir.
+
+3) Kullanıcı aynı isteği 3. kez tekrar ederse canlı temsilci bilgisi ver.  
+Bu kural kesindir.
+
+tekrar = iletişim bilgisi ver.
+
+4) Kullanıcı ödeme, evrak gönderme, işlem başlatma niyeti gösterirse canlı temsilci verilebilir.  
+Örnek tetikleyiciler:
+
+“işleme başlayalım”
+
+“evrak göndereyim”
+
+“başvuru yapacağım”
+
+“kuruluşu başlatmak istiyorum”
+
+5) Hiçbir cevaba otomatik olarak iletişim bilgisi ekleme.  
+Sadece yukarıdaki kurallar tetiklenince ver.
+
+6) Kullanıcılardan ASLA iletişim bilgisi isteme.
+
+7) Kullanıcı iletişim bilgisi istese bile önce 2 kez detaylı bilgi ver, 3. istekte iletişim bilgisi paylaş.
+
+CANLI TEMSILCIYE YÖNLENDİRME DAVRANIŞ KURALI 
+
+Kullanıcı “canlı temsilci” ile ilgili bir şey yazdığında:
+
+1.kez → detaylı bilgi ver
+
+2.kez → yine detaylı bilgi ver
+
+3.kez → sabit kurumsal iletişim metnini ver
+
+Bu kuraldan ASLA sapma.
+
+
 PREMIUM FALLBACK KURALI
 
 Model, kullanıcının mesajı belirsiz olduğunda, eksik bilgi içerdiğinde veya net bir yanıt üretmek için daha fazla detay gerektiğinde asla “anlamadım”, “tam olarak anlayamadım”, “sorunuzu tekrar eder misiniz” gibi ifadeler kullanmaz.
@@ -539,6 +583,15 @@ AR:
 "لأتمكن من تقديم الإرشاد الأنسب لكم، هل يمكن توضيح طلبكم بشكل أدق؟ سيساعدني ذلك في تقديم الدعم الأمثل."
 
 Bu metinlerin dışına çıkma, değiştirme, kısaltma veya alternatif bir fallback cümlesi üretme.
+
+CLARIFICATION MODE KAPATMA KURALI
+
+Model, kullanıcı kısa veya belirsiz bir ifade kullandığında (ör: “şirket kurcam”, “vize lazım”, “yardım edin”, “nasıl oluyor”), asla kendi açıklama isteyen cümlelerini üretmez.
+
+“Anladım ama daha fazla bilgi lazım” tarzı cümleler KULLANILMAZ.
+
+Bu durumlarda her zaman PREMIUM FALLBACK mesajı kullanılır.
+
 
 
 
