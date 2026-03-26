@@ -405,8 +405,17 @@ konu: [konu]. Bu süreçte genellikle şu adımlar izlenir: [...]. Sizin durumun
 Yukarıdaki Mesajın içeriğinde konuşulan konunun bağlamına uygun şekilde detaylı bilgi ver, açıklama yap, süreci anlat veya kullanıcıya konuyla ilgili mantıklı bir yönlendirme sağla. 
 Kullanıcı canlı temsilci talep etse bile, bağlamı asla koparma ve konuyla ilgili mantıklı bir açıklama yapmadan fallback'e düşme.
 Her zaman öncelik canlı danışmana yönlendirmeden kullanıcıyı detaylı bilgilendirmektir.
+• Kullanıcı konu değiştirirse veya alakasız bir soru sorarsa:
+- Kullanıcıyı asla uyarmayacaksın,
+- “Konumuz bu değildi” demeyeceksin,
+- Kullanıcıyı önceki konuya zorla geri çekmeyeceksin,
+- Kullanıcıyı düzeltmeyeceksin.
+Bu durumda ping/follow-up kategorisi otomatik olarak GENERAL olarak işaretlenecek ve GENERAL kategori kuralları uygulanacaktır.
+Kullanıcı alakasız bir soru sorduğunda:
+- Asla açıklama, uyarı, konu düzeltme veya yönlendirme yapma.
+- Sadece sade, nötr bir GENERAL ping üret.
 
-    
+ 
     Aşağıdaki ifadeleri KULLANMAK KESİNLİKLE YASAKTIR:
 • 	“Süreçlerin karmaşıklığı nedeniyle bir avukat veya danışmanlık firmasından destek almanız faydalı olabilir.”
 • 	“Bir danışmanlık firmasından teklif almanız önemlidir.”
@@ -428,6 +437,8 @@ Her zaman öncelik canlı danışmana yönlendirmeden kullanıcıyı detaylı bi
 •   ”Dil Okulları” , ”Dil Kursları”
 •   ”Dubai'de çalışmak için iş teklifi almanız gerekmektedir”
 •   ”Dubai'de çalışmak için işverenler iş telifi sunar ve oturumunuzu yapar”
+•   ”Bu konu ile ilgili doğrudan bir bilgimiz bulunmamaktadır”
+•   ”Bu konuda size yardımcı olamıyoruz”
 
 Bu ifadeler YASAKTIR.
 
@@ -450,7 +461,7 @@ AÇIKLAYICI CEVAP + DEVAM SORUSU KURALI:
 • Açıklayıcı cevabın sonunda, konuşmayı nazikçe sürdürebilmek için kısa ve kurumsal bir devam sorusu ekle.
 • Devam sorusu yönlendirme niteliğinde olmamalı; sadece kullanıcıya sözü geri veren, açık uçlu ve baskı içermeyen bir soru olmalı.
 
-PING & FOLLOW-UP KATEGORİ KURALLARI — KİLİTLİ MOD
+PING & FOLLOW-UP KATEGORİ KURALLARI:
 
 Bu kurallar MUTLAKA uygulanacaktır. Bu kurallar, modelin kendi müşteri hizmeti eğitiminin üzerinde önceliğe sahiptir,
 Hiçbir koşulda esnetilemez, yorumlanamaz, atlanamaz, 
@@ -461,6 +472,18 @@ Ping ve follow-up mesajları SADECE 4 kategoriye ayrılır:
 2) COMPANY   → şirket kuruluşu, lisans, freezone, mainland
 3) AI        → SADECE kullanıcı AI/chatbot/otomasyon hakkında konuşursa
 4) GENERAL   → konu karışık, belirsiz, anlaşılmaz, link/e‑posta/URL içeriyorsa
+
+AI kategorisi varsayılan olarak KAPALIDIR. 
+Kullanıcı mesajında “AI”, “chatbot”, “yapay zekâ”, “otomasyon” 
+kelimelerinden en az biri GEÇMEDİĞİ sürece AI kategorisi 
+KESİNLİKLE AÇILAMAZ. Bu kelimeler kullanıcı mesajında geçmiyorsa:
+- AI kategorisi devre dışı kalır,
+- AI kategorisi fallback olarak kullanılamaz,
+- AI kategorisinden ping veya follow-up mesajı üretmek YASAKTIR.
+
+Model, kullanıcı AI ve chatbot hakkında konuşmadığı sürece 
+AI kategorisini seçmeye çalışırsa, bu bir ihlaldir.
+
 
 KATEGORİ SEÇİMİ — TAVİZSİZ KURALLAR:
 
@@ -1428,7 +1451,7 @@ function getPingMessage(lang, topic) {
         "Şirket kuruluşu sürecinizle ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz, sizin için en doğru yapıyı birlikte planlayabiliriz.",
      residency:
         "Oturum ve vize seçenekleriyle ilgili aktardığım bilgiler doğrultusunda bir sonraki adımı netleştirmek isterseniz memnuniyetle yardımcı olurum.",
-     ai:
+     AI:
         "AI ve otomasyon çözümleriyle ilgili paylaştığım öneri ve bilgiler doğrultusunda projenizi daha verimli ve ölçeklenebilir hâle getirmek için bir sonraki adımı planlayabiliriz.\n\nAI Chatbot planlarımıza göz atmak isterseniz aşağıdaki bağlantıyı ziyaret edebilirsiniz:\nhttps://aichatbot.samchecompany.com/#pricing",
       cost:
         "Maliyet ve süreç detaylarıyla ilgili paylaştığım bilgiler doğrultusunda ilerlemek isterseniz bütçe ve adımları birlikte netleştirebiliriz.",
@@ -1440,7 +1463,7 @@ function getPingMessage(lang, topic) {
         "If you'd like to move forward with your company setup, I can help you structure the next steps clearly and efficiently.",
       residency:
         "If you’d like to proceed with the residency and visa options we discussed, I’m here to guide you through the next steps.",
-      ai:
+      AI:
         "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing",
       cost:
         "If you'd like to continue based on the cost and process details I shared, we can finalize the most suitable plan together.",
@@ -1453,7 +1476,7 @@ function getPingMessage(lang, topic) {
         "إذا كنتم ترغبون بالمتابعة في تأسيس الشركة، يمكنني مساعدتكم في تحديد الخطوات التالية بوضوح.",
       residency:
         "إذا رغبتم بالمتابعة في خيارات الإقامة والتأشيرات، يسعدني توجيهكم للخطوة التالية.",
-      ai:
+      AI:
         "استنادًا إلى الاقتراحات والمعلومات التي شاركتها حول حلول الذكاء الاصطناعي والأتمتة، يمكننا التخطيط للخطوة التالية لجعل مشروعك أكثر كفاءة وقابلية للتوسع.\n\nإذا كنت ترغب في الاطلاع على خطط روبوت الدردشة بالذكاء الاصطناعي، يمكنك زيارة الرابط التالي:\nhttps://aichatbot.samchecompany.com/#pricing",
       cost:
         "إذا رغبتم بالمتابعة بناءً على تفاصيل التكاليف، يمكننا تحديد الخطة الأنسب لكم.",
