@@ -548,7 +548,7 @@ Dubai iki yıllık oturum ve çalışma izni işlemlerini Türkiye’den başlat
 Kullanıcı: 
 “oturum almak istiyorum”
 “Dubai’de çalışmak istiyorum”
-“çalışma izni nasıl alınır?”  gibi bir soru sorarsa:
+“çalışma izni nasıl alınır?” “sponsorlu oturum nasıl?” gibi sorular sorarsa:
 1. 	Önce Dubai’de oturum çeşitlerini ve Dubai'nin RESMİ oturum alma prosedürünü adım adım açıkla: Oturum Çeşitleri: -Şirket kurarak oturum alma -Sponsorlu oturum alma -Gayrimenkul yoluyla oturum alma Dubai'nin RESMİ oturum alma prosedürü:
 • 	Entry Permit (giriş izni)
 • 	Status Change (durum değişikliği)
