@@ -152,30 +152,52 @@ const contactText = {
 function detectTopic(text) {
   const t = text.toLowerCase();
 
+  // -------------------------
+  // AI — ÖNCELİKLİ TETİKLEYİCİLER
+  // -------------------------
+  // Kullanıcı mesajında AI/chatbot/yapay zekâ/otomasyon geçiyorsa
+  // AI kategorisi TÜM kategorilere göre ÖNCELİKLİDİR.
+  if (
+    t.includes("ai") ||
+    t.includes("chatbot") ||
+    t.includes("chat bot") ||
+    t.includes("yapay zeka") ||
+    t.includes("yapay zekâ") ||
+    t.includes("otomasyon") ||
+    t.includes("automation") ||
+    t.includes("bot") ||
+    t.includes("webchat")
+  ) {
+    return "ai";
+  }
+
+  // -------------------------
+  // COMPANY
+  // -------------------------
   if (
     t.includes("şirket") ||
     t.includes("company") ||
     t.includes("business setup") ||
     t.includes("company setup")
-  )
+  ) {
     return "company";
+  }
 
+  // -------------------------
+  // RESIDENCY
+  // -------------------------
   if (
     t.includes("oturum") ||
     t.includes("residency") ||
     t.includes("visa") ||
     t.includes("ikamet")
-  )
+  ) {
     return "residency";
+  }
 
-  if (
-    t.includes("ai") ||
-    t.includes("bot") ||
-    t.includes("chatbot") ||
-    t.includes("webchat")
-  )
-    return "ai";
-
+  // -------------------------
+  // COST
+  // -------------------------
   if (
     t.includes("maliyet") ||
     t.includes("cost") ||
@@ -183,9 +205,13 @@ function detectTopic(text) {
     t.includes("ücret") ||
     t.includes("bütçe") ||
     t.includes("budget")
-  )
+  ) {
     return "cost";
+  }
 
+  // -------------------------
+  // OTHER → GENERAL
+  // -------------------------
   return "other";
 }
 
@@ -234,6 +260,7 @@ function calculateIntentScore(text, currentScore = 0) {
 
   return score;
 }
+
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
