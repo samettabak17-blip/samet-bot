@@ -149,16 +149,18 @@ const contactText = {
 // -------------------------------
 //  TOPIC DETECTION & INTENT SCORE
 // -------------------------------
+
 function detectTopic(text) {
-  const t = text.toLowerCase();
+  const t = text.toLowerCase().trim();
 
   // -------------------------
   // AI — ÖNCELİKLİ TETİKLEYİCİLER
-if (
-    t.includes(" ai ") ||
+  // -------------------------
+  if (
+    t === "ai" ||
     t.startsWith("ai ") ||
     t.endsWith(" ai") ||
-    t === "ai" ||
+    t.includes(" ai ") ||
     t.includes("artificial intelligence") ||
     t.includes("ai services") ||
     t.includes("ai solutions") ||
@@ -173,11 +175,11 @@ if (
     t.includes("otomasyon") ||
     t.includes("yapay zeka") ||
     t.includes("yapay zekâ")
-) {
+  ) {
     return "ai";
-}
+  }
 
-   // -------------------------
+  // -------------------------
   // COMPANY
   // -------------------------
   if (
@@ -219,6 +221,26 @@ if (
   // OTHER → GENERAL
   // -------------------------
   return "other";
+}
+
+// -------------------------------
+//  PING SEÇİMİ (KRİTİK FONKSİYON)
+// -------------------------------
+function selectPing(userMessage) {
+  // 1) Mesajdan kategoriyi tespit et
+  const topic = detectTopic(userMessage);
+
+  // 2) Ping kategorisini topic'e göre belirle
+  const pingCategory = topic;
+
+  // 3) Ping mesajı seçimi
+  if (pingCategory === "ai") return "ai_ping";
+  if (pingCategory === "company") return "company_ping";
+  if (pingCategory === "residency") return "residency_ping";
+  if (pingCategory === "cost") return "cost_ping";
+
+  // fallback → GENERAL
+  return "general_ping";
 }
 
 function calculateIntentScore(text, currentScore = 0) {
