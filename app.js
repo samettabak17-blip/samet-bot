@@ -154,24 +154,30 @@ function detectTopic(text) {
 
   // -------------------------
   // AI — ÖNCELİKLİ TETİKLEYİCİLER
-  // -------------------------
-  // Kullanıcı mesajında AI/chatbot/yapay zekâ/otomasyon geçiyorsa
-  // AI kategorisi TÜM kategorilere göre ÖNCELİKLİDİR.
-  if (
-    t.includes("ai") ||
+if (
+    t.includes(" ai ") ||
+    t.startsWith("ai ") ||
+    t.endsWith(" ai") ||
+    t === "ai" ||
+    t.includes("artificial intelligence") ||
+    t.includes("ai services") ||
+    t.includes("ai solutions") ||
+    t.includes("ai development") ||
+    t.includes("ai integration") ||
+    t.includes("ai automation") ||
+    t.includes("ai system") ||
+    t.includes("ai chatbot") ||
     t.includes("chatbot") ||
     t.includes("chat bot") ||
-    t.includes("yapay zeka") ||
-    t.includes("yapay zekâ") ||
-    t.includes("otomasyon") ||
     t.includes("automation") ||
-    t.includes("bot") ||
-    t.includes("webchat")
-  ) {
+    t.includes("otomasyon") ||
+    t.includes("yapay zeka") ||
+    t.includes("yapay zekâ")
+) {
     return "ai";
-  }
+}
 
-  // -------------------------
+   // -------------------------
   // COMPANY
   // -------------------------
   if (
