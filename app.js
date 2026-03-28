@@ -1447,14 +1447,10 @@ cron.schedule("*/10 * * * *", async () => {
         const lastTopic = topics.length ? topics[topics.length - 1] : "general";
         const lang = typeof s.lang === "string" ? s.lang : "en";
 
-        // followUpStage yoksa sıfırla
         if (typeof s.followUpStage !== "number") {
           s.followUpStage = 0;
         }
 
-        // -----------------------------------------------------
-        // 10 DAKİKA PING — SADECE 1 KERE
-        // -----------------------------------------------------
         if (diffMinutes >= 10 && !s.pingSentOnce) {
           const pingMessage = getPingMessage(lang, lastTopic);
 
@@ -1470,14 +1466,10 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        // Kullanıcı geri dönerse resetle
         if (diffMinutes < 10 && s.pingSentOnce) {
           s.pingSentOnce = false;
         }
 
-        // -----------------------------------------------------
-        // 3 SAAT FOLLOW-UP (>= 3 saat)
-        // -----------------------------------------------------
         if (s.followUpStage === 0 && diffHours >= 3) {
           const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
@@ -1493,7 +1485,8 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        // -----------------------------------------------------
+
+         // -----------------------------------------------------
         // 24 SAAT FOLLOW-UP (>= 24 saat)
         // -----------------------------------------------------
         if (s.followUpStage === 1 && diffHours >= 24) {
