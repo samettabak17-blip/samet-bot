@@ -380,9 +380,10 @@ app.post("/webhook", async (req, res) => {
 
     const topic = detectTopic(text);
     if (!session.topics) session.topics = [];
-    if (topic !== "other" && !session.topics.includes(topic)) {
+   if (topic !== "other") {
       session.topics.push(topic);
-    }
+}
+
 
     session.intentScore = calculateIntentScore(
       text,
@@ -1562,16 +1563,16 @@ function getFollowUpMessage(lang, topic, stage) {
       },
 
       cost: {
-        tr: "Merhaba. Bir süredir iletişim kuramadığımızı fark ettim ve bütçe planlamanızın havada kalmasını istemedim. Dubai’de maliyetleri doğru konumlandırmak, yaşam ve iş hedeflerinizi çok daha güçlü bir zemine taşır. Sizin için en uygun yapıyı netleştirebiliriz. Ne dersiniz, devam edelim mi?",
+        tr: "Merhaba. Bir süredir iletişim kuramadığımızı fark ettim ve bütçe planlamanızın beklemede kalmasını istemedim. Dubai’de maliyetleri doğru konumlandırmak, yaşam ve iş hedeflerinizi çok daha güçlü bir zemine taşır. Sizin için en uygun yapıyı netleştirebiliriz. Ne dersiniz, devam edelim mi?",
         en: "Hello. I noticed we haven’t been in touch and didn’t want your budgeting process to remain unclear. Positioning your costs correctly in Dubai strengthens both your lifestyle and business goals. We can clarify the most suitable structure for you. Shall we continue?",
         ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن تبقى خطتكم المالية غير واضحة. تحديد التكاليف بشكل صحيح في دبي يعزز أهدافكم المعيشية والعملية. يمكننا تحديد الهيكل الأنسب لكم. ما رأيكم، هل نتابع؟"
       },
 
       AI: {
-        tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim ve projenizin beklemede kalmasını istemedim. Doğru AI yapısı işinizi birkaç adım öne taşıyabilir. Projenizi daha verimli ve ölçeklenebilir bir modele dönüştürmek isterseniz birlikte planlayabiliriz. Hazırsanız devam edelim mi?",
-        en: "Hello. I noticed we haven’t been in touch and didn’t want your project to remain on hold. The right AI structure can move your business several steps ahead. If you'd like to transform your project into a more efficient and scalable model, we can plan it together. Shall we continue?",
-        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن يبقى مشروعكم متوقفًا. الهيكل الصحيح للذكاء الاصطناعي يمكن أن يدفع عملكم عدة خطوات إلى الأمام. إذا رغبتم في تحويل مشروعكم إلى نموذج أكثر كفاءة وقابلية للتوسع، يمكننا التخطيط له معًا. هل نتابع؟"
-      }
+        tr: "Doğru AI yapısı işinizi birkaç adım öne taşıyabilir. Projenizi daha verimli ve ölçeklenebilir bir modele dönüştürmek isterseniz birlikte planlayabiliriz. Planlar ve demoları buradan inceleyebilirsiniz: https://aichatbot.samchecompany.com/ Hazırsanız devam edelim mi?",
+        en: "The right AI structure can move your business several steps forward. If you’d like to transform your project into a more efficient and scalable model, we can plan it together. You can review the plans and demos here: https://aichatbot.samchecompany.com/ If you're ready, we can continue.",
+        ar:  "البنية الصحيحة للذكاء الاصطناعي يمكن أن تدفع عملك عدة خطوات إلى الأمام. إذا كنت ترغب في تحويل مشروعك إلى نموذج أكثر كفاءة وقابلية للتوسع، يمكننا التخطيط له معًا. يمكنك مراجعة الخطط والعروض التوضيحية هنا: https://aichatbot.samchecompany.com/ وإذا كنت جاهزًا يمكننا المتابعة."
+        }
     },
 
     // -------------------------
