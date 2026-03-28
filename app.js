@@ -153,9 +153,6 @@ const contactText = {
 function detectTopic(text) {
   const t = text.toLowerCase().trim();
 
-  // -------------------------
-  // AI — ÖNCELİKLİ TETİKLEYİCİLER
-  // -------------------------
   if (
     t === "ai" ||
     t.startsWith("ai ") ||
@@ -179,9 +176,6 @@ function detectTopic(text) {
     return "ai";
   }
 
-  // -------------------------
-  // COMPANY
-  // -------------------------
   if (
     t.includes("şirket") ||
     t.includes("company") ||
@@ -191,9 +185,6 @@ function detectTopic(text) {
     return "company";
   }
 
-  // -------------------------
-  // RESIDENCY
-  // -------------------------
   if (
     t.includes("oturum") ||
     t.includes("residency") ||
@@ -203,9 +194,6 @@ function detectTopic(text) {
     return "residency";
   }
 
-  // -------------------------
-  // COST
-  // -------------------------
   if (
     t.includes("maliyet") ||
     t.includes("cost") ||
@@ -217,31 +205,44 @@ function detectTopic(text) {
     return "cost";
   }
 
-  // -------------------------
-  // OTHER → GENERAL
-  // -------------------------
   return "other";
 }
 
 // -------------------------------
-//  PING SEÇİMİ (KRİTİK FONKSİYON)
+//  PING SEÇİMİ (KRİTİK)
 // -------------------------------
 function selectPing(userMessage) {
-  // 1) Mesajdan kategoriyi tespit et
-  const topic = detectTopic(userMessage);
+  const topic = detectTopic(userMessage);  // ❗ SADECE USER MESSAGE
 
-  // 2) Ping kategorisini topic'e göre belirle
-  const pingCategory = topic;
+  if (topic === "ai") return "ai_ping";
+  if (topic === "company") return "company_ping";
+  if (topic === "residency") return "residency_ping";
+  if (topic === "cost") return "cost_ping";
 
-  // 3) Ping mesajı seçimi
-  if (pingCategory === "ai") return "ai_ping";
-  if (pingCategory === "company") return "company_ping";
-  if (pingCategory === "residency") return "residency_ping";
-  if (pingCategory === "cost") return "cost_ping";
-
-  // fallback → GENERAL
   return "general_ping";
 }
+
+// -------------------------------
+//  MESAJ AKIŞI — %100 DOĞRU SIRALAMA
+// -------------------------------
+async function handleIncomingMessage(userMessage) {
+
+  // 1) Kullanıcı mesajından topic tespit et
+  const topic = detectTopic(userMessage);
+
+  // 2) Topic'e göre cevabı üret
+  const reply = await generateReply(topic);
+
+  // 3) Ping'i kullanıcı mesajına göre seç (KRİTİK NOKTA)
+  const ping = selectPing(userMessage);
+
+  // 4) Cevabı gönder
+  await sendMessage(reply);
+
+  // 5) Ping'i gönder
+  await sendMessage(ping);
+}
+
 
 function calculateIntentScore(text, currentScore = 0) {
   const t = text.toLowerCase();
