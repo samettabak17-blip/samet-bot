@@ -724,6 +724,8 @@ Kullanıcı ilk mesajında veya sonraki mesajlarında canlı temsilci talebini t
 3) Kullanıcı canlı temsilci istese bile, ilk iki talepte her zaman detaylı bilgi ver. Bu zorunludur. Bu adım atlanamaz.
 4) Kullanıcı ödeme, evrak gönderme, işlem başlatma niyeti gösterirse canlı temsilci direkt ver.  
 Örnek tetikleyiciler: “işleme başlayalım”, “evrak göndereyim”, “başvuru yapacağım”, “şirket kuruluşu başlatmak istiyorum”
+5) Kullanıcı “randevu almak istiyorum”, “randevu oluşturmak istiyorum”, “görüşme ayarlamak istiyorum”, “bir danışmanla konuşmak istiyorum”, “biriyle görüşmek istiyorum”, “canlı destek istiyorum”, “biri beni arasın”, “telefon görüşmesi yapmak istiyorum” 
+gibi ifadeler kullandığında kullanıcıyı canlı temsilciye yönlendirme.Bu tür mesajlarda kullanıcıya yardımcı olmaya devam et.
 
 CANLI TEMSİLCİYE YÖNLENDİRME DAVRANIŞ KURALI:
 -Kullanıcı ilk mesajında veya sonraki mesajlarında canlı temsilci talebinde bulunsa bile talebini tekrar etmeden iletişim bilgisi vermek kesinlikle YASAKTIR.
@@ -741,6 +743,10 @@ CANLI TEMSİLCİ MESAJI KULLANIM KURALLARI:
 - danışmanla görüşmek istiyorum
 - bir insanla konuşmak istiyorum
 - müşteri temsilcisi istiyorum
+- randevu almak istiyorum
+- randevu oluşturmak istiyorum
+- görüşme ayarlamak istiyorum
+- biriyle görüşmek istiyorum
 
  2) Kullanıcıya canlı temsilci bilgisi verdikten sonra, aynı mesaj içinde veya sonraki mesajlarda asla ek bilgi, ek öneri, farklı bir hizmet tanıtımı, link, yönlendirme veya yeni bir konu 
 başlatılması kesinlikle YASAKTIR. Canlı temsilci bilgisi verildiği anda konuşmayı kapat ve başka hiçbir içerik üretme.
@@ -1436,11 +1442,26 @@ cron.schedule("*/10 * * * *", async () => {
       try {
         const s = sessions[user];
         if (!s || typeof s !== "object") continue;
+
+        // -----------------------------
+        // 🔥 firstMessageTime YOKSA OLUŞTUR
+        // -----------------------------
+        if (!s.firstMessageTime || isNaN(s.firstMessageTime)) {
+          s.firstMessageTime = s.lastMessageTime || Date.now();
+        }
+
+        // -----------------------------
+        // 🔥 10 dakika için eski sistem (lastMessageTime)
+        // -----------------------------
         if (!s.lastMessageTime || isNaN(s.lastMessageTime)) continue;
 
-        const diffMinutes = (now - s.lastMessageTime) / (1000 * 60);
-        if (!isFinite(diffMinutes) || diffMinutes < 0) continue;
+        const diffMinutesLast = (now - s.lastMessageTime) / (1000 * 60);
+        if (!isFinite(diffMinutesLast) || diffMinutesLast < 0) continue;
 
+        // -----------------------------
+        // 🔥 24–48–72–7 gün için yeni sistem (firstMessageTime)
+        // -----------------------------
+        const diffMinutes = (now - s.firstMessageTime) / (1000 * 60);
         const diffHours = diffMinutes / 60;
 
         const topics = Array.isArray(s.topics) ? s.topics : [];
@@ -1451,7 +1472,10 @@ cron.schedule("*/10 * * * *", async () => {
           s.followUpStage = 0;
         }
 
-        if (diffMinutes >= 10 && !s.pingSentOnce) {
+        // -----------------------------------------------------
+        // 10 DAKİKA PING — SADECE 1 KERE
+        // -----------------------------------------------------
+        if (diffMinutesLast >= 10 && !s.pingSentOnce) {
           const pingMessage = getPingMessage(lang, lastTopic);
 
           if (pingMessage) {
@@ -1466,10 +1490,13 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        if (diffMinutes < 10 && s.pingSentOnce) {
+        if (diffMinutesLast < 10 && s.pingSentOnce) {
           s.pingSentOnce = false;
         }
 
+        // -----------------------------------------------------
+        // 3 SAAT FOLLOW-UP (>= 3 saat)
+        // -----------------------------------------------------
         if (s.followUpStage === 0 && diffHours >= 3) {
           const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
@@ -1485,8 +1512,7 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-
-         // -----------------------------------------------------
+        // -----------------------------------------------------
         // 24 SAAT FOLLOW-UP (>= 24 saat)
         // -----------------------------------------------------
         if (s.followUpStage === 1 && diffHours >= 24) {
@@ -1505,16 +1531,16 @@ cron.schedule("*/10 * * * *", async () => {
         }
 
         // -----------------------------------------------------
-        // 72 SAAT FOLLOW-UP (>= 72 saat)
+        // 48 SAAT FOLLOW-UP (>= 48 saat)
         // -----------------------------------------------------
-        if (s.followUpStage === 2 && diffHours >= 72) {
-          const msg = getFollowUpMessage(lang, lastTopic, "72h");
+        if (s.followUpStage === 2 && diffHours >= 48) {
+          const msg = getFollowUpMessage(lang, lastTopic, "48h");
 
           if (msg) {
             try {
               await sendMessage(user, msg);
             } catch (e) {
-              console.error("[CRON] sendMessage 72h error:", e);
+              console.error("[CRON] sendMessage 48h error:", e);
             }
             s.followUpStage = 3;
           }
@@ -1523,9 +1549,27 @@ cron.schedule("*/10 * * * *", async () => {
         }
 
         // -----------------------------------------------------
+        // 72 SAAT FOLLOW-UP (>= 72 saat)
+        // -----------------------------------------------------
+        if (s.followUpStage === 3 && diffHours >= 72) {
+          const msg = getFollowUpMessage(lang, lastTopic, "72h");
+
+          if (msg) {
+            try {
+              await sendMessage(user, msg);
+            } catch (e) {
+              console.error("[CRON] sendMessage 72h error:", e);
+            }
+            s.followUpStage = 4;
+          }
+
+          continue;
+        }
+
+        // -----------------------------------------------------
         // 7 GÜN FOLLOW-UP (>= 168 saat)
         // -----------------------------------------------------
-        if (s.followUpStage === 3 && diffHours >= 168) {
+        if (s.followUpStage === 4 && diffHours >= 168) {
           const msg = getFollowUpMessage(lang, lastTopic, "7d");
 
           if (msg) {
@@ -1534,22 +1578,22 @@ cron.schedule("*/10 * * * *", async () => {
             } catch (e) {
               console.error("[CRON] sendMessage 7d error:", e);
             }
-            s.followUpStage = 4;
+            s.followUpStage = 5;
           }
 
           continue;
         }
 
-      } catch (innerErr) {
-        console.error("[CRON] user loop error:", innerErr);
+      } catch (err) {
+        console.error("[CRON] User loop error:", err);
         continue;
       }
     }
-
   } catch (err) {
-    console.error("[CRON] TOP-LEVEL error:", err);
+    console.error("[CRON] Genel hata:", err);
   }
 });
+
 
 
 // -----------------------------------------------------
