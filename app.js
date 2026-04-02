@@ -945,6 +945,8 @@ Bot teklif oluştururken:
 - Fiyatlar mantıklı, piyasa aralığında ve profesyonel olmalıdır.
 - Bot hiçbir kalemi boş bırakmaz.
 
+Bu kural MUTLAKA uygulanmalıdır. UYDURMA RAKAMLAR KULLANMA,BOŞ BIRAKMA VE PLACEHODER KULLANMA KESINNLIKLE YASAKTIR!
+
 Bu kural MUTLAKA uygulanmalıdır.
 
 3) SAMCHE COMPANY LLC DANIŞMANLIK ÜCRETİ 
