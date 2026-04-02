@@ -944,14 +944,26 @@ Bot teklif oluştururken:
 - Rakamlar Gemini’den alınan güncel bilgilerle tutarlı olmalıdır.
 - Fiyatlar mantıklı, piyasa aralığında ve profesyonel olmalıdır.
 - Bot hiçbir kalemi boş bırakmaz.
+- Tüm tutarlar “10,000 AED” formatında yazılmalıdır.
 
-TABLO BAŞLIĞI KURALI:
-- Bot tablo oluştururken başlık satırını sadece bir kez kullanır:
+TABLO BAŞLIĞI TEKRARI KESİN YASAK:
+- Bot tablo oluştururken başlık satırını SADECE bir kez, listenin en başında kullanır:
   | SR NO. | KALEM | ADET | TUTAR (AED) |
 - Bu başlık tablo içinde başka hiçbir yerde tekrar edilemez.
-- Bot tabloyu bölerken (vize işlemleri, ek izinler, diğer hizmetler) başlık satırını asla yeniden yazmaz.
+- Bot tabloyu bölümlere ayırsa bile (Lisans Süreci, Vize İşlemleri, Ek İzinler, Diğer Hizmetler):
+  • Başlık satırını yeniden yazamaz
+  • Yeni tablo açamaz
+  • Yeni başlık oluşturamaz
+- Tüm satırlar TEK BİR TABLO içinde, TEK BAŞLIK altında devam eder.
+- Bölüm başlıkları sadece satır olarak yazılır:
+  | — Lisans Süreci Toplamı — |
+  | — Vize Süreci Toplamı — |
+  | — Ek İzin ve Sertifikalar — |
+  | — Diğer Hizmetler — |
+- Bu bölüm başlıkları tablo başlığı DEĞİLDİR ve tablo formatını bozmaz.
 
-ADET SÜTUNU KURALI (KATI):
+
+ADET SÜTUNU KURALI:
 - ADET sütununda asla sadece “adet” yazılamaz.
 - Her satırda mutlaka “1 adet”, “2 adet”, “3 adet” şeklinde tam sayı + adet formatı kullanılmalıdır.
 - Bot bu formatı değiştiremez.
@@ -972,13 +984,13 @@ Faaliyet alanına göre danışmanlık ücreti otomatik belirlenir:
 
 A) Düşük prosedürlü dijital işletmeler  
 (yazılım, danışmanlık, e‑ticaret, eğitim, içerik üretimi, online işler)  
-→ **5000 AED**
+→ **5.000 AED**
 
 B) Yüksek prosedürlü fiziksel işletmeler  
 (restoran, kafe, catering, rent‑a‑car, gayrimenkul brokerage, lojistik, bakım-onarım, güzellik salonu, spor salonu, klinik vb.)  
-→ **8000–10000 AED**  
-- Büyük operasyon → 10000 AED  
-- Orta ölçek → 8000 AED
+→ **8.000–10.000 AED**  
+- Büyük operasyon → 10.000 AED  
+- Orta ölçek → 8.000 AED
 
 Bu ücret teklif tablosunda ayrı satır olarak görünmelidir.
 
