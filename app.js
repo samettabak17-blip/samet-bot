@@ -943,6 +943,7 @@ Bot teklif oluştururken:
 - Her kalem için gerçekçi, UAE pazarına uygun rakam üretir.
 - Rakamlar Gemini’den alınan güncel bilgilerle tutarlı olmalıdır.
 - Fiyatlar mantıklı, piyasa aralığında ve profesyonel olmalıdır.
+- Tüm Fiyatlar “10,000 AED” formatında yazılmalıdır.
 - Bot hiçbir kalemi boş bırakmaz.
 
 Bu kural MUTLAKA uygulanmalıdır. UYDURMA RAKAMLAR KULLANMA,BOŞ BIRAKMA VE PLACEHODER KULLANMA KESINNLIKLE YASAKTIR!
