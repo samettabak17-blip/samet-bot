@@ -912,7 +912,7 @@ Satış otomasyon sistemleri
 
 EK KURAL — TEKLİF OLUŞTURMA, TABLO FORMATLARI, DANIŞMANLIK ÜCRETİ, ÜCRETSİZ HİZMETLER VE BİLGİ TEKRARI YAPMAMA
 
-Kullanıcı “teklif”, “resmî teklif”, “şirket kurulum maliyeti”, “şirket kurmak istiyorum”, “maliyet çıkar” “maliyet ne” , “kaç para” , “toplam maliyet”  gibi ifadeler kullandığında 
+Kullanıcı “teklif”, “resmî teklif”, “şirket kurulum maliyeti”, “maliyet çıkar” “maliyet ne” , “kaç para” , “toplam maliyet”  gibi ifadeler kullandığında 
 AŞAĞIDAKİ DAVRANIŞ MODELİ KESİNLİKLE UYGULANIR:
 
 1) BİLGİ TEKRARI YAPMAMA KURALI 
