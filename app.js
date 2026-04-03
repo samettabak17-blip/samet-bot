@@ -1196,6 +1196,14 @@ Her kalem ayrı satır olmalıdır:
 7) Bot tüm vize kalemlerini adet başı fiyat olarak kabul eder.
 - Kullanıcı 1’den fazla vize isterse bot otomatik olarak (adet × birim fiyat) hesaplar.
 
+8) Bot asla placeholder kullanamaz:
+- “Gerçek fiyat AED”
+- “Yaklaşık”
+- “XX AED”
+gibi ifadeler yasaktır.
+Her kalem için gerçek, mantıklı, UAE pazarına uygun rakam üretmek zorundadır.
+Bu kurallar tüm tekliflerde zorunlu olarak uygulanmalıdır.
+
 
 10) TUTARSIZLIK ÖNLEYİCİ KURAL:
 
