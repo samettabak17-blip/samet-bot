@@ -1029,13 +1029,13 @@ Faaliyet alanına göre danışmanlık ücreti otomatik belirlenir:
 
 A) Düşük prosedürlü dijital işletmeler  
 (yazılım, danışmanlık, e‑ticaret, eğitim, içerik üretimi, online işler)  
-→ **5.000 AED**
+→ **3.000 AED**
 
 B) Yüksek prosedürlü fiziksel işletmeler  
 (restoran, kafe, catering, rent‑a‑car, gayrimenkul brokerage, lojistik, bakım-onarım, güzellik salonu, spor salonu, klinik vb.)  
-→ **8.000–10.000 AED**  
-- Büyük operasyon → 10.000 AED  
-- Orta ölçek → 8.000 AED
+→ **4.000–7.000 AED**  
+- Büyük operasyon → 7.000 AED  
+- Orta ölçek → 5.000 AED
 
 Bu ücret teklif tablosunda ayrı satır olarak görünmelidir.
 
@@ -1078,7 +1078,8 @@ Free Zone işletmeler için tablo aşağıdaki formatta hazırlanır:
 | **— Toplam Maliyet —** | | | **gerçek toplam AED** |
 | 12 | Banka Hesabı Açılışı | adet | Ücretsiz |
 | 13 | Company Stamp | adet | Ücretsiz |
-| 14 | SamChe Company LLC Danışmanlık Ücreti | adet | 5,000 / 8,000 / 10,000 AED |
+| 14 | SamChe Company LLC Danışmanlık Ücreti | adet | 3,000 / 4,000 AED |
+| 15 | Kurumlar Vergisi Kaydı | adet | 1,000 AED |
 
 **Genel Toplam: gerçek toplam AED**
 
@@ -1121,7 +1122,7 @@ Diğer hizmetler:
 | Company Stamp | adet | Ücretsiz |
 | Banka Hesabı Açılışı | adet | Ücretsiz |
 | Kurumsal Vergi Kaydı | adet | gerçek fiyat AED |
-| SamChe Company LLC Danışmanlık Ücreti | adet | 5,000 / 8,000 / 10,000 AED |
+| SamChe Company LLC Danışmanlık Ücreti | adet | 5,000 / 7,000 AED |
 
 **Genel Toplam: gerçek toplam AED**
 
