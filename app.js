@@ -75,7 +75,7 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  // Prompt boş gelirse hata verme, sessizce null dön
+  // Eğer prompt boşsa API'ye istek atma
   if (!prompt) return null;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -86,10 +86,11 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            role: "user", // Google 2.0 Flash için bu alan artık zorunlu
+            role: "user", // Gemini 2.0 için bu alan zorunludur
             parts: [
               {
-                text: prompt // Veri yapısı tam olarak bu şekilde olmalı (400 hatası çözümü)
+                // HATA BURADAYDI: Google mutlaka 'text' anahtarını ve string değer bekler
+                text: String(prompt) 
               }
             ]
           }
@@ -110,20 +111,19 @@ async function callGemini(prompt) {
       }
     );
 
-    // Yanıt yolunu güvenli şekilde kontrol ediyoruz
-    const candidate = response.data?.candidates?.[0];
-    const resultText = candidate?.content?.parts?.[0]?.text;
-
+    // Yanıtı güvenli bir şekilde çekelim
+    const resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
     if (!resultText) {
-      console.warn("⚠️ Gemini metin üretmedi. Sebep:", candidate?.finishReason);
+      console.warn("⚠️ Gemini yanıt üretmedi. Sebep:", response.data?.candidates?.[0]?.finishReason);
       return null;
     }
 
     return resultText.trim();
 
   } catch (err) {
-    // Hatayı loglarda detaylıca görmek için
-    console.error("❌ Gemini API Hatası Detayı:", JSON.stringify(err.response?.data) || err.message);
+    // 400 hatasının detayını logda görmek için:
+    console.error("❌ Gemini API Hatası:", err.response?.data ? JSON.stringify(err.response.data) : err.message);
     return null;
   }
 }
@@ -346,9 +346,9 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-   const session = sessions[from];
+  const session = sessions[from];
 
-    // LANGUAGE SELECTION
+    // 1. DİL SEÇİMİ (LANGUAGE SELECTION)
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -364,7 +364,13 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
 
-    // CONTACT
+    // 2. BOŞ MESAJ KONTROLÜ (En güvenli yer burasıdır)
+    if (!text || text.trim() === "") {
+        console.log("⚠️ Mesaj içeriği boş, işlem durduruldu.");
+        return res.sendStatus(200);
+    }
+
+    // 3. İLETİŞİM BİLGİLERİ (CONTACT)
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
@@ -376,7 +382,7 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // SESSION UPDATE
+    // 4. OTURUM GÜNCELLEME (SESSION UPDATE)
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
@@ -393,28 +399,26 @@ app.post("/webhook", async (req, res) => {
       session.intentScore || 0
     );
 
-    // --- DÜZENLENEN KISIM BURASI ---
+    // --- DÜZENLENMİŞ VE HATALARI GİDERİLMİŞ BÖLÜM ---
     
     // Geçmişi temiz bir şekilde birleştiriyoruz
-   const historyText = session.history
+    const historyText = session.history
       .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
       .join("\n");
 
-    // 2. İngilizce ve diğer dillerde boş dönmemesi için dili ve geçmişi açıkça belirtiyoruz
-    // Gemini 2.0'ın en sevdiği ve 400 hatası vermeyecek yapı budur:
-    const prompt = `System: Answer in the language '${lang}'.\n\n${historyText}\nAssistant:`;
+    // Gemini'a dili ve geçmişi açıkça söylüyoruz (İngilizce/Arapça düzelmesi için)
+    const prompt = `System: Answer clearly in the language '${lang}'.\n\n${historyText}\nAssistant:`;
 
-    // 3. Gemini'ı çağırıyoruz
+    // Gemini API Çağrısı
     const reply = await callGemini(prompt);
 
     if (!reply) {
-      // Eğer hala boş dönerse fallback mesajı gönderiyoruz
-      console.log(`⚠️ ${lang} dilinde yanıt alınamadı, fallback gönderiliyor.`);
+      console.log(`⚠️ ${lang} dilinde yanıt alınamadı veya filtreye takıldı. Fallback gönderiliyor.`);
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
-    // 4. Yanıtı geçmişe ekle ve kullanıcıya gönder
+    // 5. Yanıtı geçmişe ekle ve kullanıcıya gönder
     session.history.push({ role: "assistant", text: reply });
     await sendMessage(from, reply);
 
@@ -424,9 +428,6 @@ app.post("/webhook", async (req, res) => {
     //  PROMPT OLUŞTURMA BAŞLANGICI
     // -------------------------------
     let prompt = "";
-        // -------------------------------
-    //  PROMPT OLUŞTURMA
-    // -------------------------------
     if (lang === "tr") {
       prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
 Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
