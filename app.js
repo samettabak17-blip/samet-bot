@@ -75,35 +75,50 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL (GÜVENLİK AYARLARI EKLENMİŞ)
 
 async function callGemini(prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  // URL'yi ve Key'i kontrol et
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
-    const response = await axios({
-      method: 'post',
-      url: url,
-      headers: { 'Content-Type': 'application/json' },
-      data: {
-        contents: [{
-          parts: [{ text: prompt }]
-        }]
+    const response = await axios.post(url, {
+      contents: [{
+        role: "user", // 2.0 Flash bazen bunu zorunlu tutar
+        parts: [{ text: prompt }]
+      }],
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+      ],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1000
       }
+    }, {
+      headers: { 'Content-Type': 'application/json' }
     });
 
-    // RENDER LOGLARINA BAK: Burası çok kritik
-    console.log("GOOGLE'DAN GELEN HAM VERİ:", JSON.stringify(response.data));
+    // --- BU SATIR ÇOK ÖNEMLİ: Render loglarında cevabı görmemizi sağlar ---
+    console.log("GOOGLE RESPONSE:", JSON.stringify(response.data));
 
-    if (response.data && response.data.candidates && response.data.candidates[0].content) {
-      return response.data.candidates[0].content.parts[0].text.trim();
-    } else {
-      // Eğer burası çalışıyorsa, Google mesajı aldı ama cevap üretmedi
-      console.log("Cevap yapısı eksik. Durum:", response.data?.candidates?.[0]?.finishReason);
-      return null;
+    const candidate = response.data?.candidates?.[0];
+    const text = candidate?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      // Eğer metin yoksa sebebini logla
+      console.warn("⚠️ Google metin üretmedi. Sebep:", candidate?.finishReason || "Bilinmiyor");
     }
+
+    return text || null;
+
   } catch (err) {
-    console.error("KRİTİK HATA:", err.response?.data || err.message);
+    // Hatayı detaylı görmek için
+    console.error("❌ Gemini API Hatası:", err.response?.data || err.message);
     return null;
   }
 }
+
+
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
