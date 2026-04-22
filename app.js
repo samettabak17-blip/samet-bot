@@ -75,25 +75,45 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
+  // v1beta ve model isminin doğruluğundan emin olalım
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
-    const response = await axios.post(url, {
-      contents: [{
-        role: "user", // BURASI ÇOK KRİTİK
-        parts: [{ text: prompt }]
-      }],
-      safetySettings: [
-        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-      ]
-    });
+    const response = await axios.post(
+      url,
+      {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: prompt // Burada 'text' anahtarı ve karşılığındaki string çok kritik
+              }
+            ]
+          }
+        ],
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000
+        }
+      },
+      { 
+        headers: { "Content-Type": "application/json" } 
+      }
+    );
 
+    // Yanıtı güvenli bir şekilde döndür
     return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+
   } catch (err) {
-    console.error("Gemini API Error:", err.response?.data || err.message);
+    // Hatayı loglarda detaylı görmek için (Örn: 400 hatasının içindeki mesajı okur)
+    console.error("❌ Gemini API Hatası:", JSON.stringify(err.response?.data) || err.message);
     return null;
   }
 }
