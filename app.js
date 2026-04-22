@@ -75,34 +75,25 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + process.env.GEMINI_API_KEY;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
-    const response = await axios.post(
-      url,
-      {
-        contents: [
-          {
-            role: "user", // Google artık "Bu mesajı kim gönderdi?" bilgisini net istiyor.
-            parts: [{ text: prompt }]
-          }
-        ],
-        // Ekstra: Yanıtın kesilmemesi için bunları da eklemiş olduk
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
+    const response = await axios.post(url, {
+      contents: [{
+        role: "user", // BURASI ÇOK KRİTİK
+        parts: [{ text: prompt }]
+      }],
+      safetySettings: [
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+      ]
+    });
 
-    // Yanıtı okuma kısmı
     return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-
   } catch (err) {
-    console.error("Gemini API hatası detay:", err.response?.data || err.message);
+    console.error("Gemini API Error:", err.response?.data || err.message);
     return null;
   }
 }
@@ -325,7 +316,7 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const session = sessions[from];
+   const session = sessions[from];
 
     // LANGUAGE SELECTION
     if (!session.lang) {
@@ -372,9 +363,37 @@ app.post("/webhook", async (req, res) => {
       session.intentScore || 0
     );
 
+    // --- DÜZENLENEN KISIM BURASI ---
+    
+    // Geçmişi temiz bir şekilde birleştiriyoruz
     const historyText = session.history
-      .map((m) => `User: ${m.text}`)
+      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
       .join("\n");
+
+    // ARTIK PARANTEZ İÇİ KOMUT EKLEMİYORUZ. 
+    // Sadece kullanıcının mesajını (text) gönderiyoruz. 
+    // Gemini 2.0 dili otomatik algılayıp seçilen dilde cevap verecektir.
+    const prompt = text; 
+
+    const reply = await callGemini(prompt);
+
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
+    }
+
+    // Yanıtı geçmişe ekle ve gönder
+    session.history.push({ role: "assistant", text: reply });
+    await sendMessage(from, reply);
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
+
 
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
