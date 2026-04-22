@@ -390,31 +390,6 @@ app.post("/webhook", async (req, res) => {
       .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
       .join("\n");
 
-    // ARTIK PARANTEZ İÇİ KOMUT EKLEMİYORUZ. 
-    // Sadece kullanıcının mesajını (text) gönderiyoruz. 
-    // Gemini 2.0 dili otomatik algılayıp seçilen dilde cevap verecektir.
-    const prompt = text; 
-
-    const reply = await callGemini(prompt);
-
-    if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
-    }
-
-    // Yanıtı geçmişe ekle ve gönder
-    session.history.push({ role: "assistant", text: reply });
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
-
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
     // -------------------------------
