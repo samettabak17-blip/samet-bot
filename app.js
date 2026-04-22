@@ -328,9 +328,9 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-  const session = sessions[from];
+ const session = sessions[from];
 
-    // 1. DİL SEÇİMİ (LANGUAGE SELECTION)
+    // 1. DİL SEÇİMİ (Burası en başta kalmalı)
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -339,89 +339,37 @@ app.post("/webhook", async (req, res) => {
         await sendMessage(from, "Please choose 1, 2 or 3.");
         return res.sendStatus(200);
       }
-
       await sendMessage(from, introAfterLang[session.lang]);
       return res.sendStatus(200);
     }
 
-    const lang = session.lang;
+    // HATA BURADAYDI: lang tanımını yukarı çektik
+    const lang = session.lang; 
+    const lowerText = text.toLowerCase();
 
     // 2. BOŞ MESAJ KONTROLÜ
-    if (!text || text.trim() === "") {
-        console.log("⚠️ Mesaj içeriği boş, işlem durduruldu.");
-        return res.sendStatus(200);
-    }
+    if (!text || text.trim() === "") return res.sendStatus(200);
 
-    // 3. İLETİŞİM BİLGİLERİ (CONTACT)
-    // lower değişkeninin tanımlı olduğu varsayılmıştır: const lower = text.toLowerCase();
+    // 3. İLETİŞİM KONTROLÜ
     if (
-      lower.includes("contact") ||
-      lower.includes("iletişim") ||
-      lower.includes("whatsapp") ||
-      lower.includes("call") ||
-      lower.includes("telefon")
+      lowerText.includes("contact") || lowerText.includes("iletişim") ||
+      lowerText.includes("whatsapp") || lowerText.includes("call") ||
+      lowerText.includes("telefon")
     ) {
       await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
     }
 
-    // 4. OTURUM GÜNCELLEME (SESSION UPDATE)
+    // 4. OTURUM GÜNCELLEME
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
-    session.followUpStage = session.followUpStage || 0;
 
-    const topic = detectTopic(text);
-    if (!session.topics) session.topics = [];
-    if (topic !== "other" && !session.topics.includes(topic)) {
-      session.topics.push(topic);
-    }
+    // 5. PROMPT HAZIRLAMA (Değişken ismini 'finalPrompt' yaparak çakışmayı önledik)
+    let finalPrompt = "";
 
-    session.intentScore = calculateIntentScore(
-      text,
-      session.intentScore || 0
-    );
-
-    // --- DÜZENLENMİŞ VE HATALARI GİDERİLMİŞ BÖLÜM ---
-    
-    // Geçmişi User/Model formatına çeviriyoruz
-    const historyText = session.history
-      .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
-      .join("\n");
-
-    // Prompt hazırlığı
-    const prompt = `System: You are a corporate assistant. Respond in ${lang} language.\n\n${historyText}\nModel:`;
-
-    // 3. Gemini API Çağrısı
-    const reply = await callGemini(prompt);
-
-    if (!reply) {
-      console.log(`⚠️ ${lang} dilinde yanıt alınamadı veya filtreye takıldı. Fallback gönderiliyor.`);
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
-    }
-
-    // 4. Yanıtı geçmişe ekle
-    session.history.push({ role: "assistant", text: reply });
-    
-    // 5. Kullanıcıya gönder
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    // Tüm süreçteki hataları yakalar
-    console.error("❌ Webhook Kritik Hata:", err.message);
-    return res.sendStatus(500);
-  }
-}); 
-
-    // -------------------------------
-    //  PROMPT OLUŞTURMA BAŞLANGICI
-    // -------------------------------
-    let prompt = "";
     if (lang === "tr") {
-      prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
+      finalPrompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın.
 Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
 Gemini’nin hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını ASLA kullanma. 
 KENDİ KALIPLARINI ÜRETME. 
@@ -933,7 +881,7 @@ ${text}
     }
 
     else if (lang === "en") {
-      prompt = `You are the corporate artificial intelligence consultant of SamChe Company LLC.
+     finalPrompt = `You are the corporate artificial intelligence consultant of SamChe Company LLC.
 Provide professional, strategic, analytical and guiding answers.
 NEVER use Gemini’s ready-made templates, procedural texts, government processes, or classical explanations.
 DO NOT CREATE YOUR OWN TEMPLATES.
@@ -1174,8 +1122,8 @@ ${text}
 `;
     }
 
-    else {
-      prompt = `أنت مستشار الذكاء الاصطناعي المؤسسي لشركة SamChe Company LLC.
+    else if (lang === "ar") {
+      finalPrompt = `أنت مستشار الذكاء الاصطناعي المؤسسي لشركة SamChe Company LLC.
 قدّم إجابات احترافية، استراتيجية، تحليلية وموجِّهة.
 لا تستخدم أبداً القوالب الجاهزة الخاصة بـ Gemini أو نصوص الإجراءات أو العمليات الحكومية أو الشروحات الكلاسيكية.
 لا تُنشئ قوالب خاصة بك.
@@ -1409,12 +1357,32 @@ Chatbot
 إذا ذكر المستخدم القطاع سابقاً، لا تسأل عنه مرة أخرى إطلاقاً.
 
 سياق المحادثة:
-${historyText}
+const historyText = session.history
+      .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
+      .join("\n");
 
-رسالة المستخدم:
-${text}
-`;
+    const fullContext = `System Instructions:\n${finalPrompt}\n\nChat History:\n${historyText}\nModel:`;
+
+    // 6. GEMINI ÇAĞRISI
+    const reply = await callGemini(fullContext);
+
+    if (!reply) {
+      console.log(`⚠️ ${lang} dilinde yanıt alınamadı.`);
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
     }
+
+    // 7. YANITI KAYDET VE GÖNDER
+    session.history.push({ role: "assistant", text: reply });
+    await sendMessage(from, reply);
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("❌ Webhook Hatası:", err.message);
+    return res.sendStatus(500);
+  }
+});
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
