@@ -75,7 +75,6 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  // Eğer prompt boşsa API'ye istek atma
   if (!prompt) return null;
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
@@ -86,13 +85,8 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            role: "user", // Gemini 2.0 için bu alan zorunludur
-            parts: [
-              {
-                // HATA BURADAYDI: Google mutlaka 'text' anahtarını ve string değer bekler
-                text: String(prompt) 
-              }
-            ]
+            role: "user", // MUTLAKA küçük harf 'user' olmalı
+            parts: [{ text: String(prompt) }]
           }
         ],
         safetySettings: [
@@ -106,23 +100,11 @@ async function callGemini(prompt) {
           maxOutputTokens: 1000
         }
       },
-      { 
-        headers: { "Content-Type": "application/json" } 
-      }
+      { headers: { "Content-Type": "application/json" } }
     );
 
-    // Yanıtı güvenli bir şekilde çekelim
-    const resultText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (!resultText) {
-      console.warn("⚠️ Gemini yanıt üretmedi. Sebep:", response.data?.candidates?.[0]?.finishReason);
-      return null;
-    }
-
-    return resultText.trim();
-
+    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
   } catch (err) {
-    // 400 hatasının detayını logda görmek için:
     console.error("❌ Gemini API Hatası:", err.response?.data ? JSON.stringify(err.response.data) : err.message);
     return null;
   }
@@ -364,13 +346,14 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
 
-    // 2. BOŞ MESAJ KONTROLÜ (En güvenli yer burasıdır)
+    // 2. BOŞ MESAJ KONTROLÜ
     if (!text || text.trim() === "") {
         console.log("⚠️ Mesaj içeriği boş, işlem durduruldu.");
         return res.sendStatus(200);
     }
 
     // 3. İLETİŞİM BİLGİLERİ (CONTACT)
+    // lower değişkeninin tanımlı olduğu varsayılmıştır: const lower = text.toLowerCase();
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
@@ -401,15 +384,15 @@ app.post("/webhook", async (req, res) => {
 
     // --- DÜZENLENMİŞ VE HATALARI GİDERİLMİŞ BÖLÜM ---
     
-    // Geçmişi temiz bir şekilde birleştiriyoruz
+    // Geçmişi User/Model formatına çeviriyoruz
     const historyText = session.history
-      .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
+      .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
       .join("\n");
 
-    // Gemini'a dili ve geçmişi açıkça söylüyoruz (İngilizce/Arapça düzelmesi için)
-    const prompt = `System: Answer clearly in the language '${lang}'.\n\n${historyText}\nAssistant:`;
+    // Prompt hazırlığı
+    const prompt = `System: You are a corporate assistant. Respond in ${lang} language.\n\n${historyText}\nModel:`;
 
-    // Gemini API Çağrısı
+    // 3. Gemini API Çağrısı
     const reply = await callGemini(prompt);
 
     if (!reply) {
@@ -418,11 +401,20 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 5. Yanıtı geçmişe ekle ve kullanıcıya gönder
+    // 4. Yanıtı geçmişe ekle
     session.history.push({ role: "assistant", text: reply });
+    
+    // 5. Kullanıcıya gönder
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
+
+  } catch (err) {
+    // Tüm süreçteki hataları yakalar
+    console.error("❌ Webhook Kritik Hata:", err.message);
+    return res.sendStatus(500);
+  }
+}); 
 
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
