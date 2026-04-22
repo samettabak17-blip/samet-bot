@@ -75,8 +75,7 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  // URL'yi v1beta olarak güncel tutuyoruz
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + process.env.GEMINI_API_KEY;
 
   try {
     const response = await axios.post(
@@ -84,39 +83,26 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            role: "user", // 2.0 sürümünde bu alan kritik
+            role: "user", // Google artık "Bu mesajı kim gönderdi?" bilgisini net istiyor.
             parts: [{ text: prompt }]
           }
         ],
-        // Güvenlik ayarlarını ekliyoruz ki "boş mesaj" dönmesin
+        // Ekstra: Yanıtın kesilmemesi için bunları da eklemiş olduk
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000
-        }
+        ]
       },
       { headers: { "Content-Type": "application/json" } }
     );
 
-    // Yanıtı güvenli bir şekilde alalım
-    const candidate = response.data?.candidates?.[0];
-    const reply = candidate?.content?.parts?.[0]?.text;
+    // Yanıtı okuma kısmı
+    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
-    if (!reply) {
-      // Eğer Google yanıt vermediyse loglarda nedenini gör
-      console.warn("⚠️ Google yanıt üretmedi. Sebep:", candidate?.finishReason);
-      return null;
-    }
-
-    return reply.trim();
   } catch (err) {
-    // API hatasını Render loglarında detaylı gör
-    console.error("❌ Gemini API Hatası:", err.response?.data || err.message);
+    console.error("Gemini API hatası detay:", err.response?.data || err.message);
     return null;
   }
 }
