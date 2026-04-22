@@ -73,45 +73,55 @@ function corporateFallback(lang) {
 
 // -------------------------------
 //  GEMINI 2.0 FLASH CALL (GÜVENLİK AYARLARI EKLENMİŞ)
-// -------------------------------
 async function callGemini(prompt) {
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
+    // 1. Log: Giden veriyi kontrol et (Render loglarında bunu gör)
+    console.log("Gemini'a giden prompt:", prompt);
+
     const response = await axios.post(
       url,
       {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        // Güvenlik filtrelerini en esnek hale getiren kısım burası:
+        contents: [{ parts: [{ text: prompt }] }], // Bazı sürümlerde 'role' gerekmeyebilir, en yalın hali bu.
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ],
-        // Yanıtın kalitesini artırmak için isteğe bağlı eklenebilir:
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 1000
+          topP: 0.95,
+          topK: 40,
+          maxOutputTokens: 1024,
         }
       },
       { headers: { "Content-Type": "application/json" } }
     );
 
-    // Detaylı hata ayıklama için (Boş mesaj gelirse Render loglarında sebebi görebilirsin)
+    // 2. Log: API'den gelen ham yanıtı gör (Hata yoksa burası doludur)
+    // console.log("API Raw Response:", JSON.stringify(response.data));
+
     const candidate = response.data?.candidates?.[0];
+    
+    // Yanıtın neden durduğunu kontrol et (SAFETY, RECITATION, vb.)
     if (candidate?.finishReason && candidate.finishReason !== "STOP") {
-        console.warn("⚠️ Yanıt tamamlanamadı. Sebep:", candidate.finishReason);
+        console.warn("⚠️ Durdurulma Nedeni:", candidate.finishReason);
     }
 
+    // Farklı veri okuma yollarını dene
     const reply = candidate?.content?.parts?.[0]?.text || "";
-    return reply.trim() || null;
     
+    if (!reply) {
+        console.error("❌ Model başarılı döndü ama metin boş!");
+    }
+
+    return reply.trim() || null;
+
   } catch (err) {
-    // API hatasını daha detaylı görmek için:
-    console.error("Gemini API error:", JSON.stringify(err.response?.data || err.message, null, 2));
+    // Hata varsa detayını dök
+    console.error("‼️ API Hatası:", err.response?.data || err.message);
     return null;
   }
 }
