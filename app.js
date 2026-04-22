@@ -72,7 +72,7 @@ function corporateFallback(lang) {
 
 
 // -------------------------------
-//  GEMINI 2.0 FLASH CALL
+//  GEMINI 2.0 FLASH CALL (GÜVENLİK AYARLARI EKLENMİŞ)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
@@ -84,19 +84,37 @@ async function callGemini(prompt) {
       url,
       {
         contents: [{ role: "user", parts: [{ text: prompt }] }],
+        // Güvenlik filtrelerini en esnek hale getiren kısım burası:
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ],
+        // Yanıtın kalitesini artırmak için isteğe bağlı eklenebilir:
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1000
+        }
       },
       { headers: { "Content-Type": "application/json" } }
     );
 
-    const reply =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    // Detaylı hata ayıklama için (Boş mesaj gelirse Render loglarında sebebi görebilirsin)
+    const candidate = response.data?.candidates?.[0];
+    if (candidate?.finishReason && candidate.finishReason !== "STOP") {
+        console.warn("⚠️ Yanıt tamamlanamadı. Sebep:", candidate.finishReason);
+    }
+
+    const reply = candidate?.content?.parts?.[0]?.text || "";
     return reply.trim() || null;
+    
   } catch (err) {
-    console.error("Gemini API error:", err.response?.data || err.message);
+    // API hatasını daha detaylı görmek için:
+    console.error("Gemini API error:", JSON.stringify(err.response?.data || err.message, null, 2));
     return null;
   }
 }
-
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
