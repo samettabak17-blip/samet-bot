@@ -75,7 +75,9 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  // v1beta ve model isminin doğruluğundan emin olalım
+  // Prompt boş gelirse hata verme, sessizce null dön
+  if (!prompt) return null;
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
@@ -84,10 +86,10 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            role: "user",
+            role: "user", // Google 2.0 Flash için bu alan artık zorunlu
             parts: [
               {
-                text: prompt // Burada 'text' anahtarı ve karşılığındaki string çok kritik
+                text: prompt // Veri yapısı tam olarak bu şekilde olmalı (400 hatası çözümü)
               }
             ]
           }
@@ -108,12 +110,20 @@ async function callGemini(prompt) {
       }
     );
 
-    // Yanıtı güvenli bir şekilde döndür
-    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    // Yanıt yolunu güvenli şekilde kontrol ediyoruz
+    const candidate = response.data?.candidates?.[0];
+    const resultText = candidate?.content?.parts?.[0]?.text;
+
+    if (!resultText) {
+      console.warn("⚠️ Gemini metin üretmedi. Sebep:", candidate?.finishReason);
+      return null;
+    }
+
+    return resultText.trim();
 
   } catch (err) {
-    // Hatayı loglarda detaylı görmek için (Örn: 400 hatasının içindeki mesajı okur)
-    console.error("❌ Gemini API Hatası:", JSON.stringify(err.response?.data) || err.message);
+    // Hatayı loglarda detaylıca görmek için
+    console.error("❌ Gemini API Hatası Detayı:", JSON.stringify(err.response?.data) || err.message);
     return null;
   }
 }
@@ -386,9 +396,29 @@ app.post("/webhook", async (req, res) => {
     // --- DÜZENLENEN KISIM BURASI ---
     
     // Geçmişi temiz bir şekilde birleştiriyoruz
-    const historyText = session.history
+   const historyText = session.history
       .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
       .join("\n");
+
+    // 2. İngilizce ve diğer dillerde boş dönmemesi için dili ve geçmişi açıkça belirtiyoruz
+    // Gemini 2.0'ın en sevdiği ve 400 hatası vermeyecek yapı budur:
+    const prompt = `System: Answer in the language '${lang}'.\n\n${historyText}\nAssistant:`;
+
+    // 3. Gemini'ı çağırıyoruz
+    const reply = await callGemini(prompt);
+
+    if (!reply) {
+      // Eğer hala boş dönerse fallback mesajı gönderiyoruz
+      console.log(`⚠️ ${lang} dilinde yanıt alınamadı, fallback gönderiliyor.`);
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
+    }
+
+    // 4. Yanıtı geçmişe ekle ve kullanıcıya gönder
+    session.history.push({ role: "assistant", text: reply });
+    await sendMessage(from, reply);
+
+    return res.sendStatus(200);
 
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
