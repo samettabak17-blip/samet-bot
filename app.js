@@ -557,13 +557,6 @@ Ping ve follow-up mesajları SADECE 5 kategoriye ayrılır:
 4) AI        → kullanıcı AI/chatbot/yapay zekâ/otomasyon hakkında konuşursa
 5) GENERAL   → konu karışık, belirsiz, anlaşılmaz, link/e‑posta/URL içeriyorsa
 
-PING SEÇİM_KURALI:
-Ping kategorisi, kategori seçimi tamamlandıktan SONRA belirlenir.
-Eğer seçilen kategori AI ise:
-- Ping kategorisi otomatik olarak AI_ping olur.
-- GENERAL, RESIDENCE, COMPANY veya COST ping kategorileri AI ping’in yerine GEÇEMEZ.
-- Default ping AI kategorisinde ASLA devreye giremez.
-
 PING_KATEGORİ_ATAMA:
 Seçilen kategori hangi ping’in gönderileceğini belirler.
 - Eğer kategori AI ise → ping = AI_ping
