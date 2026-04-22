@@ -73,55 +73,34 @@ function corporateFallback(lang) {
 
 // -------------------------------
 //  GEMINI 2.0 FLASH CALL (GÜVENLİK AYARLARI EKLENMİŞ)
+
 async function callGemini(prompt) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
-    // 1. Log: Giden veriyi kontrol et (Render loglarında bunu gör)
-    console.log("Gemini'a giden prompt:", prompt);
+    const response = await axios({
+      method: 'post',
+      url: url,
+      headers: { 'Content-Type': 'application/json' },
+      data: {
+        contents: [{
+          parts: [{ text: prompt }]
+        }]
+      }
+    });
 
-    const response = await axios.post(
-      url,
-      {
-        contents: [{ parts: [{ text: prompt }] }], // Bazı sürümlerde 'role' gerekmeyebilir, en yalın hali bu.
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 1024,
-        }
-      },
-      { headers: { "Content-Type": "application/json" } }
-    );
+    // RENDER LOGLARINA BAK: Burası çok kritik
+    console.log("GOOGLE'DAN GELEN HAM VERİ:", JSON.stringify(response.data));
 
-    // 2. Log: API'den gelen ham yanıtı gör (Hata yoksa burası doludur)
-    // console.log("API Raw Response:", JSON.stringify(response.data));
-
-    const candidate = response.data?.candidates?.[0];
-    
-    // Yanıtın neden durduğunu kontrol et (SAFETY, RECITATION, vb.)
-    if (candidate?.finishReason && candidate.finishReason !== "STOP") {
-        console.warn("⚠️ Durdurulma Nedeni:", candidate.finishReason);
+    if (response.data && response.data.candidates && response.data.candidates[0].content) {
+      return response.data.candidates[0].content.parts[0].text.trim();
+    } else {
+      // Eğer burası çalışıyorsa, Google mesajı aldı ama cevap üretmedi
+      console.log("Cevap yapısı eksik. Durum:", response.data?.candidates?.[0]?.finishReason);
+      return null;
     }
-
-    // Farklı veri okuma yollarını dene
-    const reply = candidate?.content?.parts?.[0]?.text || "";
-    
-    if (!reply) {
-        console.error("❌ Model başarılı döndü ama metin boş!");
-    }
-
-    return reply.trim() || null;
-
   } catch (err) {
-    // Hata varsa detayını dök
-    console.error("‼️ API Hatası:", err.response?.data || err.message);
+    console.error("KRİTİK HATA:", err.response?.data || err.message);
     return null;
   }
 }
