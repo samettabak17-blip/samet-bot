@@ -75,9 +75,7 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  if (!prompt) return null;
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + process.env.GEMINI_API_KEY;
 
   try {
     const response = await axios.post(
@@ -85,27 +83,26 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            role: "user", // MUTLAKA küçük harf 'user' olmalı
-            parts: [{ text: String(prompt) }]
+            role: "user", // Google artık "Bu mesajı kim gönderdi?" bilgisini net istiyor.
+            parts: [{ text: prompt }]
           }
         ],
+        // Ekstra: Yanıtın kesilmemesi için bunları da eklemiş olduk
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000
-        }
+        ]
       },
       { headers: { "Content-Type": "application/json" } }
     );
 
+    // Yanıtı okuma kısmı
     return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+
   } catch (err) {
-    console.error("❌ Gemini API Hatası:", err.response?.data ? JSON.stringify(err.response.data) : err.message);
+    console.error("Gemini API hatası detay:", err.response?.data || err.message);
     return null;
   }
 }
@@ -328,9 +325,9 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
- const session = sessions[from];
+    const session = sessions[from];
 
-    // 1. DİL SEÇİMİ (Burası en başta kalmalı)
+    // LANGUAGE SELECTION
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -339,37 +336,55 @@ app.post("/webhook", async (req, res) => {
         await sendMessage(from, "Please choose 1, 2 or 3.");
         return res.sendStatus(200);
       }
+
       await sendMessage(from, introAfterLang[session.lang]);
       return res.sendStatus(200);
     }
 
-    // HATA BURADAYDI: lang tanımını yukarı çektik
-    const lang = session.lang; 
-    const lowerText = text.toLowerCase();
+    const lang = session.lang;
 
-    // 2. BOŞ MESAJ KONTROLÜ
-    if (!text || text.trim() === "") return res.sendStatus(200);
-
-    // 3. İLETİŞİM KONTROLÜ
+    // CONTACT
     if (
-      lowerText.includes("contact") || lowerText.includes("iletişim") ||
-      lowerText.includes("whatsapp") || lowerText.includes("call") ||
-      lowerText.includes("telefon")
+      lower.includes("contact") ||
+      lower.includes("iletişim") ||
+      lower.includes("whatsapp") ||
+      lower.includes("call") ||
+      lower.includes("telefon")
     ) {
       await sendMessage(from, contactText[lang]);
       return res.sendStatus(200);
     }
 
-    // 4. OTURUM GÜNCELLEME
+    // SESSION UPDATE
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
+    session.followUpStage = session.followUpStage || 0;
 
-    // 5. PROMPT HAZIRLAMA (Değişken ismini 'finalPrompt' yaparak çakışmayı önledik)
-    let finalPrompt = "";
+    const topic = detectTopic(text);
+    if (!session.topics) session.topics = [];
+    if (topic !== "other" && !session.topics.includes(topic)) {
+      session.topics.push(topic);
+    }
 
+    session.intentScore = calculateIntentScore(
+      text,
+      session.intentScore || 0
+    );
+
+    const historyText = session.history
+      .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
+      .join("\n");
+   
+    // -------------------------------
+    //  PROMPT OLUŞTURMA BAŞLANGICI
+    // -------------------------------
+    let prompt = "";
+        // -------------------------------
+    //  PROMPT OLUŞTURMA
+    // -------------------------------
     if (lang === "tr") {
-      finalPrompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın.
+      prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
 Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
 Gemini’nin hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını ASLA kullanma. 
 KENDİ KALIPLARINI ÜRETME. 
@@ -881,7 +896,7 @@ ${text}
     }
 
     else if (lang === "en") {
-     finalPrompt = `You are the corporate artificial intelligence consultant of SamChe Company LLC.
+      prompt = `You are the corporate artificial intelligence consultant of SamChe Company LLC.
 Provide professional, strategic, analytical and guiding answers.
 NEVER use Gemini’s ready-made templates, procedural texts, government processes, or classical explanations.
 DO NOT CREATE YOUR OWN TEMPLATES.
@@ -1122,8 +1137,8 @@ ${text}
 `;
     }
 
-    else if (lang === "ar") {
-      finalPrompt = `أنت مستشار الذكاء الاصطناعي المؤسسي لشركة SamChe Company LLC.
+    else {
+      prompt = `أنت مستشار الذكاء الاصطناعي المؤسسي لشركة SamChe Company LLC.
 قدّم إجابات احترافية، استراتيجية، تحليلية وموجِّهة.
 لا تستخدم أبداً القوالب الجاهزة الخاصة بـ Gemini أو نصوص الإجراءات أو العمليات الحكومية أو الشروحات الكلاسيكية.
 لا تُنشئ قوالب خاصة بك.
@@ -1357,29 +1372,30 @@ Chatbot
 إذا ذكر المستخدم القطاع سابقاً، لا تسأل عنه مرة أخرى إطلاقاً.
 
 سياق المحادثة:
-const historyText = session.history
-      .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
-      .join("\n");
+${historyText}
 
-    const fullContext = `System Instructions:\n${finalPrompt}\n\nChat History:\n${historyText}\nModel:`;
+رسالة المستخدم:
+${text}
+`;
+    }
 
-    // 6. GEMINI ÇAĞRISI
-    const reply = await callGemini(fullContext);
+    // -------------------------------
+    //  GEMINI CEVABI
+    // -------------------------------
+    const reply = await callGemini(prompt);
 
     if (!reply) {
-      console.log(`⚠️ ${lang} dilinde yanıt alınamadı.`);
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
-    // 7. YANITI KAYDET VE GÖNDER
     session.history.push({ role: "assistant", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
 
   } catch (err) {
-    console.error("❌ Webhook Hatası:", err.message);
+    console.error("Webhook error:", err);
     return res.sendStatus(500);
   }
 });
