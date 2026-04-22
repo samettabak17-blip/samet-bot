@@ -1416,27 +1416,6 @@ ${text}
 `;
     }
 
-    // -------------------------------
-    //  GEMINI CEVABI
-    // -------------------------------
-    const reply = await callGemini(prompt);
-
-    if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
-    }
-
-    session.history.push({ role: "assistant", text: reply });
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
 // -----------------------------------------------------
