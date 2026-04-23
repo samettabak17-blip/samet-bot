@@ -1380,43 +1380,27 @@ ${text}
     }
 
   // -------------------------------
-    // GEMINI CEVABI (Revize Edilmiş Sigortalı Bölüm)
+    //  GEMINI CEVABI
     // -------------------------------
- // --- GEMINI ÇAĞRISI VE %100 CEVAP GARANTİSİ ---
-    let reply = "";
+    const reply = await callGemini(prompt);
 
-    try {
-      // 1. Deneme: Senin ağır kuralların olduğu ana prompt ile
-      reply = await callGemini(fullPrompt);
-    } catch (e) {
-      console.log("Birinci deneme başarısız.");
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
     }
 
-    // EĞER BOŞ DÖNERSE (İşte burası kurtarıcı kısım)
-    if (!reply || reply.trim() === "") {
-      console.log("⚠️ ANA PROMPT ENGELENDİ. Sadeleştirilmiş kurtarma modu deneniyor...");
-      
-      // Orijinal dosyadaki tüm o devasa promptu çöpe atıp sadece soruyu soruyoruz
-      // Bu, Google'ın filtrelerini aşmanın tek yoludur.
-      const emergencyPrompt = `Sen profesyonel bir asistansın. Kullanıcının sorusunu ${lang} dilinde yanıtla: ${text}`;
-      
-      try {
-        reply = await callGemini(emergencyPrompt);
-      } catch (retryErr) {
-        console.log("Kurtarma denemesi de başarısız.");
-      }
-    }
-
-    // HER ŞEYE RAĞMEN BOŞSA (En son çare)
-    if (!reply || reply.trim() === "") {
-      reply = corporateFallback(lang);
-    }
-
-    // MESAJI GÖNDER VE KAYDET
     session.history.push({ role: "assistant", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(200);
+  }
+});
+
+
 
 
 // -----------------------------------------------------
