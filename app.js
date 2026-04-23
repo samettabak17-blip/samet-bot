@@ -1388,21 +1388,37 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-    const reply = await callGemini(prompt);
+  // --- GEMINI ÇAĞRISI VE OTOMATİK KURTARMA ---
+    let reply = await callGemini(Prompt); // Dosyandaki değişkene göre 'fullPrompt' veya 'prompt' yapabilirsin
 
+    // 1. GÜVENLİK SİGORTASI: Eğer ilk cevap boş gelirse (Filtreye takılırsa)
+    if (!reply || reply.trim() === "") {
+      console.log("⚠️ Kritik: İlk deneme boş döndü, kurtarma modu (Retry) başlatılıyor...");
+      
+      // Çok sade ve takılmayacağı bir prompt ile tekrar zorluyoruz
+      const simplePrompt = `System: You are a professional assistant. Respond in ${lang} clearly. User: ${text}\nModel:`;
+      reply = await callGemini(simplePrompt);
+    }
+
+    // 2. YANIT HALA YOKSA (EN SON ÇARE)
     if (!reply) {
+      console.log(`❌ ${lang} dilinde yanıt alınamadı, fallback gönderiliyor.`);
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
+    // 3. BAŞARILI YANITI KAYDET VE GÖNDER
     session.history.push({ role: "assistant", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
 
   } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
+    // 4. HATA DURUMUNDA SUNUCUYU AYAKTA TUT (500 yerine 200 dönülür)
+    console.error("❌ Webhook Hatası:", err.message);
+    if (!res.headersSent) {
+      res.sendStatus(200);
+    }
   }
 });
 
