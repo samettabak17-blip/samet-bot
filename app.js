@@ -76,38 +76,41 @@ function corporateFallback(lang) {
 // -------------------------------
 async function callGemini(prompt) {
   try {
+    // axios'un tanımlı olduğundan emin oluyoruz
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
+        // KÖK ÇÖZÜM: Boş dönmeyi engelleyen filtre ayarları
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.95,
+          topK: 40,
+          maxOutputTokens: 2048,
+        }
+      },
+      {
+        headers: { "Content-Type": "application/json" }
       }
     );
-    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  } catch (error) {
-    console.error("API Error:", error.message);
-    return "";
-  }
-}
 
-    // Yanıt yolunu güvenli kontrol et
-    const content = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
-    if (content) {
-      return content;
+    // Yanıtı kontrol et
+    if (response.data && response.data.candidates && response.data.candidates[0].content) {
+      return response.data.candidates[0].content.parts[0].text;
     } else {
-      // Eğer yanıt yine de boşsa, sebebini logla
-      console.log("⚠️ Gemini Yanıt Üretmedi. Sebebi:", response.data?.candidates?.[0]?.finishReason);
-      return "";
+      console.error("⚠️ Gemini yanıt yapısı beklenenden farklı veya boş.");
+      return null;
     }
   } catch (error) {
-    console.error("❌ Gemini API Hatası:", error.response?.data || error.message);
-    return "";
+    // Hatayı detaylı logla ki sorunu görelim
+    console.error("❌ Gemini API Hatası:", error.response ? error.response.data : error.message);
+    return null;
   }
 }
 
@@ -1386,41 +1389,23 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-// --- GEMINI ÇAĞRISI VE %100 ÇALIŞMA GARANTİSİ ---
-  // --- GEMINI ÇAĞRISI VE KURTARMA SİSTEMİ ---
-    let reply = "";
-    try {
-      reply = await callGemini(fullPrompt);
-    } catch (err) {
-      console.error("İlk deneme hatası:", err.message);
+    const reply = await callGemini(prompt);
+
+    if (!reply) {
+      await sendMessage(from, corporateFallback(lang));
+      return res.sendStatus(200);
     }
 
-    if (!reply || reply.trim() === "") {
-      console.log("⚠️ Boş yanıt, kurtarma modu devrede...");
-      const recoveryPrompt = `Sen profesyonel bir asistansın. Şuna ${lang} dilinde cevap ver: ${text}`;
-      try {
-        reply = await callGemini(recoveryPrompt);
-      } catch (retryErr) {
-        console.error("Kurtarma hatası:", retryErr.message);
-      }
-    }
-
-    if (!reply || reply.trim() === "") {
-      reply = corporateFallback(lang);
-    }
-
-    session.history.push({ role: "model", text: reply });
+    session.history.push({ role: "assistant", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
 
   } catch (err) {
-    console.error("❌ Webhook Hatası:", err.message);
-    if (!res.headersSent) {
-      res.sendStatus(200);
-    }
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
   }
-}); 
+});
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
