@@ -77,37 +77,33 @@ function corporateFallback(lang) {
 async function callGemini(prompt) {
   try {
     const response = await axios.post(
-      // MODELİ 1.5 FLASH OLARAK DEĞİŞTİRDİK
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
-        // FİLTRELERİ BLOCK_NONE YAPARAK BOTUN SUSMASINI ENGELLİYORUZ
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 800,
-        }
+        generationConfig: { temperature: 0.7 }
       }
     );
 
-    // YANIT OKUMA (EN GÜVENLİ YOL)
-    if (response.data && response.data.candidates && response.data.candidates[0].content) {
-      return response.data.candidates[0].content.parts[0].text;
+    // YANIT KONTROLÜ - En ufak bir boşlukta log atar
+    const result = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (result) {
+      return result;
     } else {
-      console.log("⚠️ Gemini bir cevabı engelledi veya boş döndü.");
+      console.log("⚠️ API Yanıt verdi ama içerik boş! Yanıt yapısı:", JSON.stringify(response.data));
       return null;
     }
   } catch (error) {
-    console.error("❌ API Hatası:", error.response ? error.response.data : error.message);
+    console.error("❌ API Çağrı Hatası:", error.response?.data || error.message);
     return null;
   }
 }
-
 
 
 // -------------------------------
@@ -270,7 +266,51 @@ app.post("/webhook", async (req, res) => {
 
     const from = message.from;
     const text = message.text?.body || "";
-    const lower = text.toLowerCase();
+    const lower = text.toLowerCase().trim();
+
+    let reply = "";
+
+    // 1. ADIM: OTOMATİK SELAMLAŞMA KONTROLÜ
+    if (lower === "merhaba" || lower === "selam" || lower === "hi") {
+      reply = "Merhaba! SamChe Company asistanıyım. Size Dubai'de şirket kurulumu, vize işlemleri veya yapay zeka çözümlerimiz hakkında nasıl yardımcı olabilirim?";
+    } else {
+      // 2. ADIM: GEMINI'I ÇAĞIR
+      try {
+        console.log(`📩 Gelen: ${text} | Gemini sorgusu...`);
+        reply = await callGemini(fullContext); 
+      } catch (e) {
+        console.error("❌ Gemini API Hatası:", e.message);
+      }
+    }
+
+    // 3. ADIM: EĞER GEMINI BOŞ DÖNERSE (Zorla konuşturma)
+    if (!reply || reply.trim() === "") {
+      console.log("🔄 Yanıt boş! Acil durum modu devrede...");
+      const emergencyPrompt = `Sen SamChe asistanısın. Müşteri şunu sordu: "${text}". Kısa ve profesyonel bir cevap ver.`;
+      
+      try {
+        reply = await callGemini(emergencyPrompt);
+      } catch (e) {
+        reply = "Şu an teknik bir yoğunluk yaşıyorum, sorunuzu ekibimize ilettim. En kısa sürede döneceğiz.";
+      }
+    }
+
+    // 4. ADIM: GÖNDER VE KAYDET
+    await sendMessage(from, reply);
+
+    if (!sessions[from]) {
+      sessions[from] = { history: [], last_lang: "tr" };
+    }
+    sessions[from].history.push({ role: "user", text: text });
+    sessions[from].history.push({ role: "assistant", text: reply });
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("KRİTİK WEBHOOK HATASI:", err);
+    if (!res.headersSent) res.sendStatus(200);
+  }
+});
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
