@@ -1835,3 +1835,4 @@ const port = process.env.PORT || 3000;
 app.listen(port, () =>
   console.log("SamChe Bot running on port " + port)
 );
+});
