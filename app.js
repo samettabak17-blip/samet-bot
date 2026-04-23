@@ -1404,49 +1404,40 @@ ${text}
     //  GEMINI CEVABI (GÜÇLENDİRİLMİŞ)
     // -------------------------------
     let reply = "";
-
     try {
-        // 1. Deneme: Tüm kurallar ve geçmiş (fullContext) ile
         reply = await callGemini(fullContext);
-    } catch (err) {
-        console.error("Gemini çağrı hatası:", err.message);
+    } catch (e) {
+        console.log("Birinci deneme hatası.");
     }
 
-    // EĞER BOŞ DÖNERSE: Tüm kuralları çöpe at ve sadece müşteriye cevap ver (Filtre Delici)
+    // Eğer boş dönerse (Zorla konuşturma)
     if (!reply || reply.trim() === "") {
-        console.log("🔄 Boş yanıt için acil durum modu (Zorla Konuşturma) başlatılıyor...");
-        
-        // Bu prompt çok sade olduğu için Google'ın "Safety Filter" (Güvenlik Filtresi) takılmaz.
-        const emergencyPrompt = `Sen profesyonel bir asistansın. Şu soruyu ${lang} dilinde nazikçe cevapla: ${text}`;
-        
+        console.log("🔄 Boş yanıt için acil durum modu başlatılıyor...");
+        const emergencyPrompt = `Answer this user question in ${lang} language briefly: ${text}`;
         try {
             reply = await callGemini(emergencyPrompt);
-        } catch (retryErr) {
-            console.error("Acil durum denemesi de başarısız.");
+        } catch (e) {
+            console.log("Acil durum hatası.");
         }
     }
 
-    // HER ŞEYE RAĞMEN BOŞSA: Hazır kurumsal mesajı gönder
     if (!reply || reply.trim() === "") {
-        reply = corporateFallback(lang);
+        await sendMessage(from, corporateFallback(lang));
+    } else {
+        await sendMessage(from, reply);
+        // Geçmişi kaydet
+        if (sessions[from]) {
+            sessions[from].history.push({ role: "assistant", text: reply });
+        }
     }
 
-    // MESAJI GÖNDER VE KAYDET
-    await sendMessage(from, reply);
-    
-    // Geçmişe kaydet (Hata almamak için reply kontrolü ile)
-    if (sessions[from] && reply) {
-        sessions[from].history.push({ role: "assistant", text: reply });
-    }
+    return res.sendStatus(200); // Webhook başarıyla bitti
 
-    // WEBHOOK'U KAPATAN KRİTİK SATIRLAR
-    return res.sendStatus(200);
-
-  } catch (globalErr) {
-    console.error("Webhook Kritik Hata:", globalErr.message);
+  } catch (err) {
+    console.error("KRİTİK WEBHOOK HATASI:", err);
     if (!res.headersSent) res.sendStatus(200);
   }
-}); 
+});
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
