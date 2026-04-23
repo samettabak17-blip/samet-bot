@@ -76,12 +76,10 @@ function corporateFallback(lang) {
 // -------------------------------
 async function callGemini(prompt) {
   try {
-    // axios'un tanımlı olduğundan emin oluyoruz
     const response = await axios.post(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
-        // KÖK ÇÖZÜM: Boş dönmeyi engelleyen filtre ayarları
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -89,28 +87,24 @@ async function callGemini(prompt) {
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ],
         generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048,
+          temperature: 1.0, // Daha yaratıcı ve az kısıtlayıcı olması için yükselttik
+          candidateCount: 1
         }
-      },
-      {
-        headers: { "Content-Type": "application/json" }
       }
     );
 
-    // Yanıtı kontrol et
-    if (response.data && response.data.candidates && response.data.candidates[0].content) {
-      return response.data.candidates[0].content.parts[0].text;
-    } else {
-      console.error("⚠️ Gemini yanıt yapısı beklenenden farklı veya boş.");
-      return null;
+    const candidate = response.data?.candidates?.[0];
+    
+    // EĞER FİLTREYE TAKILDIYSA LOGDA GÖRÜNÜR
+    if (candidate?.finishReason === "SAFETY") {
+      console.error("🚨 KRİTİK: Google Güvenlik Filtresi Yanıtı Engelledi!");
+      return "RETRY_WITH_SAFE_PROMPT"; // Özel bir işaret döndürüyoruz
     }
+
+    return candidate?.content?.parts?.[0]?.text || "";
   } catch (error) {
-    // Hatayı detaylı logla ki sorunu görelim
-    console.error("❌ Gemini API Hatası:", error.response ? error.response.data : error.message);
-    return null;
+    console.error("❌ API Bağlantı Hatası:", error.message);
+    return "";
   }
 }
 
@@ -1386,24 +1380,52 @@ ${text}
 `;
     }
 
+  // -------------------------------
+    // GEMINI CEVABI (Revize Edilmiş Sigortalı Bölüm)
     // -------------------------------
-    //  GEMINI CEVABI
-    // -------------------------------
-    const reply = await callGemini(prompt);
+    let reply = "";
 
-    if (!reply) {
+    try {
+      // 1. DENEME: Dosyandaki orijinal fullPrompt ile çağırıyoruz
+      reply = await callGemini(fullPrompt);
+    } catch (err) {
+      console.error("Gemini ilk deneme hatası:", err.message);
+    }
+
+    // KRİTİK ADIM: Eğer yanıt boşsa (Filtreye takılırsa veya susarsa)
+    if (!reply || reply.trim() === "") {
+      console.log("⚠️ Bot sustu veya filtreye takıldı. Kurtarma modu başlatılıyor...");
+      
+      // Çok sade bir prompt: Tüm o 1400 satırlık kuralları atlayıp sadece cevaba odaklanır
+      const recoveryPrompt = `Sen SamChe Company asistanısın. Lütfen şu soruyu ${lang} dilinde cevapla: ${text}`;
+      
+      try {
+        reply = await callGemini(recoveryPrompt);
+      } catch (retryErr) {
+        console.error("Kurtarma denemesi de başarısız:", retryErr.message);
+      }
+    }
+
+    // EĞER HALA CEVAP YOKSA (En son çare)
+    if (!reply || reply.trim() === "") {
+      console.log("❌ Tüm denemeler başarısız, kurumsal fallback gönderiliyor.");
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
+    // Yanıt başarılıysa kaydet ve gönder
+    // Dosyandaki sisteme uygun olarak 'assistant' rolüyle kaydediyoruz
     session.history.push({ role: "assistant", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
 
   } catch (err) {
+    // Webhook genel hata koruması
     console.error("Webhook error:", err);
-    return res.sendStatus(500);
+    if (!res.headersSent) {
+      res.sendStatus(200); // 500 yerine 200 dönerek sunucuyu ayakta tutuyoruz
+    }
   }
 });
 
