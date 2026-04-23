@@ -13,7 +13,6 @@ const cron = require("node-cron");
 // ENV CHECK
 // =====================================================
 const REQUIRED_ENV = [
-  "PORT",
   "VERIFY_TOKEN",
   "META_TOKEN",
   "PHONE_NUMBER_ID",
@@ -897,14 +896,12 @@ cron.schedule("0 * * * *", async () => {
 // =====================================================
 // START
 // =====================================================
-server.listen(
-  process.env.PORT,
-  () => {
-    log(
-      "SAMCHE V3 HARD LOCK STARTED"
-    );
-  }
-);
+
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT, () => {
+  log("SAMCHE V3 HARD LOCK STARTED ON PORT " + PORT);
+});
 
 
 
