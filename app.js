@@ -1389,7 +1389,7 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-   let reply = await callGemini(fullContext);
+  let reply = await callGemini(fullContext);
 
     // Eğer hala boş dönüyorsa, tüm geçmişi silip sadece soruyu sor (Zorla konuşturma)
     if (!reply || reply.trim() === "") {
