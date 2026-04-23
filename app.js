@@ -364,7 +364,7 @@ app.post("/webhook", async (req, res) => {
 
     // SESSION UPDATE
     session.history.push({ role: "user", text });
-    if (session.history.length > 10) session.history.shift();
+    if (session.history.length > 6) session.history.shift();
     session.lastMessageTime = Date.now();
     session.followUpStage = session.followUpStage || 0;
 
