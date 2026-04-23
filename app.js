@@ -1425,6 +1425,11 @@ ${text}
     }
 
     return res.sendStatus(200);
+  } catch (err) {
+    console.error("KRİTİK WEBHOOK HATASI:", err);
+    if (!res.headersSent) res.sendStatus(200);
+  }
+});
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
