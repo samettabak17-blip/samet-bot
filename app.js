@@ -1388,44 +1388,49 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-// --- GEMINI ÇAĞRISI VE OTOMATİK KURTARMA ---
-    // Değişken adını senin koduna (fullPrompt) göre eşitledim
+// --- GEMINI ÇAĞRISI VE GARANTİLİ KURTARMA SİSTEMİ ---
     let reply = "";
+    
     try {
-      reply = await callGemini(fullPrompt);
-    } catch (apiErr) {
-      console.error("Gemini İlk Çağrı Hatası:", apiErr.message);
+      // İlk deneme: Senin hazırladığın geniş kapsamlı fullPrompt ile
+      const geminiResponse = await callGemini(fullPrompt);
+      reply = geminiResponse;
+    } catch (err) {
+      console.error("❌ Gemini İlk Deneme Hatası:", err.message);
     }
 
-    // 1. GÜVENLİK SİGORTASI: Eğer yanıt boşsa veya hata alındıysa
+    // KRİTİK ADIM: Eğer yanıt boşsa veya hata alındıysa (Boş dönmeyi engelleyen kısım)
     if (!reply || reply.trim() === "") {
-      console.log("⚠️ Kritik: Gemini sustu, kurtarma modu başlatılıyor...");
+      console.log("⚠️ UYARI: Gemini boş döndü, Kurtarma Modu (Retry) başlatılıyor...");
       
-      // Çok sade bir prompt ile tekrar zorluyoruz (Geçmişi dahil etmeden)
-      const recoveryPrompt = `System: You are a professional assistant. Respond in ${lang} clearly. User: ${text}\nModel:`;
+      // Çok sade, filtrelere takılmayacak kısa bir komutla tekrar zorluyoruz
+      const recoveryPrompt = `System: Sen profesyonel bir asistansın. Lütfen şu kullanıcı sorusuna ${lang} dilinde kısa ve öz bir yanıt ver. User: ${text}\nModel:`;
+      
       try {
-        reply = await callGemini(recoveryPrompt);
-      } catch (recoveryErr) {
-        console.error("Kurtarma Modu Hatası:", recoveryErr.message);
+        const retryResponse = await callGemini(recoveryPrompt);
+        reply = retryResponse;
+      } catch (retryErr) {
+        console.error("❌ Kurtarma Modu da Başarısız:", retryErr.message);
       }
     }
 
-    // 2. YANIT HALA YOKSA FALLBACK MESAJI GÖNDER
+    // EĞER HER ŞEYE RAĞMEN CEVAP YOKSA (Fallback mesajı gönderir, botu susturmaz)
     if (!reply || reply.trim() === "") {
-      console.log(`❌ ${lang} dilinde yanıt üretilemedi, manuel fallback gönderiliyor.`);
+      console.log("❌ TÜM DENEMELER BAŞARISIZ: Manuel mesaj gönderiliyor.");
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
-    // 3. BAŞARILI YANITI KAYDET VE WHATSAPP'TAN GÖNDER
+    // BAŞARILI YANITI KAYDET VE GÖNDER
+    // Not: Gemini standartı için rolü 'model' olarak kaydediyoruz
     session.history.push({ role: "model", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
 
   } catch (err) {
-    // 4. HATA DURUMUNDA SUNUCUNUN ÇÖKMESİNİ ENGELLER
-    console.error("❌ Webhook Genel Hatası:", err.message);
+    // Webhook genel hata koruması
+    console.error("❌ Webhook Kritik Hata:", err.message);
     if (!res.headersSent) {
       res.sendStatus(200);
     }
