@@ -259,10 +259,14 @@ app.get("/webhook", (req, res) => {
 // -------------------------------
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
+
 app.post("/webhook", async (req, res) => {
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
-    if (!message) return res.sendStatus(200);
+    if (!message) {
+      res.sendStatus(200);
+      return;
+    }
 
     const from = message.from;
     const text = message.text?.body || "";
@@ -270,47 +274,54 @@ app.post("/webhook", async (req, res) => {
 
     let reply = "";
 
-    // 1. ADIM: OTOMATİK SELAMLAŞMA
+    // 1. KOTA DOSTU SELAMLAŞMA
     if (lower === "merhaba" || lower === "selam" || lower === "hi") {
       reply = "Merhaba! SamChe Company asistanıyım. Size Dubai'de şirket kurulumu, vize işlemleri veya yapay zeka çözümlerimiz hakkında nasıl yardımcı olabilirim?";
     } else {
-      // 2. ADIM: GEMINI'I ÇAĞIR
+      // 2. NORMAL GEMINI SORGUSU
       try {
-        console.log(`📩 Gelen: ${text} | Gemini sorgusu...`);
+        console.log(`📩 Soru: ${text}`);
         reply = await callGemini(fullContext); 
       } catch (e) {
-        console.error("❌ Gemini API Hatası:", e.message);
+        console.error("❌ API Hatası:", e.message);
       }
     }
 
-    // 3. ADIM: EĞER GEMINI BOŞ DÖNERSE
+    // 3. GEMINI BOŞ DÖNERSE (SİGORTA)
     if (!reply || reply.trim() === "") {
-      console.log("🔄 Yanıt boş! Acil durum modu devrede...");
-      const emergencyPrompt = `Sen SamChe asistanısın. Müşteri şunu sordu: "${text}". Kısa ve profesyonel bir cevap ver.`;
+      console.log("🔄 Yanıt boş! Zorla konuşturma devrede...");
       try {
-        reply = await callGemini(emergencyPrompt);
+        reply = await callGemini(`Sen profesyonel bir asistansın. Müşterinin şu mesajına kısa cevap ver: "${text}"`);
       } catch (e) {
-        reply = "Şu an teknik bir yoğunluk yaşıyorum, sorunuzu ekibimize ilettim. En kısa sürede döneceğiz.";
+        reply = "Şu an teknik bir yoğunluk var, sorunuzu ekibimize ilettim. En kısa sürede döneceğiz.";
       }
     }
 
-    // 4. ADIM: GÖNDER VE KAYDET
+    // 4. WHATSAPP'A GÖNDER
     await sendMessage(from, reply);
 
+    // HAFIZA KAYDI
     if (!sessions[from]) {
       sessions[from] = { history: [], last_lang: "tr" };
     }
     sessions[from].history.push({ role: "user", text: text });
     sessions[from].history.push({ role: "assistant", text: reply });
 
-    // Hatanın olduğu yer burasıydı, şimdi fonksiyonun içinde:
-    return res.sendStatus(200);
+    res.sendStatus(200); // return kelimesi kaldırıldı, artık o hatayı veremez.
 
   } catch (err) {
-    console.error("KRİTİK WEBHOOK HATASI:", err);
+    console.error("KRİTİK HATA:", err);
     if (!res.headersSent) res.sendStatus(200);
   }
-}); 
+});
+// --- WEBHOOK BİTİŞİ ---
+
+// --- SUNUCUYU BAŞLATMA (DOSYANIN EN SONU) ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🚀 SamChe Bot Başarıyla Çalışıyor! Port: " + PORT);
+});
+
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
