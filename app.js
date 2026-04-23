@@ -1382,7 +1382,7 @@ ${text}
   // -------------------------------
     // GEMINI CEVABI (Revize Edilmiş Sigortalı Bölüm)
     // -------------------------------
-  // --- GEMINI ÇAĞRISI VE %100 CEVAP GARANTİSİ ---
+ // --- GEMINI ÇAĞRISI VE %100 CEVAP GARANTİSİ ---
     let reply = "";
 
     try {
@@ -1417,8 +1417,6 @@ ${text}
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
-      }
-});
 
 
 // -----------------------------------------------------
