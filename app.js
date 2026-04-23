@@ -1388,34 +1388,44 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-  // --- GEMINI ÇAĞRISI VE OTOMATİK KURTARMA ---
-    let reply = await callGemini(Prompt); // Dosyandaki değişkene göre 'fullPrompt' veya 'prompt' yapabilirsin
-
-    // 1. GÜVENLİK SİGORTASI: Eğer ilk cevap boş gelirse (Filtreye takılırsa)
-    if (!reply || reply.trim() === "") {
-      console.log("⚠️ Kritik: İlk deneme boş döndü, kurtarma modu (Retry) başlatılıyor...");
-      
-      // Çok sade ve takılmayacağı bir prompt ile tekrar zorluyoruz
-      const simplePrompt = `System: You are a professional assistant. Respond in ${lang} clearly. User: ${text}\nModel:`;
-      reply = await callGemini(simplePrompt);
+// --- GEMINI ÇAĞRISI VE OTOMATİK KURTARMA ---
+    // Değişken adını senin koduna (fullPrompt) göre eşitledim
+    let reply = "";
+    try {
+      reply = await callGemini(fullPrompt);
+    } catch (apiErr) {
+      console.error("Gemini İlk Çağrı Hatası:", apiErr.message);
     }
 
-    // 2. YANIT HALA YOKSA (EN SON ÇARE)
-    if (!reply) {
-      console.log(`❌ ${lang} dilinde yanıt alınamadı, fallback gönderiliyor.`);
+    // 1. GÜVENLİK SİGORTASI: Eğer yanıt boşsa veya hata alındıysa
+    if (!reply || reply.trim() === "") {
+      console.log("⚠️ Kritik: Gemini sustu, kurtarma modu başlatılıyor...");
+      
+      // Çok sade bir prompt ile tekrar zorluyoruz (Geçmişi dahil etmeden)
+      const recoveryPrompt = `System: You are a professional assistant. Respond in ${lang} clearly. User: ${text}\nModel:`;
+      try {
+        reply = await callGemini(recoveryPrompt);
+      } catch (recoveryErr) {
+        console.error("Kurtarma Modu Hatası:", recoveryErr.message);
+      }
+    }
+
+    // 2. YANIT HALA YOKSA FALLBACK MESAJI GÖNDER
+    if (!reply || reply.trim() === "") {
+      console.log(`❌ ${lang} dilinde yanıt üretilemedi, manuel fallback gönderiliyor.`);
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
 
-    // 3. BAŞARILI YANITI KAYDET VE GÖNDER
-    session.history.push({ role: "assistant", text: reply });
+    // 3. BAŞARILI YANITI KAYDET VE WHATSAPP'TAN GÖNDER
+    session.history.push({ role: "model", text: reply });
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
 
   } catch (err) {
-    // 4. HATA DURUMUNDA SUNUCUYU AYAKTA TUT (500 yerine 200 dönülür)
-    console.error("❌ Webhook Hatası:", err.message);
+    // 4. HATA DURUMUNDA SUNUCUNUN ÇÖKMESİNİ ENGELLER
+    console.error("❌ Webhook Genel Hatası:", err.message);
     if (!res.headersSent) {
       res.sendStatus(200);
     }
