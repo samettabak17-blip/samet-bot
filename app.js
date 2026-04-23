@@ -114,20 +114,6 @@ async function callGemini(prompt) {
   }
 }
 
-    // Yanıtı kontrol et
-    if (response.data && response.data.candidates && response.data.candidates[0].content) {
-      return response.data.candidates[0].content.parts[0].text;
-    } else {
-      console.error("⚠️ Gemini yanıt yapısı beklenenden farklı veya boş.");
-      return null;
-    }
-  } catch (error) {
-    // Hatayı detaylı logla ki sorunu görelim
-    console.error("❌ Gemini API Hatası:", error.response ? error.response.data : error.message);
-    return null;
-  }
-}
-
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
@@ -1835,4 +1821,4 @@ const port = process.env.PORT || 3000;
 app.listen(port, () =>
   console.log("SamChe Bot running on port " + port)
 );
-});
+
