@@ -1,14 +1,11 @@
-// package.json
-
 {
-  "name": "samche-bot-v2",
-  "version": "2.0.0",
-  "description": "SamChe GPT WhatsApp Bot",
+  "name": "samche-bot",
+  "version": "1.0.0",
+  "description": "SamChe WhatsApp Bot",
   "main": "app.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
+    "start": "node app.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -16,8 +13,7 @@
     "express": "^4.19.2",
     "node-cron": "^3.0.3"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.0"
+  "engines": {
+    "node": "20.x"
   }
 }
-
