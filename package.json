@@ -2,7 +2,6 @@
   "name": "samche-bot",
   "version": "1.0.0",
   "description": "WhatsApp + Instagram Gemini Bot",
-  "type": "module",
   "main": "app.js",
   "scripts": {
     "start": "node app.js"
@@ -16,4 +15,3 @@
     "node-cron": "^3.0.3"
   }
 }
-
