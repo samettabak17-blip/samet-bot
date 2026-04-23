@@ -270,7 +270,7 @@ app.post("/webhook", async (req, res) => {
 
     let reply = "";
 
-    // 1. ADIM: OTOMATİK SELAMLAŞMA KONTROLÜ
+    // 1. ADIM: OTOMATİK SELAMLAŞMA
     if (lower === "merhaba" || lower === "selam" || lower === "hi") {
       reply = "Merhaba! SamChe Company asistanıyım. Size Dubai'de şirket kurulumu, vize işlemleri veya yapay zeka çözümlerimiz hakkında nasıl yardımcı olabilirim?";
     } else {
@@ -283,11 +283,10 @@ app.post("/webhook", async (req, res) => {
       }
     }
 
-    // 3. ADIM: EĞER GEMINI BOŞ DÖNERSE (Zorla konuşturma)
+    // 3. ADIM: EĞER GEMINI BOŞ DÖNERSE
     if (!reply || reply.trim() === "") {
       console.log("🔄 Yanıt boş! Acil durum modu devrede...");
       const emergencyPrompt = `Sen SamChe asistanısın. Müşteri şunu sordu: "${text}". Kısa ve profesyonel bir cevap ver.`;
-      
       try {
         reply = await callGemini(emergencyPrompt);
       } catch (e) {
@@ -304,13 +303,14 @@ app.post("/webhook", async (req, res) => {
     sessions[from].history.push({ role: "user", text: text });
     sessions[from].history.push({ role: "assistant", text: reply });
 
+    // Hatanın olduğu yer burasıydı, şimdi fonksiyonun içinde:
     return res.sendStatus(200);
 
   } catch (err) {
     console.error("KRİTİK WEBHOOK HATASI:", err);
     if (!res.headersSent) res.sendStatus(200);
   }
-});
+}); 
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
