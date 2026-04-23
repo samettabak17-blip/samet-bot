@@ -75,34 +75,41 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + process.env.GEMINI_API_KEY;
-
   try {
+    // axios'un tanımlı olduğundan emin oluyoruz
     const response = await axios.post(
-      url,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
-        contents: [
-          {
-            role: "user", // Google artık "Bu mesajı kim gönderdi?" bilgisini net istiyor.
-            parts: [{ text: prompt }]
-          }
-        ],
-        // Ekstra: Yanıtın kesilmemesi için bunları da eklemiş olduk
+        contents: [{ parts: [{ text: prompt }] }],
+        // KÖK ÇÖZÜM: Boş dönmeyi engelleyen filtre ayarları
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          topP: 0.95,
+          topK: 40,
+          maxOutputTokens: 2048,
+        }
       },
-      { headers: { "Content-Type": "application/json" } }
+      {
+        headers: { "Content-Type": "application/json" }
+      }
     );
 
-    // Yanıtı okuma kısmı
-    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-
-  } catch (err) {
-    console.error("Gemini API hatası detay:", err.response?.data || err.message);
+    // Yanıtı kontrol et
+    if (response.data && response.data.candidates && response.data.candidates[0].content) {
+      return response.data.candidates[0].content.parts[0].text;
+    } else {
+      console.error("⚠️ Gemini yanıt yapısı beklenenden farklı veya boş.");
+      return null;
+    }
+  } catch (error) {
+    // Hatayı detaylı logla ki sorunu görelim
+    console.error("❌ Gemini API Hatası:", error.response ? error.response.data : error.message);
     return null;
   }
 }
