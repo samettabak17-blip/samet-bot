@@ -80,20 +80,20 @@ async function callGemini(prompt) {
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
-        // TÜM FİLTRELERİ KAPATIYORUZ (Boş dönmeyi engellemek için)
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          maxOutputTokens: 2048
-        }
+        ]
       }
     );
+    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } catch (error) {
+    console.error("API Error:", error.message);
+    return "";
+  }
+}
 
     // Yanıt yolunu güvenli kontrol et
     const content = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -1387,39 +1387,40 @@ ${text}
     //  GEMINI CEVABI
     // -------------------------------
 // --- GEMINI ÇAĞRISI VE %100 ÇALIŞMA GARANTİSİ ---
-    let finalReply = "";
-
+  // --- GEMINI ÇAĞRISI VE KURTARMA SİSTEMİ ---
+    let reply = "";
     try {
-      // 1. Deneme: Orijinal kurumsal promptunla
-      finalReply = await callGemini(fullPrompt);
+      reply = await callGemini(fullPrompt);
     } catch (err) {
-      console.log("İlk deneme hatası.");
+      console.error("İlk deneme hatası:", err.message);
     }
 
-    // KRİTİK: Eğer ilk deneme boşsa, geçmişi ve kuralları silip sadece soruyu soruyoruz
-    if (!finalReply || finalReply.trim() === "") {
-      console.log("⚠️ İlk deneme engellendi veya boş döndü. Kurtarma modu devrede...");
-      
-      // Çok sade bir prompt: "System: Yardımcı bir asistansın."
-      const simplePrompt = `Sen SamChe Company için çalışan profesyonel bir asistansın. Lütfen şu kullanıcı sorusuna ${lang} dilinde cevap ver: ${text}`;
-      
+    if (!reply || reply.trim() === "") {
+      console.log("⚠️ Boş yanıt, kurtarma modu devrede...");
+      const recoveryPrompt = `Sen profesyonel bir asistansın. Şuna ${lang} dilinde cevap ver: ${text}`;
       try {
-        finalReply = await callGemini(simplePrompt);
+        reply = await callGemini(recoveryPrompt);
       } catch (retryErr) {
-        console.log("Kurtarma denemesi başarısız.");
+        console.error("Kurtarma hatası:", retryErr.message);
       }
     }
 
-    // HER ŞEYE RAĞMEN CEVAP YOKSA (En son çare)
-    if (!finalReply || finalReply.trim() === "") {
-      finalReply = corporateFallback(lang);
+    if (!reply || reply.trim() === "") {
+      reply = corporateFallback(lang);
     }
 
-    // WHATSAPP'A GÖNDER VE GEÇMİŞE KAYDET
-    session.history.push({ role: "model", text: finalReply });
-    await sendMessage(from, finalReply);
+    session.history.push({ role: "model", text: reply });
+    await sendMessage(from, reply);
 
     return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("❌ Webhook Hatası:", err.message);
+    if (!res.headersSent) {
+      res.sendStatus(200);
+    }
+  }
+}); 
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
