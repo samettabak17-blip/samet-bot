@@ -85,24 +85,12 @@ async function callGemini(prompt) {
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048
-        }
+        ]
       }
     );
-
-    // Yanıt yolunu en güvenli şekilde kontrol ediyoruz
-    const candidates = response.data?.candidates;
-    if (candidates && candidates.length > 0 && candidates[0].content?.parts?.[0]?.text) {
-      return candidates[0].content.parts[0].text;
-    }
-    
-    // Eğer Google filtreye takarsa veya boş dönerse boş string döndür
-    return ""; 
+    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
   } catch (error) {
-    console.error("❌ API ERROR:", error.response?.data || error.message);
+    console.error("API Call Error:", error.message);
     return "";
   }
 }
@@ -1382,36 +1370,48 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-// --- GEMINI ÇAĞRISI VE SİGORTA ---
-    let finalAnswer = "";
+// --- GEMINI ÇAĞRISI VE %100 ÇALIŞMA GARANTİLİ KURTARMA ---
+    let finalReply = "";
 
     try {
-      // 1. Deneme
-      finalAnswer = await callGemini(fullPrompt);
-    } catch (e) {
-      console.log("İlk deneme hatası");
+      // 1. Deneme: Orijinal fullPrompt ile
+      const firstAttempt = await callGemini(fullPrompt);
+      finalReply = firstAttempt;
+    } catch (err) {
+      console.error("❌ Gemini İlk Deneme Hatası:", err.message);
     }
 
-    // EĞER BOŞ DÖNERSE (Kurtarma Modu)
-    if (!finalAnswer || finalAnswer.trim() === "") {
-      console.log("⚠️ Bot sustu, zorla konuşturma modu başlatılıyor...");
-      
-      // Çok sade bir prompt
+    // Eğer ilk deneme boş dönerse (Filtre/Hata durumu)
+    if (!finalReply || finalReply.trim() === "") {
+      console.log("⚠️ UYARI: Gemini boş döndü. Kurtarma modu başlatılıyor...");
       const recoveryPrompt = `Sen profesyonel bir asistansın. Kullanıcının sorusuna ${lang} dilinde cevap ver: ${text}`;
-      finalAnswer = await callGemini(recoveryPrompt);
+      
+      try {
+        finalReply = await callGemini(recoveryPrompt);
+      } catch (retryErr) {
+        console.error("❌ Kurtarma denemesi de başarısız:", retryErr.message);
+      }
     }
 
-    // HALA BOŞSA (En son çare - Manuel mesaj)
-    if (!finalAnswer || finalAnswer.trim() === "") {
-      console.log("❌ Tamamen başarısız, fallback gönderiliyor.");
-      finalAnswer = corporateFallback(lang);
+    // Her şeye rağmen boşsa Fallback gönder
+    if (!finalReply || finalReply.trim() === "") {
+      finalReply = corporateFallback(lang);
     }
 
-    // WHATSAPP'A GÖNDER
-    session.history.push({ role: "model", text: finalAnswer });
-    await sendMessage(from, finalAnswer);
+    // Mesajı kaydet ve gönder
+    session.history.push({ role: "model", text: finalReply });
+    await sendMessage(from, finalReply);
 
     return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("❌ Webhook Genel Hatası:", err.message);
+    if (!res.headersSent) {
+      return res.sendStatus(200);
+    }
+  }
+});
+
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
