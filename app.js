@@ -14,8 +14,8 @@ const cron = require("node-cron");
 // =====================================================
 const REQUIRED_ENV = [
   "VERIFY_TOKEN",
-  "META_TOKEN",
-  "PHONE_NUMBER_ID",
+  "WHATSAPP_TOKEN",
+  "WHATSAPP_PHONE_ID",
   "OPENAI_API_KEY"
 ];
 
