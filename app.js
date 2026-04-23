@@ -1389,23 +1389,19 @@ ${text}
     // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-    const reply = await callGemini(prompt);
+   let reply = await callGemini(fullContext);
 
-    if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
+    // Eğer hala boş dönüyorsa, tüm geçmişi silip sadece soruyu sor (Zorla konuşturma)
+    if (!reply || reply.trim() === "") {
+        console.log("🔄 Boş yanıt için acil durum modu (Retry) başlatılıyor...");
+        const emergencyPrompt = `Answer this user question in ${lang} language briefly: ${text}`;
+        reply = await callGemini(emergencyPrompt);
     }
 
-    session.history.push({ role: "assistant", text: reply });
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
+    if (!reply) {
+        await sendMessage(from, corporateFallback(lang));
+        return res.sendStatus(200);
+    }
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
