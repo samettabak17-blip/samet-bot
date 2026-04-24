@@ -1,13 +1,13 @@
 {
-  "name": "samche-gpt5-bot",
+  "name": "samche-bot",
   "version": "1.0.0",
-  "type": "module",
+  "description": "SamChe Intelligence Core Bot",
   "main": "app.js",
   "scripts": {
     "start": "node app.js"
   },
   "dependencies": {
-    "axios": "^1.6.7",
+    "axios": "^1.6.8",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "node-cron": "^3.0.3"
