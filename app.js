@@ -1,7 +1,7 @@
 // =====================================================
-// SAMCHE MASTER RULE APP.JS
-// PART A
-// FOUNDATION + ENV + SERVER + MEMORY + LANGUAGE ENGINE
+// FULL STABLE PRO APP.JS
+// PART 1
+// IMPORTS + ENV + SERVER + HELPERS
 // =====================================================
 
 require("dotenv").config();
@@ -12,7 +12,7 @@ const http = require("http");
 const cron = require("node-cron");
 
 // =====================================================
-// ENV VALIDATION
+// ENV CHECK
 // =====================================================
 
 const REQUIRED_ENV = [
@@ -33,17 +33,15 @@ for (const key of REQUIRED_ENV) {
 // CONFIG
 // =====================================================
 
-const PORT = process.env.PORT || 10000;
+const PORT = Number(process.env.PORT || 10000);
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
 const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 
-const GPT_MODEL = process.env.OPENAI_MODEL || "gpt-5-mini";
-
-const ADMIN_NUMBER =
-  process.env.ADMIN_NUMBER || "";
+const GPT_MODEL =
+  process.env.OPENAI_MODEL || "gpt-5-mini";
 
 // =====================================================
 // APP
@@ -57,8 +55,7 @@ app.use(
   })
 );
 
-const server =
-  http.createServer(app);
+const server = http.createServer(app);
 
 // =====================================================
 // HELPERS
@@ -75,9 +72,7 @@ function log(...args) {
   );
 }
 
-function normalizeText(
-  text = ""
-) {
+function normalizeText(text = "") {
   return String(text)
     .toLowerCase()
     .trim()
@@ -92,23 +87,35 @@ function normalizeText(
     .trim();
 }
 
-function digitsOnly(
-  value = ""
-) {
-  return String(value)
-    .replace(/\D/g, "");
+function safeText(value = "") {
+  return String(value).trim().slice(0, 3000);
 }
 
 // =====================================================
-// SESSION MEMORY
+// HEALTHCHECK
 // =====================================================
 
-const sessions =
-  new Map();
+app.get("/", (req, res) => {
+  res.status(200).json({
+    success: true,
+    bot: "FULL STABLE PRO",
+    status: "online"
+  });
+});
 
-function createSession(
-  userId
-) {
+// =====================================================
+// FULL STABLE PRO APP.JS
+// PART 2
+// SESSION + LANGUAGE + GREETING
+// =====================================================
+
+// =====================================================
+// MEMORY
+// =====================================================
+
+const sessions = new Map();
+
+function createSession(userId) {
   return {
     userId,
 
@@ -117,118 +124,48 @@ function createSession(
     lastMessageAt: now(),
 
     greeted: false,
-
     language: "tr",
 
     topic: "general",
-    subTopic: null,
-
-    lastIntent: null,
-
-    sector: null,
-    visaNeed: null,
-    budget: null,
-
-    residencyChoice:
-      null,
 
     history: [],
 
-    liveRequestCount: 0,
-
     ping10Sent: false,
     ping3hSent: false,
-    ping24hSent: false,
-
-    duplicateText:
-      null,
-    duplicateAt: 0
+    ping24hSent: false
   };
 }
 
-function getSession(
-  userId
-) {
-  if (
-    !sessions.has(
-      userId
-    )
-  ) {
+function getSession(userId) {
+  if (!sessions.has(userId)) {
     sessions.set(
       userId,
-      createSession(
-        userId
-      )
+      createSession(userId)
     );
   }
 
-  const s =
-    sessions.get(
-      userId
-    );
+  const s = sessions.get(userId);
 
-  s.updatedAt =
-    now();
-
-  s.lastMessageAt =
-    now();
+  s.updatedAt = now();
+  s.lastMessageAt = now();
 
   return s;
 }
 
-function remember(
-  session,
-  role,
-  text
-) {
+function remember(session, role, text) {
   session.history.push({
     role,
     text,
     at: now()
   });
 
-  if (
-    session.history
-      .length > 15
-  ) {
+  if (session.history.length > 10) {
     session.history.shift();
   }
 }
 
 // =====================================================
-// DUPLICATE SHIELD
-// =====================================================
-
-function isDuplicate(
-  session,
-  text
-) {
-  const clean =
-    normalizeText(
-      text
-    );
-
-  const same =
-    clean ===
-    session.duplicateText;
-
-  const recent =
-    now() -
-      session.duplicateAt <
-    5000;
-
-  session.duplicateText =
-    clean;
-
-  session.duplicateAt =
-    now();
-
-  return same && recent;
-}
-
-// =====================================================
 // LANGUAGE ENGINE
-// Strong detection
 // =====================================================
 
 function detectLanguage(
@@ -239,11 +176,9 @@ function detectLanguage(
     return previous;
   }
 
-  // Arabic
+  // Arabic letters
   if (
-    /[\u0600-\u06FF]/.test(
-      text
-    )
+    /[\u0600-\u06FF]/.test(text)
   ) {
     return "ar";
   }
@@ -251,7 +186,7 @@ function detectLanguage(
   const raw =
     String(text).toLowerCase();
 
-  const t =
+  const clean =
     normalizeText(text);
 
   let tr = 0;
@@ -259,41 +194,37 @@ function detectLanguage(
 
   const trWords = [
     "merhaba",
-    "nasil",
     "sirket",
     "oturum",
     "vize",
-    "ucret",
     "fiyat",
+    "ucret",
+    "nasil",
     "istiyorum",
-    "dubai",
     "yardim"
   ];
 
   const enWords = [
     "hello",
-    "hi",
     "company",
     "visa",
     "residency",
     "price",
     "cost",
+    "how",
     "want",
-    "help",
-    "dubai"
+    "help"
   ];
 
   for (const w of trWords) {
-    if (t.includes(w)) tr++;
+    if (clean.includes(w)) tr++;
   }
 
   for (const w of enWords) {
     if (raw.includes(w)) en++;
   }
 
-  if (
-    /[çğıöşü]/i.test(text)
-  ) {
+  if (/[çğıöşü]/i.test(text)) {
     tr += 5;
   }
 
@@ -312,13 +243,11 @@ function detectLanguage(
 // GREETING
 // =====================================================
 
-function greeting(
-  lang = "tr"
-) {
+function greeting(lang = "tr") {
   if (lang === "en") {
     return `Hello, I’m here to assist you on behalf of SamChe Company LLC.
 
-I can help with company formation in Dubai, business plans, residency options, visas, costs and advisory services. How may I assist you today?`;
+I can help with company setup in Dubai, residency options, visas, costs and advisory services. How may I assist you today?`;
   }
 
   if (lang === "ar") {
@@ -332,65 +261,39 @@ Dubai’de şirket kuruluşu, iş planları, oturum seçenekleri, vizeler, maliy
 }
 
 // =====================================================
-// PREMIUM FALLBACK
+// SAFE FALLBACK
 // =====================================================
 
-function fallback(
-  lang = "tr"
-) {
+function fallback(lang = "tr") {
   if (lang === "en") {
-    return `To provide you with the most accurate guidance, could you clarify your request a little further?`;
+    return "Could you clarify your request so I can guide you accurately?";
   }
 
   if (lang === "ar") {
-    return `لأتمكن من تقديم الإرشاد الأنسب لكم، هل يمكن توضيح طلبكم بشكل أدق؟`;
+    return "هل يمكن توضيح طلبكم حتى أتمكن من مساعدتكم بدقة؟";
   }
 
-  return `Size en doğru bilgiyi sunabilmem için konuyu biraz daha netleştirebilir misiniz?`;
+  return "Size doğru yönlendirme yapabilmem için talebinizi biraz daha netleştirebilir misiniz?";
 }
 
 // =====================================================
-// HEALTHCHECK
+// FULL STABLE PRO APP.JS
+// PART 3
+// RULES + GPT + WEBHOOK
 // =====================================================
 
-app.get("/", (req, res) => {
-  res.json({
-    success: true,
-    bot: "SAMCHE MASTER RULE",
-    sessions:
-      sessions.size
-  });
-});
-
 // =====================================================
-// SAMCHE MASTER RULE APP.JS
-// PART B
 // RULE ENGINE
-// RESIDENCY + COMPANY + TRUST + HUMAN + PAYMENT
 // =====================================================
 
-// =====================================================
-// INTENT DETECTION
-// =====================================================
-
-function detectIntent(text) {
+function detectTopic(text) {
   const t = normalizeText(text);
-
-  // AI priority
-  if (
-    t.includes("ai") ||
-    t.includes("chatbot") ||
-    t.includes("yapay zeka") ||
-    t.includes("otomasyon")
-  ) {
-    return "ai";
-  }
 
   if (
     t.includes("oturum") ||
-    t.includes("residency") ||
     t.includes("visa") ||
     t.includes("vize") ||
+    t.includes("residency") ||
     t.includes("sponsorlu")
   ) {
     return "residency";
@@ -400,46 +303,39 @@ function detectIntent(text) {
     t.includes("sirket") ||
     t.includes("company") ||
     t.includes("mainland") ||
-    t.includes("freezone") ||
-    t.includes("free zone")
+    t.includes("freezone")
   ) {
     return "company";
   }
 
   if (
-    t.includes("guven") ||
-    t.includes("güven") ||
-    t.includes("real mi") ||
-    t.includes("dolandir")
+    t.includes("fiyat") ||
+    t.includes("maliyet") ||
+    t.includes("ucret") ||
+    t.includes("price")
   ) {
-    return "trust";
-  }
-
-  if (
-    t.includes("odeme") ||
-    t.includes("payment") ||
-    t.includes("evrak")
-  ) {
-    return "payment";
-  }
-
-  if (
-    t.includes("canli") ||
-    t.includes("temsilci") ||
-    t.includes("human") ||
-    t.includes("yetkili")
-  ) {
-    return "human";
+    return "price";
   }
 
   return "general";
 }
 
-// =====================================================
-// RESIDENCY RULES
-// =====================================================
+function residencyReply(lang = "tr", text = "") {
+  const t = normalizeText(text);
 
-function residencyMain(lang = "tr") {
+  if (
+    t.includes("sponsorlu")
+  ) {
+    if (lang === "en") {
+      return `Sponsored residency is a practical option to live in Dubai without opening your own company. Approximate packages start from 13,000 AED. Would you like timeline or document details?`;
+    }
+
+    if (lang === "ar") {
+      return `الإقامة بالرعاية خيار عملي للعيش في دبي دون تأسيس شركة. تبدأ الباقات التقريبية من 13,000 درهم. هل ترغبون بمعرفة المدة أو المستندات؟`;
+    }
+
+    return `Sponsorlu oturum, kendi şirketinizi kurmadan Dubai’de yaşamak isteyenler için pratik bir seçenektir. Paketler genel olarak 13.000 AED seviyesinden başlar. Süreç veya evrak detaylarını ister misiniz?`;
+  }
 
   if (lang === "en") {
     return `There are 3 common residency options in Dubai:
@@ -448,7 +344,7 @@ function residencyMain(lang = "tr") {
 • Residency through real estate investment
 • Residency by establishing your own company
 
-Which option would you like to explore?`;
+Which option interests you most?`;
   }
 
   if (lang === "ar") {
@@ -458,7 +354,7 @@ Which option would you like to explore?`;
 • إقامة عبر الاستثمار العقاري
 • إقامة من خلال تأسيس شركة
 
-ما الخيار الذي ترغبون بمعرفته؟`;
+ما الخيار الأقرب لكم؟`;
   }
 
   return `Dubai’de genel olarak 3 ana oturum seçeneği bulunmaktadır:
@@ -470,223 +366,37 @@ Which option would you like to explore?`;
 Hangi seçenekle ilgileniyorsunuz?`;
 }
 
-function sponsoredFlow(lang = "tr") {
-
+function companyReply(lang = "tr") {
   if (lang === "en") {
-    return `Sponsored residency is a practical option for living in Dubai without opening your own company.
-
-A sponsoring company supports your 2-year residency process. Approximate total package starts from 13,000 AED.
-
-Would you like timeline or required documents?`;
+    return `Dubai company setup is generally structured through Mainland and Free Zone models. The best option depends on your sector and visa needs. Which sector are you planning for?`;
   }
 
   if (lang === "ar") {
-    return `الإقامة بالرعاية خيار عملي للعيش في دبي دون تأسيس شركة.
-
-تقوم شركة راعية بدعم إجراءات إقامة لمدة سنتين. تبدأ التكلفة التقريبية من 13,000 درهم.
-
-هل ترغبون بمعرفة المدة أو المستندات؟`;
+    return `يتم تأسيس الشركات في دبي غالباً عبر البر الرئيسي أو المنطقة الحرة. يعتمد الخيار الأفضل على النشاط وعدد التأشيرات. ما هو نشاطكم؟`;
   }
 
-  return `Sponsorlu oturum, kendi şirketinizi kurmadan Dubai’de yasal şekilde yaşamak isteyenler için tercih edilen çözümlerden biridir.
-
-Sponsor firma 2 yıllık oturum sürecini destekler. Toplam süreç maliyeti genel olarak 13.000 AED seviyesinden başlamaktadır.
-
-İsterseniz süre veya gerekli evrak listesini de paylaşabilirim.`;
-}
-
-function familyVisa(lang = "tr") {
-
-  if (lang === "en") {
-    return `Family visa options may be added after your residency becomes active.
-
-• Child visa: from 4,500 AED
-• Spouse visa: from 6,000 AED
-
-Would you like spouse or child details?`;
-  }
-
-  if (lang === "ar") {
-    return `يمكن إضافة تأشيرات عائلية بعد تفعيل الإقامة.
-
-• تأشيرة الطفل تبدأ من 4,500 درهم
-• تأشيرة الزوج/الزوجة تبدأ من 6,000 درهم
-
-هل ترغبون بتفاصيل أكثر؟`;
-  }
-
-  return `Aile vizesi seçenekleri oturum aktif olduktan sonra eklenebilir.
-
-• Çocuk vizesi: 4.500 AED’den başlayan seviyeler
-• Eş vizesi: 6.000 AED’den başlayan seviyeler
-
-Eş veya çocuk için hangisiyle ilgileniyorsunuz?`;
+  return `Dubai’de şirket kuruluşu genellikle Mainland ve Free Zone modelleri üzerinden planlanır. En doğru yapı sektörünüze ve vize ihtiyacınıza göre belirlenir. Hangi sektörde faaliyet göstermek istiyorsunuz?`;
 }
 
 // =====================================================
-// COMPANY RULES
+// GPT SUPPORT
 // =====================================================
-
-function companyMain(lang = "tr") {
-
-  if (lang === "en") {
-    return `Dubai company setup is generally structured through two main models:
-
-• Mainland Company
-• Free Zone Company
-
-The correct structure depends on your sector and visa needs. Which sector are you planning to operate in?`;
-  }
-
-  if (lang === "ar") {
-    return `يتم تأسيس الشركات في دبي غالباً عبر نموذجين رئيسيين:
-
-• شركة البر الرئيسي
-• شركة المنطقة الحرة
-
-يعتمد الخيار المناسب على القطاع وعدد التأشيرات. ما هو نشاطكم؟`;
-  }
-
-  return `Dubai’de şirket kuruluşu genel olarak iki ana model üzerinden planlanır:
-
-• Mainland Company
-• Free Zone Company
-
-En doğru yapı sektörünüze ve vize ihtiyacınıza göre belirlenir. Hangi sektörde faaliyet göstermek istiyorsunuz?`;
-}
-
-function companyCost(lang = "tr") {
-  if (lang === "en") {
-    return `Company setup costs vary based on sector, number of visas, and selected jurisdiction. If you share your activity and visa need, I can explain realistic ranges.`;
-  }
-
-  if (lang === "ar") {
-    return `تكلفة تأسيس الشركة تختلف حسب النشاط وعدد التأشيرات والمنطقة المختارة. إذا ذكرتم النشاط وعدد التأشيرات يمكنني توضيح النطاق التقريبي.`;
-  }
-
-  return `Şirket kurulum maliyeti; sektör, vize adedi ve seçilecek bölgeye göre değişmektedir. Faaliyet alanınızı ve kaç vize gerektiğini paylaşırsanız daha gerçekçi aralık verebilirim.`;
-}
-
-// =====================================================
-// TRUST RULES
-// =====================================================
-
-function trustReply(lang = "tr") {
-
-  if (lang === "en") {
-    return `SamChe Company LLC operates with a professional and transparent service approach. Processes are handled clearly, legally, and with structured communication. Which service are you evaluating currently?`;
-  }
-
-  if (lang === "ar") {
-    return `تعمل SamChe Company LLC بمنهج مهني وشفاف، مع وضوح في الإجراءات والتواصل. ما الخدمة التي تقومون بتقييمها حالياً؟`;
-  }
-
-  return `SamChe Company LLC profesyonel ve şeffaf hizmet anlayışıyla çalışmaktadır. Süreçler açık iletişim ve düzenli planlama ile yürütülür. Şu anda hangi hizmeti değerlendiriyorsunuz?`;
-}
-
-// =====================================================
-// HUMAN RULES
-// =====================================================
-
-function humanReply(lang = "tr") {
-
-  if (lang === "en") {
-    return `Before directing you to a live consultant, I’d like to clarify a few important details so the process progresses correctly. Are you asking about company setup, residency, or another topic?`;
-  }
-
-  if (lang === "ar") {
-    return `قبل توجيهكم إلى مستشار مباشر، أود توضيح بعض التفاصيل المهمة حتى يسير الأمر بالشكل الصحيح. هل استفساركم عن تأسيس شركة أم إقامة أم موضوع آخر؟`;
-  }
-
-  return `Canlı temsilciye yönlendirmeden önce, sürecin sizin için doğru ilerlemesi adına birkaç önemli detayı netleştirmem gerekiyor. Şirket kuruluşu, oturum veya farklı bir konu hakkında mı bilgi almak istiyorsunuz?`;
-}
-
-// =====================================================
-// PAYMENT RULES
-// =====================================================
-
-function paymentReply(lang = "tr") {
-
-  const bank = `
-Account holder: SamChe Company LLC
-Account Type: USD $
-Account number: 9726414926
-IBAN: AE210860000009726414926
-BIC: WIOBAEADXXX`;
-
-  if (lang === "en") {
-    return `Thank you. Since you are ready to proceed, I’m sharing our payment details below:
-
-${bank}`;
-  }
-
-  if (lang === "ar") {
-    return `شكراً لكم. بما أنكم جاهزون للبدء، أشارك معكم بيانات الدفع أدناه:
-
-${bank}`;
-  }
-
-  return `Teşekkür ederim. Sürece başlamaya hazır olduğunuz için ödeme bilgilerini aşağıda paylaşıyorum:
-
-${bank}`;
-
-  // =====================================================
-// SAMCHE MASTER RULE APP.JS
-// PART C
-// MAIN BRAIN + GPT + WEBHOOK + FOLLOW-UP + STARTUP
-// =====================================================
-
-// =====================================================
-// GPT SUPPORT LAYER
-// Used only when no hard rule matches
-// =====================================================
-
-function systemPrompt(lang = "tr") {
-  if (lang === "en") {
-    return `
-You are SamChe Company LLC's premium consultant.
-
-Rules:
-- Reply only in English.
-- Professional and confident tone.
-- Expert in Dubai company setup and residency.
-- Never redirect users elsewhere.
-- Give useful, clear answers.
-- End naturally with a short question.
-`;
-  }
-
-  if (lang === "ar") {
-    return `
-أنت المستشار الرسمي لشركة SamChe Company LLC.
-
-القواعد:
-- الرد بالعربية فقط.
-- نبرة احترافية وواضحة.
-- خبير في تأسيس الشركات والإقامة في دبي.
-- لا تقم بتوجيه المستخدم إلى جهات أخرى.
-`;
-  }
-
-  return `
-Sen SamChe Company LLC'nin premium danışmanısın.
-
-Kurallar:
-- Türkçe yazana sadece Türkçe cevap ver.
-- Profesyonel ve güven veren konuş.
-- Dubai şirket kuruluşu ve oturum konularında uzman gibi davran.
-- Kullanıcıyı başka yere yönlendirme.
-- Açıklayıcı cevap ver.
-- Sonunda kısa doğal soru sor.
-`;
-}
 
 async function askGPT(session, userText) {
   try {
+    const lang = session.language;
+
+    const system =
+      lang === "en"
+        ? "You are a professional Dubai company setup consultant. Reply only in English."
+        : lang === "ar"
+        ? "أنت مستشار احترافي لتأسيس الشركات في دبي. أجب بالعربية فقط."
+        : "Sen profesyonel Dubai şirket kuruluş danışmanısın. Sadece Türkçe cevap ver.";
+
     const messages = [
       {
         role: "system",
-        content: systemPrompt(session.language)
+        content: system
       }
     ];
 
@@ -702,31 +412,37 @@ async function askGPT(session, userText) {
       content: userText
     });
 
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: GPT_MODEL,
-        messages,
-        temperature: 0.45,
-        max_tokens: 500
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
+    const response =
+      await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model: GPT_MODEL,
+          messages,
+          temperature: 0.4,
+          max_tokens: 400
         },
-        timeout: 45000
-      }
+        {
+          headers: {
+            Authorization:
+              `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type":
+              "application/json"
+          }
+        }
+      );
+
+    return (
+      response.data
+        ?.choices?.[0]
+        ?.message?.content ||
+      fallback(lang)
     );
-
-    const text =
-      response.data?.choices?.[0]?.message?.content?.trim();
-
-    return text || fallback(session.language);
 
   } catch (error) {
     log("GPT ERROR:", error.message);
-    return fallback(session.language);
+    return fallback(
+      session.language
+    );
   }
 }
 
@@ -735,111 +451,78 @@ async function askGPT(session, userText) {
 // =====================================================
 
 async function buildReply(session, userText) {
+  session.language =
+    detectLanguage(
+      userText,
+      session.language
+    );
 
-  session.language = detectLanguage(
-    userText,
-    session.language
-  );
-
-  const clean = normalizeText(userText);
-
-  if (isDuplicate(session, clean)) {
-    return null;
-  }
-
-  // First greeting
   if (!session.greeted) {
     session.greeted = true;
+    return greeting(
+      session.language
+    );
+  }
 
-    const msg = greeting(session.language);
+  remember(
+    session,
+    "user",
+    userText
+  );
 
-    remember(session, "assistant", msg);
+  session.topic =
+    detectTopic(
+      userText
+    );
+
+  if (
+    session.topic ===
+    "residency"
+  ) {
+    const msg =
+      residencyReply(
+        session.language,
+        userText
+      );
+
+    remember(
+      session,
+      "assistant",
+      msg
+    );
 
     return msg;
   }
 
-  remember(session, "user", userText);
+  if (
+    session.topic ===
+    "company"
+  ) {
+    const msg =
+      companyReply(
+        session.language
+      );
 
-  const intent = detectIntent(clean);
+    remember(
+      session,
+      "assistant",
+      msg
+    );
 
-  session.lastIntent = intent;
-  session.topic = intent;
-
-  // ---------------------------------------------
-  // HARD RULES
-  // ---------------------------------------------
-
-  if (intent === "residency") {
-
-    if (
-      clean.includes("sponsorlu") ||
-      clean.includes("sponsor")
-    ) {
-      const msg = sponsoredFlow(session.language);
-      remember(session, "assistant", msg);
-      return msg;
-    }
-
-    if (
-      clean.includes("aile") ||
-      clean.includes("family") ||
-      clean.includes("es") ||
-      clean.includes("cocuk")
-    ) {
-      const msg = familyVisa(session.language);
-      remember(session, "assistant", msg);
-      return msg;
-    }
-
-    const msg = residencyMain(session.language);
-    remember(session, "assistant", msg);
     return msg;
   }
 
-  if (intent === "company") {
+  const msg =
+    await askGPT(
+      session,
+      userText
+    );
 
-    if (
-      clean.includes("fiyat") ||
-      clean.includes("maliyet") ||
-      clean.includes("ucret")
-    ) {
-      const msg = companyCost(session.language);
-      remember(session, "assistant", msg);
-      return msg;
-    }
-
-    const msg = companyMain(session.language);
-    remember(session, "assistant", msg);
-    return msg;
-  }
-
-  if (intent === "trust") {
-    const msg = trustReply(session.language);
-    remember(session, "assistant", msg);
-    return msg;
-  }
-
-  if (intent === "human") {
-    session.liveRequestCount += 1;
-
-    const msg = humanReply(session.language);
-    remember(session, "assistant", msg);
-    return msg;
-  }
-
-  if (intent === "payment") {
-    const msg = paymentReply(session.language);
-    remember(session, "assistant", msg);
-    return msg;
-  }
-
-  // ---------------------------------------------
-  // GPT SUPPORT
-  // ---------------------------------------------
-
-  const msg = await askGPT(session, userText);
-
-  remember(session, "assistant", msg);
+  remember(
+    session,
+    "assistant",
+    msg
+  );
 
   return msg;
 }
@@ -853,7 +536,8 @@ async function sendWhatsAppMessage(to, body) {
     await axios.post(
       `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_ID}/messages`,
       {
-        messaging_product: "whatsapp",
+        messaging_product:
+          "whatsapp",
         to,
         type: "text",
         text: {
@@ -863,31 +547,45 @@ async function sendWhatsAppMessage(to, body) {
       },
       {
         headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
+          Authorization:
+            `Bearer ${WHATSAPP_TOKEN}`,
+          "Content-Type":
+            "application/json"
         }
       }
     );
-
   } catch (error) {
     log("SEND ERROR:", error.message);
   }
 }
 
 // =====================================================
+// FULL STABLE PRO APP.JS
+// PART 4
+// WEBHOOK + CRON + STARTUP
+// =====================================================
+
+// =====================================================
 // WEBHOOK VERIFY
 // =====================================================
 
 app.get("/webhook", (req, res) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+  const mode =
+    req.query["hub.mode"];
+
+  const token =
+    req.query["hub.verify_token"];
+
+  const challenge =
+    req.query["hub.challenge"];
 
   if (
     mode === "subscribe" &&
     token === VERIFY_TOKEN
   ) {
-    return res.status(200).send(challenge);
+    return res
+      .status(200)
+      .send(challenge);
   }
 
   return res.sendStatus(403);
@@ -910,97 +608,172 @@ app.post("/webhook", async (req, res) => {
     if (msg.type !== "text") return;
 
     const from = msg.from;
-    const text = msg.text?.body || "";
+    const text =
+      safeText(
+        msg.text?.body || ""
+      );
 
-    const session = getSession(from);
+    if (!from || !text) return;
 
+    const session =
+      getSession(from);
+
+    // reset ping flags
     session.ping10Sent = false;
     session.ping3hSent = false;
     session.ping24hSent = false;
 
-    const reply = await buildReply(session, text);
+    const reply =
+      await buildReply(
+        session,
+        text
+      );
 
     if (!reply) return;
 
-    await sendWhatsAppMessage(from, reply);
+    await sendWhatsAppMessage(
+      from,
+      reply
+    );
 
   } catch (error) {
-    log("WEBHOOK ERROR:", error.message);
+    log(
+      "WEBHOOK ERROR:",
+      error.message
+    );
   }
 });
 
 // =====================================================
-// FOLLOW-UP PINGS
+// FOLLOW-UP CRON
+// Every minute
 // =====================================================
 
 cron.schedule("* * * * *", async () => {
   try {
-    const current = now();
+    const current =
+      now();
 
-    for (const [id, s] of sessions) {
+    for (const [
+      id,
+      s
+    ] of sessions) {
+      const diff =
+        current -
+        s.lastMessageAt;
 
-      const diff = current - s.lastMessageAt;
-      const mins = diff / 60000;
-      const hrs = diff / 3600000;
+      const mins =
+        diff / 60000;
+
+      const hrs =
+        diff / 3600000;
 
       let msg = null;
 
-      if (mins >= 10 && !s.ping10Sent) {
+      // 10 min
+      if (
+        mins >= 10 &&
+        !s.ping10Sent
+      ) {
         s.ping10Sent = true;
 
-        if (s.topic === "company") {
-          msg = s.language === "en"
-            ? "If your company plan is still active, I can help you choose the right structure."
-            : "Şirket planınız devam ediyorsa size uygun yapıyı belirlemenize yardımcı olabilirim.";
+        if (
+          s.topic ===
+          "company"
+        ) {
+          msg =
+            s.language ===
+            "en"
+              ? "If your company plan is still active, I can help you choose the right structure."
+              : s.language ===
+                "ar"
+              ? "إذا كانت خطة الشركة ما زالت قائمة يمكنني مساعدتكم في اختيار الهيكل المناسب."
+              : "Şirket planınız devam ediyorsa size uygun yapıyı belirlemenize yardımcı olabilirim.";
         }
 
-        else if (s.topic === "residency") {
-          msg = s.language === "en"
-            ? "If your residency plan is still active, I can explain the best route for you."
-            : "Oturum planınız devam ediyorsa size en uygun seçeneği açıklayabilirim.";
+        else if (
+          s.topic ===
+          "residency"
+        ) {
+          msg =
+            s.language ===
+            "en"
+              ? "If your residency plan is still active, I can explain the best option for you."
+              : s.language ===
+                "ar"
+              ? "إذا كانت خطة الإقامة ما زالت قائمة يمكنني توضيح الخيار الأنسب لكم."
+              : "Oturum planınız devam ediyorsa size en uygun seçeneği açıklayabilirim.";
         }
 
         else {
-          msg = s.language === "en"
-            ? "Whenever you're ready, we can continue."
-            : "Hazır olduğunuzda devam edebiliriz.";
+          msg =
+            s.language ===
+            "en"
+              ? "Whenever you're ready, we can continue."
+              : s.language ===
+                "ar"
+              ? "يمكننا المتابعة متى شئتم."
+              : "Hazır olduğunuzda devam edebiliriz.";
         }
       }
 
-      else if (hrs >= 3 && !s.ping3hSent) {
+      // 3 hour
+      else if (
+        hrs >= 3 &&
+        !s.ping3hSent
+      ) {
         s.ping3hSent = true;
 
-        msg = s.language === "en"
-          ? "We can continue whenever you'd like."
-          : "Dilediğiniz zaman devam edebiliriz.";
+        msg =
+          s.language ===
+          "en"
+            ? "We can continue whenever you'd like."
+            : s.language ===
+              "ar"
+            ? "يمكننا المتابعة في أي وقت يناسبكم."
+            : "Dilediğiniz zaman devam edebiliriz.";
       }
 
-      else if (hrs >= 24 && !s.ping24hSent) {
+      // 24 hour
+      else if (
+        hrs >= 24 &&
+        !s.ping24hSent
+      ) {
         s.ping24hSent = true;
 
-        msg = s.language === "en"
-          ? "I’ll be happy to assist whenever you're ready."
-          : "Hazır olduğunuzda memnuniyetle yardımcı olabilirim.";
+        msg =
+          s.language ===
+          "en"
+            ? "I’ll be happy to assist whenever you're ready."
+            : s.language ===
+              "ar"
+            ? "سأكون سعيداً بمساعدتكم متى كنتم جاهزين."
+            : "Hazır olduğunuzda memnuniyetle yardımcı olabilirim.";
       }
 
       if (msg) {
-        await sendWhatsAppMessage(id, msg);
+        await sendWhatsAppMessage(
+          id,
+          msg
+        );
       }
     }
 
   } catch (error) {
-    log("CRON ERROR:", error.message);
+    log(
+      "CRON ERROR:",
+      error.message
+    );
   }
 });
 
 // =====================================================
-// START
+// START SERVER
 // =====================================================
 
 server.listen(PORT, () => {
-  log(`SAMCHE MASTER RULE STARTED ON ${PORT}`);
+  log(
+    `FULL STABLE PRO STARTED ON ${PORT}`
+  );
 });
-
-  
-}
 
