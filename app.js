@@ -10,6 +10,8 @@ const axios = require("axios");
 const http = require("http");
 const cron = require("node-cron");
 
+const PORT = process.env.PORT || 10000;
+
 const app = express();
 app.use(express.json({ limit: "10mb" }));
 
