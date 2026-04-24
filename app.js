@@ -455,37 +455,72 @@ Premium danışman gibi davran.
 // GPT RESPONSES API
 // =====================================================
 
+// =====================================================
+// DIAGNOSTIC VERSION
+// askGPT FUNCTION REPLACEMENT
+// PUT THIS OVER YOUR CURRENT askGPT()
+// =====================================================
+
 async function askGPT(
   session,
   userText
 ) {
   try {
-    let context =
-      "";
-
-    for (const h of session.history) {
-      context += `${h.role}: ${h.text}\n`;
-    }
-
-    const prompt =
+    const systemPrompt =
       buildSystemPrompt(
         session
-      ) +
-      "\n\nConversation:\n" +
-      context +
-      "\nUser: " +
-      userText;
+      );
+
+    const messages = [
+      {
+        role: "system",
+        content:
+          systemPrompt
+      }
+    ];
+
+    for (const h of session.history) {
+      messages.push({
+        role:
+          h.role,
+        content:
+          h.text
+      });
+    }
+
+    messages.push({
+      role: "user",
+      content:
+        userText
+    });
+
+    console.log(
+      "========== GPT REQUEST =========="
+    );
+
+    console.log(
+      "MODEL:",
+      MODEL
+    );
+
+    console.log(
+      "MESSAGES:",
+      JSON.stringify(
+        messages,
+        null,
+        2
+      )
+    );
 
     const response =
       await axios.post(
-        "https://api.openai.com/v1/responses",
+        "https://api.openai.com/v1/chat/completions",
         {
           model:
             MODEL,
-          input:
-            prompt,
+          messages,
           temperature: 0.4,
-          max_output_tokens: 550
+          max_tokens: 550
         },
         {
           headers: {
@@ -498,25 +533,67 @@ async function askGPT(
         }
       );
 
+    console.log(
+      "========== GPT RESPONSE =========="
+    );
+
+    console.log(
+      JSON.stringify(
+        response.data,
+        null,
+        2
+      )
+    );
+
     const text =
       response.data
-        ?.output?.[0]
-        ?.content?.[0]
-        ?.text
+        ?.choices?.[0]
+        ?.message
+        ?.content
         ?.trim();
 
     if (!text) {
+      console.log(
+        "GPT EMPTY TEXT"
+      );
       return "";
     }
+
+    console.log(
+      "GPT FINAL TEXT:",
+      text
+    );
 
     return text;
 
   } catch (error) {
-    log(
-      "GPT ERROR:",
+    console.log(
+      "========== GPT ERROR =========="
+    );
+
+    console.log(
+      "STATUS:",
       error.response
-        ?.data ||
-        error.message
+        ?.status
+    );
+
+    console.log(
+      "DATA:",
+      JSON.stringify(
+        error.response
+          ?.data,
+        null,
+        2
+      )
+    );
+
+    console.log(
+      "MESSAGE:",
+      error.message
+    );
+
+    console.log(
+      "================================"
     );
 
     return "";
