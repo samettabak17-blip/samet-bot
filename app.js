@@ -1,7 +1,7 @@
 // =====================================================
-// SAMCHE BOT - RESPONSES API FINAL
+// SAMCHE BOT - SINGLE CLEAN APP.JS
+// FINAL PRODUCTION VERSION
 // PART 1 / 3
-// ENV + SERVER + HEALTH
 // =====================================================
 
 require("dotenv").config({ override: false });
@@ -12,7 +12,7 @@ const http = require("http");
 const cron = require("node-cron");
 
 // =====================================================
-// ENV
+// ENV (ONLY ONCE)
 // =====================================================
 
 function env(name, fallback = "") {
@@ -25,23 +25,37 @@ const PORT = Number(
   env("PORT", "10000")
 );
 
-const OPENAI_API_KEY =
-  env("OPENAI_API_KEY");
-
-const WHATSAPP_TOKEN =
-  env("WHATSAPP_TOKEN");
-
-const WHATSAPP_PHONE_ID =
-  env("WHATSAPP_PHONE_ID");
-
-const VERIFY_TOKEN =
-  env("VERIFY_TOKEN");
-
 const MODEL =
   env(
     "OPENAI_MODEL",
     "gpt-4o-mini"
   );
+
+// IMPORTANT:
+// direct getter every time
+function getOpenAIKey() {
+  return env(
+    "OPENAI_API_KEY"
+  );
+}
+
+function getWAToken() {
+  return env(
+    "WHATSAPP_TOKEN"
+  );
+}
+
+function getPhoneId() {
+  return env(
+    "WHATSAPP_PHONE_ID"
+  );
+}
+
+function getVerifyToken() {
+  return env(
+    "VERIFY_TOKEN"
+  );
+}
 
 // =====================================================
 // STARTUP LOG
@@ -62,23 +76,14 @@ console.log(
 );
 
 console.log(
-  "OPENAI KEY:",
-  !!OPENAI_API_KEY
+  "OPENAI EXISTS:",
+  !!getOpenAIKey()
 );
 
 console.log(
   "OPENAI LEN:",
-  OPENAI_API_KEY.length
-);
-
-console.log(
-  "WA TOKEN:",
-  !!WHATSAPP_TOKEN
-);
-
-console.log(
-  "PHONE ID:",
-  !!WHATSAPP_PHONE_ID
+  getOpenAIKey()
+    .length
 );
 
 console.log(
@@ -212,70 +217,45 @@ function remember(
 }
 
 // =====================================================
+// SAMCHE BOT - SINGLE CLEAN APP.JS
+// PART 2 / 3
+// HEALTH + OPENAI + BRAIN
+// =====================================================
+
+// =====================================================
 // HEALTH
 // =====================================================
 
-app.get(
-  "/",
-  (
-    req,
-    res
-  ) => {
-    res.json({
-      ok: true,
-      model:
-        MODEL,
-      sessions:
-        sessions.size
-    });
-  }
-);
+app.get("/", (req, res) => {
+  res.json({
+    ok: true,
+    model: MODEL,
+    sessions: sessions.size
+  });
+});
 
-// =====================================================
-// SHOW ACTIVE KEY (DIAGNOSTIC)
-// =====================================================
+app.get("/show-key", (req, res) => {
+  const key = getOpenAIKey();
 
-app.get(
-  "/show-key",
-  (
-    req,
-    res
-  ) => {
-    res.json({
-      exists:
-        !!OPENAI_API_KEY,
-      len:
-        OPENAI_API_KEY.length,
-      first10:
-        OPENAI_API_KEY
-          ? OPENAI_API_KEY.slice(
-              0,
-              10
-            )
-          : null,
-      last6:
-        OPENAI_API_KEY
-          ? OPENAI_API_KEY.slice(
-              -6
-            )
-          : null,
-      model:
-        MODEL
-    });
-  }
-);
-
-// =====================================================
-// TEST OPENAI
-// =====================================================
+  res.json({
+    exists: !!key,
+    len: key.length,
+    first10: key
+      ? key.slice(0, 10)
+      : null,
+    last6: key
+      ? key.slice(-6)
+      : null
+  });
+});
 
 app.get(
   "/test-openai",
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
     try {
+      const key =
+        getOpenAIKey();
+
       const response =
         await axios.post(
           "https://api.openai.com/v1/responses",
@@ -291,7 +271,7 @@ app.get(
                 "application/json",
               Authorization:
                 "Bearer " +
-                OPENAI_API_KEY
+                key
             },
             timeout:
               30000
@@ -304,9 +284,7 @@ app.get(
           response.data
       });
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
       return res
         .status(500)
         .json({
@@ -321,13 +299,7 @@ app.get(
 );
 
 // =====================================================
-// SAMCHE BOT - RESPONSES API FINAL
-// PART 2 / 3
-// LANGUAGE + PROMPTS + OPENAI BRAIN
-// =====================================================
-
-// =====================================================
-// LANGUAGE DETECTION
+// LANGUAGE
 // =====================================================
 
 function detectLanguage(
@@ -346,10 +318,6 @@ function detectLanguage(
     return "ar";
   }
 
-  const raw =
-    String(text)
-      .toLowerCase();
-
   const t =
     normalizeText(
       text
@@ -359,7 +327,7 @@ function detectLanguage(
     /[çğıöşü]/i.test(
       text
     ) ||
-    /(merhaba|sirket|oturum|vize|maliyet|yardim|dubai)/.test(
+    /(merhaba|sirket|oturum|vize|maliyet)/.test(
       t
     )
   ) {
@@ -367,8 +335,8 @@ function detectLanguage(
   }
 
   if (
-    /(hello|company|visa|residency|cost|price|help|dubai)/.test(
-      raw
+    /(hello|company|visa|cost|dubai)/.test(
+      t
     )
   ) {
     return "en";
@@ -378,117 +346,7 @@ function detectLanguage(
 }
 
 // =====================================================
-// TEXTS
-// =====================================================
-
-function greeting(
-  lang
-) {
-  if (
-    lang === "en"
-  ) {
-    return `Hello, I’m here to assist you on behalf of SamChe Company LLC.
-
-I can help with Dubai company setup, residency, visas, costs and advisory services. How may I assist you today?`;
-  }
-
-  if (
-    lang === "ar"
-  ) {
-    return `مرحباً، أنا هنا لمساعدتكم نيابةً عن SamChe Company LLC.
-
-يمكنني مساعدتكم في تأسيس الشركات في دبي، الإقامة، التأشيرات والتكاليف. كيف يمكنني مساعدتكم اليوم؟`;
-  }
-
-  return `Merhaba, SamChe Company LLC adına size yardımcı olmak için buradayım.
-
-Dubai’de şirket kuruluşu, oturum seçenekleri, vizeler, maliyetler ve danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?`;
-}
-
-function fallback(
-  lang
-) {
-  if (
-    lang === "en"
-  ) {
-    return `Please share a little more detail so I can guide you accurately.`;
-  }
-
-  if (
-    lang === "ar"
-  ) {
-    return `يرجى paylaşın daha fazla detay حتى أتمكن من مساعدتكم بدقة.`;
-  }
-
-  return `Size en doğru yönlendirmeyi yapabilmem için talebinizi biraz daha detaylandırabilir misiniz?`;
-}
-
-// =====================================================
-// SYSTEM PROMPT
-// =====================================================
-
-function buildSystemPrompt(
-  lang
-) {
-  if (
-    lang === "en"
-  ) {
-    return `
-You are SamChe Company LLC senior Dubai consultant.
-
-Reply only in English.
-
-Be premium, clear, detailed and useful.
-
-Expertise:
-- Dubai company setup
-- Mainland vs Free Zone
-- Residency options
-- Visa procedures
-- Costs
-- Business growth
-
-Never return empty replies.
-Ask smart follow-up questions.
-`;
-  }
-
-  if (
-    lang === "ar"
-  ) {
-    return `
-أنت مستشار أول لدى SamChe Company LLC.
-
-أجب بالعربية فقط.
-
-كن واضحاً ومفيداً واحترافياً.
-لا تقدم ردود فارغة.
-`;
-  }
-
-  return `
-Sen SamChe Company LLC kıdemli Dubai danışmanısın.
-
-Sadece Türkçe cevap ver.
-
-Premium danışman gibi davran.
-Net, detaylı ve güven veren cevaplar ver.
-
-Uzmanlık:
-- Dubai şirket kurulumu
-- Mainland ve Free Zone
-- Oturum seçenekleri
-- Vizeler
-- Yaklaşık maliyetler
-- İş büyütme
-
-Boş cevap verme.
-Akıllı takip soruları sor.
-`;
-}
-
-// =====================================================
-// OPENAI RESPONSES CALL
+// GPT
 // =====================================================
 
 async function askGPT(
@@ -496,24 +354,23 @@ async function askGPT(
   userText
 ) {
   try {
-    const history =
-      session.history
-        .map(
-          (h) =>
-            `${h.role}: ${h.text}`
-        )
-        .join("\n");
+    const key =
+      getOpenAIKey();
 
-    const input =
-      `
-${buildSystemPrompt(
-  session.lang
-)}
+    const prompt = `
+You are SamChe Company LLC premium Dubai consultant.
 
-Conversation history:
-${history}
+Reply in ${
+      session.lang ===
+      "en"
+        ? "English"
+        : session.lang ===
+          "ar"
+        ? "Arabic"
+        : "Turkish"
+    }.
 
-User:
+User message:
 ${userText}
 `;
 
@@ -524,7 +381,7 @@ ${userText}
           model:
             MODEL,
           input:
-            input
+            prompt
         },
         {
           headers: {
@@ -532,7 +389,7 @@ ${userText}
               "application/json",
             Authorization:
               "Bearer " +
-              OPENAI_API_KEY
+              key
           },
           timeout:
             45000
@@ -548,9 +405,7 @@ ${userText}
 
     return text || "";
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
     log(
       "GPT ERROR:",
       error.response
@@ -563,7 +418,7 @@ ${userText}
 }
 
 // =====================================================
-// MAIN BRAIN
+// MAIN REPLY
 // =====================================================
 
 async function buildReply(
@@ -588,66 +443,28 @@ async function buildReply(
     session.greeted =
       true;
 
-    const msg =
-      greeting(
-        session.lang
-      );
+    const greet =
+      session.lang ===
+      "en"
+        ? "Hello, welcome to SamChe Company LLC. How may I assist you regarding Dubai company setup, residency or visas?"
+        : session.lang ===
+          "ar"
+        ? "مرحباً بكم في SamChe Company LLC. كيف يمكنني مساعدتكم بخصوص تأسيس شركة أو إقامة في دبي؟"
+        : "Merhaba, SamChe Company LLC’ye hoş geldiniz. Dubai şirket kurulumu, oturum veya vizeler konusunda size nasıl yardımcı olabilirim?";
 
     remember(
       session,
       "assistant",
-      msg
+      greet
     );
 
-    return msg;
-  }
-
-  let prompt =
-    userText;
-
-  const t =
-    normalizeText(
-      userText
-    );
-
-  if (
-    /(oturum|residency|visa|vize)/.test(
-      t
-    )
-  ) {
-    prompt = `
-Kullanıcı Dubai oturumu soruyor.
-
-Uygun olduğunda şu 3 yolu açıkla:
-1 Sponsorlu oturum
-2 Gayrimenkul ile oturum
-3 Şirket kurarak yatırımcı oturumu
-
-Mesaj:
-${userText}
-`;
-  }
-
-  if (
-    /(sirket|company|freezone|mainland|license|lisans)/.test(
-      t
-    )
-  ) {
-    prompt = `
-Kullanıcı Dubai şirket kurulumu soruyor.
-
-Gerekirse Mainland ve Free Zone farkını açıkla.
-Maliyet sorulursa yaklaşık aralık ver.
-
-Mesaj:
-${userText}
-`;
+    return greet;
   }
 
   let reply =
     await askGPT(
       session,
-      prompt
+      userText
     );
 
   if (
@@ -656,9 +473,13 @@ ${userText}
       3
   ) {
     reply =
-      fallback(
-        session.lang
-      );
+      session.lang ===
+      "en"
+        ? "Please share more detail so I can guide you accurately."
+        : session.lang ===
+          "ar"
+        ? "يرجى مشاركة مزيد من التفاصيل حتى أتمكن من مساعدتكم بدقة."
+        : "Size doğru yönlendirme yapabilmem için biraz daha detay paylaşabilir misiniz?";
   }
 
   remember(
@@ -671,13 +492,13 @@ ${userText}
 }
 
 // =====================================================
-// SAMCHE BOT - RESPONSES API FINAL
+// SAMCHE BOT - SINGLE CLEAN APP.JS
 // PART 3 / 3
-// WEBHOOK + CRON + START
+// WHATSAPP + WEBHOOK + CRON + START
 // =====================================================
 
 // =====================================================
-// SEND WHATSAPP MESSAGE
+// SEND WHATSAPP
 // =====================================================
 
 async function sendWhatsAppMessage(
@@ -685,8 +506,14 @@ async function sendWhatsAppMessage(
   body
 ) {
   try {
+    const token =
+      getWAToken();
+
+    const phoneId =
+      getPhoneId();
+
     await axios.post(
-      `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_ID}/messages`,
+      `https://graph.facebook.com/v20.0/${phoneId}/messages`,
       {
         messaging_product:
           "whatsapp",
@@ -712,16 +539,14 @@ async function sendWhatsAppMessage(
             "application/json",
           Authorization:
             "Bearer " +
-            WHATSAPP_TOKEN
+            token
         },
         timeout:
           30000
       }
     );
 
-  } catch (
-    error
-  ) {
+  } catch (error) {
     log(
       "SEND ERROR:",
       error.response
@@ -737,10 +562,7 @@ async function sendWhatsAppMessage(
 
 app.get(
   "/webhook",
-  (
-    req,
-    res
-  ) => {
+  (req, res) => {
     const mode =
       req.query[
         "hub.mode"
@@ -760,7 +582,7 @@ app.get(
       mode ===
         "subscribe" &&
       token ===
-        VERIFY_TOKEN
+        getVerifyToken()
     ) {
       return res
         .status(200)
@@ -781,10 +603,7 @@ app.get(
 
 app.post(
   "/webhook",
-  async (
-    req,
-    res
-  ) => {
+  async (req, res) => {
     res.sendStatus(
       200
     );
@@ -845,9 +664,7 @@ app.post(
         reply
       );
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
       log(
         "WEBHOOK ERROR:",
         error.response
@@ -887,15 +704,8 @@ cron.schedule(
         ) {
           s.ping10 =
             true;
-
           msg =
-            s.lang ===
-            "en"
-              ? "If your Dubai plan is still active, I’d be happy to assist further."
-              : s.lang ===
-                "ar"
-              ? "إذا كانت خطتكم في دبي ما زالت قائمة فسأكون سعيداً بمساعدتكم."
-              : "Dubai planınız devam ediyorsa memnuniyetle yardımcı olabilirim.";
+            "Merhaba, yardımcı olabileceğim başka bir konu varsa memnuniyetle destek olurum.";
         }
 
         else if (
@@ -905,15 +715,8 @@ cron.schedule(
         ) {
           s.ping3h =
             true;
-
           msg =
-            s.lang ===
-            "en"
-              ? "We can continue whenever you'd like."
-              : s.lang ===
-                "ar"
-              ? "يمكننا المتابعة في أي وقت يناسبكم."
-              : "Dilediğiniz zaman devam edebiliriz.";
+            "Dilerseniz işlemlerinizi birlikte planlayabiliriz.";
         }
 
         else if (
@@ -923,20 +726,11 @@ cron.schedule(
         ) {
           s.ping24h =
             true;
-
           msg =
-            s.lang ===
-            "en"
-              ? "Whenever you're ready, I’ll be happy to assist."
-              : s.lang ===
-                "ar"
-              ? "متى كنتم جاهزين سأكون سعيداً بمساعدتكم."
-              : "Hazır olduğunuzda memnuniyetle yardımcı olabilirim.";
+            "Hazır olduğunuzda tekrar yazabilirsiniz.";
         }
 
-        if (
-          msg
-        ) {
+        if (msg) {
           await sendWhatsAppMessage(
             id,
             msg
@@ -944,9 +738,7 @@ cron.schedule(
         }
       }
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
       log(
         "CRON ERROR:",
         error.message
@@ -956,7 +748,7 @@ cron.schedule(
 );
 
 // =====================================================
-// START SERVER
+// START
 // =====================================================
 
 server.listen(
