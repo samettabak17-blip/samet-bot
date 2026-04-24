@@ -231,6 +231,44 @@ app.get(
   }
 );
 
+// =====================================================
+// SHOW ACTIVE KEY (DIAGNOSTIC)
+// =====================================================
+
+app.get(
+  "/show-key",
+  (
+    req,
+    res
+  ) => {
+    res.json({
+      exists:
+        !!OPENAI_API_KEY,
+      len:
+        OPENAI_API_KEY.length,
+      first10:
+        OPENAI_API_KEY
+          ? OPENAI_API_KEY.slice(
+              0,
+              10
+            )
+          : null,
+      last6:
+        OPENAI_API_KEY
+          ? OPENAI_API_KEY.slice(
+              -6
+            )
+          : null,
+      model:
+        MODEL
+    });
+  }
+);
+
+// =====================================================
+// TEST OPENAI
+// =====================================================
+
 app.get(
   "/test-openai",
   async (
