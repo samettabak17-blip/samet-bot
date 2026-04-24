@@ -1,9 +1,9 @@
 // =====================================================
 // SAMCHE COMPANY BOT
-// FINAL STABLE APP.JS
+// FINAL WORKING APP.JS
 // PART 1 / 3
-// GPT-4O-MINI + CHAT COMPLETIONS
-// FOUNDATION
+// STABLE ENV + EXPRESS + MEMORY
+// GPT-4O-MINI READY
 // =====================================================
 
 require("dotenv").config();
@@ -14,7 +14,7 @@ const http = require("http");
 const cron = require("node-cron");
 
 // =====================================================
-// CONFIG
+// ENV (FIXED)
 // =====================================================
 
 const PORT =
@@ -23,20 +23,76 @@ const PORT =
   );
 
 const OPENAI_API_KEY =
-  process.env.OPENAI_API_KEY || "";
+  (
+    process.env
+      .OPENAI_API_KEY ||
+    ""
+  ).trim();
 
 const WHATSAPP_TOKEN =
-  process.env.WHATSAPP_TOKEN || "";
+  (
+    process.env
+      .WHATSAPP_TOKEN ||
+    ""
+  ).trim();
 
 const WHATSAPP_PHONE_ID =
-  process.env.WHATSAPP_PHONE_ID || "";
+  (
+    process.env
+      .WHATSAPP_PHONE_ID ||
+    ""
+  ).trim();
 
 const VERIFY_TOKEN =
-  process.env.VERIFY_TOKEN || "";
+  (
+    process.env
+      .VERIFY_TOKEN ||
+    ""
+  ).trim();
 
 const MODEL =
-  process.env.OPENAI_MODEL ||
-  "gpt-4o-mini";
+  (
+    process.env
+      .OPENAI_MODEL ||
+    "gpt-4o-mini"
+  ).trim();
+
+// =====================================================
+// STARTUP CHECK
+// =====================================================
+
+console.log(
+  "=== ENV STATUS ==="
+);
+
+console.log(
+  "OPENAI KEY:",
+  !!OPENAI_API_KEY
+);
+
+console.log(
+  "WA TOKEN:",
+  !!WHATSAPP_TOKEN
+);
+
+console.log(
+  "PHONE ID:",
+  !!WHATSAPP_PHONE_ID
+);
+
+console.log(
+  "VERIFY:",
+  !!VERIFY_TOKEN
+);
+
+console.log(
+  "MODEL:",
+  MODEL
+);
+
+console.log(
+  "=================="
+);
 
 // =====================================================
 // APP
@@ -119,8 +175,6 @@ function getSession(
           false,
         lang:
           "tr",
-        topic:
-          "general",
         history:
           [],
         lastMessageAt:
@@ -160,7 +214,7 @@ function remember(
 
   if (
     session.history
-      .length > 8
+      .length > 10
   ) {
     session.history.shift();
   }
@@ -170,63 +224,85 @@ function remember(
 // HEALTH
 // =====================================================
 
-app.get("/", (req, res) => {
-  res.json({
-    ok: true,
-    model: MODEL,
-    sessions: sessions.size
-  });
-});
-
-// =====================================================
-// OPENAI TEST
-// =====================================================
-
-app.get("/test-openai", async (req, res) => {
-  try {
-    const response = await axios.post(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        model: MODEL,
-        messages: [
-          {
-            role: "user",
-            content: "Hello"
-          }
-        ],
-        max_tokens: 30,
-        temperature: 0
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 30000
-      }
-    );
-
-    return res.json({
+app.get(
+  "/",
+  (
+    req,
+    res
+  ) => {
+    res.json({
       ok: true,
-      model: MODEL,
-      reply:
-        response.data?.choices?.[0]?.message?.content || null
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      ok: false,
-      model: MODEL,
-      error:
-        error.response?.data ||
-        error.message
+      model:
+        MODEL,
+      sessions:
+        sessions.size
     });
   }
-});
+);
+
+app.get(
+  "/test-openai",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const r =
+        await axios.post(
+          "https://api.openai.com/v1/chat/completions",
+          {
+            model:
+              MODEL,
+            messages: [
+              {
+                role: "user",
+                content:
+                  "Hello"
+              }
+            ],
+            max_tokens: 30,
+            temperature: 0
+          },
+          {
+            headers: {
+              Authorization:
+                `Bearer ${OPENAI_API_KEY}`,
+              "Content-Type":
+                "application/json"
+            },
+            timeout:
+              30000
+          }
+        );
+
+      return res.json({
+        ok: true,
+        reply:
+          r.data
+            ?.choices?.[0]
+            ?.message
+            ?.content
+      });
+
+    } catch (
+      error
+    ) {
+      return res
+        .status(500)
+        .json({
+          ok: false,
+          error:
+            error.response
+              ?.data ||
+            error.message
+        });
+    }
+  }
+);
 
 // =====================================================
 // SAMCHE COMPANY BOT
-// FINAL STABLE APP.JS
+// FINAL WORKING APP.JS
 // PART 2 / 3
 // LANGUAGE + GPT + BRAIN
 // =====================================================
@@ -283,75 +359,7 @@ function detectLanguage(
 }
 
 // =====================================================
-// TOPIC
-// =====================================================
-
-function detectTopic(
-  text = ""
-) {
-  const t =
-    normalizeText(
-      text
-    );
-
-  let company =
-    0;
-
-  let residency =
-    0;
-
-  if (
-    /(sirket|company|freezone|free zone|mainland|license|lisans|kurulum|kurmak)/.test(
-      t
-    )
-  ) {
-    company += 3;
-  }
-
-  if (
-    /(e ticaret|ticaret|commerce|amazon|shopify)/.test(
-      t
-    )
-  ) {
-    company += 2;
-  }
-
-  if (
-    /(vize|visa|2 vize|3 vize)/.test(
-      t
-    )
-  ) {
-    company += 1;
-    residency += 1;
-  }
-
-  if (
-    /(oturum|residency|ikamet|golden visa|family visa|sponsorlu)/.test(
-      t
-    )
-  ) {
-    residency += 3;
-  }
-
-  if (
-    company >
-    residency
-  ) {
-    return "company";
-  }
-
-  if (
-    residency >
-    company
-  ) {
-    return "residency";
-  }
-
-  return "general";
-}
-
-// =====================================================
-// TEXTS
+// GREETING
 // =====================================================
 
 function greeting(
@@ -362,7 +370,7 @@ function greeting(
   ) {
     return `Hello, I’m here to assist you on behalf of SamChe Company LLC.
 
-I can help with Dubai company setup, residency options, visas, costs and advisory services. How may I assist you today?`;
+I can help with Dubai company setup, residency, visas, costs and business advisory services. How may I assist you today?`;
   }
 
   if (
@@ -375,8 +383,12 @@ I can help with Dubai company setup, residency options, visas, costs and advisor
 
   return `Merhaba, SamChe Company LLC adına size yardımcı olmak için buradayım.
 
-Dubai’de şirket kuruluşu, iş planları, oturum seçenekleri, vizeler, maliyetler ve danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?`;
+Dubai’de şirket kuruluşu, oturum seçenekleri, vizeler, maliyetler ve danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?`;
 }
+
+// =====================================================
+// FALLBACK
+// =====================================================
 
 function fallback(
   lang
@@ -401,37 +413,41 @@ function fallback(
 // =====================================================
 
 function buildSystemPrompt(
-  session
+  lang
 ) {
   if (
-    session.lang ===
-    "en"
+    lang === "en"
   ) {
     return `
-You are SamChe Company LLC Senior Dubai Consultant.
+You are SamChe Company LLC senior Dubai consultant.
 
 Reply only in English.
 
-Be premium, practical and accurate.
+Be premium, practical, confident and clear.
 
-If residency asked, explain clearly.
-If company setup asked, explain Mainland vs Free Zone when relevant.
-Give price ranges when possible.
+You help with:
+- Dubai company setup
+- Mainland vs Free Zone
+- Residency options
+- Visa processes
+- Costs
+- Business expansion
+
+Always give useful answers.
+Never reply empty.
 Ask smart follow-up questions.
-Never give empty reply.
 `;
   }
 
   if (
-    session.lang ===
-    "ar"
+    lang === "ar"
   ) {
     return `
 أنت مستشار أول لدى SamChe Company LLC.
 
 أجب بالعربية فقط.
 
-كن احترافياً ودقيقاً.
+كن احترافياً وواضحاً ومفيداً.
 لا تقدم ردود فارغة.
 `;
   }
@@ -441,25 +457,25 @@ Sen SamChe Company LLC kıdemli Dubai danışmanısın.
 
 Sadece Türkçe cevap ver.
 
-Premium, güven veren, detaylı cevap ver.
+Premium danışman gibi davran.
+Net, güven veren ve detaylı cevaplar ver.
 
-Oturum sorularında 3 ana yolu açıkla:
-1 Sponsorlu oturum
-2 Gayrimenkul ile
-3 Şirket kurarak
+Uzmanlık alanların:
+- Dubai şirket kurulumu
+- Mainland ve Free Zone farkları
+- Oturum seçenekleri
+- Vize süreçleri
+- Yaklaşık maliyetler
+- İş büyütme
 
-Şirket sorularında Mainland / Free Zone farkını uygun yerde anlat.
-
-Maliyet sorulursa yaklaşık aralık ver.
-
-Akıllı takip soruları sor.
-
+Her zaman faydalı cevap ver.
 Boş cevap verme.
+Akıllı takip soruları sor.
 `;
 }
 
 // =====================================================
-// GPT
+// GPT CALL
 // =====================================================
 
 async function askGPT(
@@ -473,7 +489,7 @@ async function askGPT(
           role: "system",
           content:
             buildSystemPrompt(
-              session
+              session.lang
             )
         }
       ];
@@ -501,7 +517,7 @@ async function askGPT(
             MODEL,
           messages,
           temperature: 0.4,
-          max_tokens: 600
+          max_tokens: 700
         },
         {
           headers: {
@@ -549,11 +565,6 @@ async function buildReply(
       session.lang
     );
 
-  session.topic =
-    detectTopic(
-      userText
-    );
-
   remember(
     session,
     "user",
@@ -580,29 +591,57 @@ async function buildReply(
     return msg;
   }
 
-  let enriched =
+  let prompt =
     userText;
 
+  const t =
+    normalizeText(
+      userText
+    );
+
   if (
-    session.topic ===
-      "company"
+    /(oturum|residency|visa|vize)/.test(
+      t
+    )
   ) {
-    enriched =
-      `Kullanıcı Dubai şirket kurulumu hakkında soruyor. Profesyonel danışman gibi cevap ver. Kullanıcı mesajı: ${userText}`;
+    prompt =
+      `
+Kullanıcı Dubai oturumu soruyor.
+
+3 ana yöntemi uygun olduğunda açıkla:
+1 Sponsorlu oturum
+2 Gayrimenkul ile oturum
+3 Şirket kurarak yatırımcı oturumu
+
+Ardından kullanıcının sorusunu profesyonel şekilde cevapla.
+
+Kullanıcı mesajı:
+${userText}
+`;
   }
 
   if (
-    session.topic ===
-      "residency"
+    /(sirket|company|freezone|mainland|license|lisans)/.test(
+      t
+    )
   ) {
-    enriched =
-      `Kullanıcı Dubai oturumu hakkında soruyor. 3 ana yolu açıklayıp sorusunu cevapla. Kullanıcı mesajı: ${userText}`;
+    prompt =
+      `
+Kullanıcı Dubai şirket kurulumu soruyor.
+
+Gerekirse Mainland ve Free Zone farkını anlat.
+Maliyet sorulursa yaklaşık aralık ver.
+Profesyonel danışman gibi cevapla.
+
+Kullanıcı mesajı:
+${userText}
+`;
   }
 
   let reply =
     await askGPT(
       session,
-      enriched
+      prompt
     );
 
   if (
@@ -627,13 +666,13 @@ async function buildReply(
 
 // =====================================================
 // SAMCHE COMPANY BOT
-// FINAL STABLE APP.JS
+// FINAL WORKING APP.JS
 // PART 3 / 3
-// WEBHOOK + CRON + STARTUP
+// WEBHOOK + FOLLOWUP + START
 // =====================================================
 
 // =====================================================
-// SEND MESSAGE
+// SEND WHATSAPP MESSAGE
 // =====================================================
 
 async function sendWhatsAppMessage(
@@ -674,6 +713,7 @@ async function sendWhatsAppMessage(
           30000
       }
     );
+
   } catch (error) {
     log(
       "SEND ERROR:",
@@ -685,7 +725,7 @@ async function sendWhatsAppMessage(
 }
 
 // =====================================================
-// VERIFY WEBHOOK
+// WEBHOOK VERIFY
 // =====================================================
 
 app.get(
@@ -694,6 +734,11 @@ app.get(
     req,
     res
   ) => {
+    const mode =
+      req.query[
+        "hub.mode"
+      ];
+
     const token =
       req.query[
         "hub.verify_token"
@@ -705,8 +750,10 @@ app.get(
       ];
 
     if (
+      mode ===
+        "subscribe" &&
       token ===
-      VERIFY_TOKEN
+        VERIFY_TOKEN
     ) {
       return res
         .status(200)
@@ -722,7 +769,7 @@ app.get(
 );
 
 // =====================================================
-// RECEIVE MESSAGE
+// WEBHOOK RECEIVE
 // =====================================================
 
 app.post(
@@ -731,11 +778,11 @@ app.post(
     req,
     res
   ) => {
-    try {
-      res.sendStatus(
-        200
-      );
+    res.sendStatus(
+      200
+    );
 
+    try {
       const msg =
         req.body
           ?.entry?.[0]
@@ -744,9 +791,14 @@ app.post(
           ?.messages?.[0];
 
       if (
-        !msg ||
+        !msg
+      ) {
+        return;
+      }
+
+      if (
         msg.type !==
-          "text"
+        "text"
       ) {
         return;
       }
@@ -775,8 +827,10 @@ app.post(
 
       session.ping10 =
         false;
+
       session.ping3h =
         false;
+
       session.ping24h =
         false;
 
@@ -805,7 +859,7 @@ app.post(
 );
 
 // =====================================================
-// CRON FOLLOW UPS
+// FOLLOW-UP CRON
 // =====================================================
 
 cron.schedule(
@@ -909,7 +963,7 @@ server.listen(
   PORT,
   () => {
     log(
-      `SAMCHE BOT STARTED ON ${PORT} USING ${MODEL}`
+      `SAMCHE BOT STARTED ON PORT ${PORT} USING ${MODEL}`
     );
   }
 );
