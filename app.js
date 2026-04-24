@@ -1,10 +1,11 @@
 // =====================================================
-// SAMCHE BOT - SINGLE CLEAN APP.JS
-// FINAL PRODUCTION VERSION
-// PART 1 / 3
+// SAMCHE BOT - FIXED STARTUP BLOCK
+// REPLACE ONLY TOP OF APP.JS
+// NO DOTENV / RENDER SAFE
 // =====================================================
 
-require("dotenv").config({ override: false });
+// REMOVE THIS LINE IF EXISTS:
+// require("dotenv").config();
 
 const express = require("express");
 const axios = require("axios");
@@ -12,27 +13,22 @@ const http = require("http");
 const cron = require("node-cron");
 
 // =====================================================
-// ENV (ONLY ONCE)
+// SAFE ENV
 // =====================================================
 
-function env(name, fallback = "") {
+function env(
+  name,
+  fallback = ""
+) {
   return String(
-    process.env[name] || fallback
+    process.env[name] ??
+      fallback
   ).trim();
 }
 
-const PORT = Number(
-  env("PORT", "10000")
-);
-
-const MODEL =
-  env(
-    "OPENAI_MODEL",
-    "gpt-4o-mini"
-  );
-
 // IMPORTANT:
-// direct getter every time
+// read live env every time
+
 function getOpenAIKey() {
   return env(
     "OPENAI_API_KEY"
@@ -57,12 +53,22 @@ function getVerifyToken() {
   );
 }
 
+const PORT = Number(
+  env("PORT", "10000")
+);
+
+const MODEL =
+  env(
+    "OPENAI_MODEL",
+    "gpt-4o-mini"
+  );
+
 // =====================================================
 // STARTUP LOG
 // =====================================================
 
 console.log(
-  "=== SAMCHE BOT STARTUP ==="
+  "=== SAMCHE START ==="
 );
 
 console.log(
@@ -87,7 +93,17 @@ console.log(
 );
 
 console.log(
-  "=========================="
+  "WA TOKEN:",
+  !!getWAToken()
+);
+
+console.log(
+  "PHONE ID:",
+  !!getPhoneId()
+);
+
+console.log(
+  "===================="
 );
 
 // =====================================================
@@ -109,44 +125,113 @@ const server =
   );
 
 // =====================================================
-// HELPERS
+// HEALTH ROUTES
 // =====================================================
 
-function now() {
-  return Date.now();
-}
+app.get(
+  "/",
+  (
+    req,
+    res
+  ) => {
+    res.json({
+      ok: true,
+      model:
+        MODEL
+    });
+  }
+);
 
-function log(...args) {
-  console.log(
-    new Date()
-      .toISOString(),
-    ...args
-  );
-}
+app.get(
+  "/show-key",
+  (
+    req,
+    res
+  ) => {
+    const key =
+      getOpenAIKey();
 
-function safeText(
-  text = ""
-) {
-  return String(text)
-    .trim()
-    .slice(0, 3000);
-}
+    res.json({
+      exists:
+        !!key,
+      len:
+        key.length,
+      first10:
+        key
+          ? key.slice(
+              0,
+              10
+            )
+          : null,
+      last6:
+        key
+          ? key.slice(
+              -6
+            )
+          : null
+    });
+  }
+);
 
-function normalizeText(
-  text = ""
-) {
-  return String(text)
-    .toLowerCase()
-    .replace(/[ç]/g, "c")
-    .replace(/[ğ]/g, "g")
-    .replace(/[ı]/g, "i")
-    .replace(/[ö]/g, "o")
-    .replace(/[ş]/g, "s")
-    .replace(/[ü]/g, "u")
-    .replace(/[^\w\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
+app.get(
+  "/test-openai",
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const key =
+        getOpenAIKey();
+
+      const response =
+        await axios.post(
+          "https://api.openai.com/v1/responses",
+          {
+            model:
+              MODEL,
+            input:
+              "Hello"
+          },
+          {
+            headers: {
+              Authorization:
+                "Bearer " +
+                key,
+              "Content-Type":
+                "application/json"
+            },
+            timeout:
+              30000
+          }
+        );
+
+      res.json({
+        ok: true,
+        data:
+          response.data
+      });
+
+    } catch (
+      error
+    ) {
+      res
+        .status(500)
+        .json({
+          ok: false,
+          error:
+            error.response
+              ?.data ||
+            error.message
+        });
+    }
+  }
+);
+
+// =====================================================
+// SAMCHE BOT - FINAL FIX
+// PART 2
+// GPT + WHATSAPP + WEBHOOK + START
+// =====================================================
 
 // =====================================================
 // MEMORY
@@ -166,213 +251,27 @@ function getSession(
     sessions.set(
       userId,
       {
-        userId,
         greeted:
-          false,
-        lang:
-          "tr",
-        history:
-          [],
-        lastMessageAt:
-          now(),
-        ping10:
-          false,
-        ping3h:
-          false,
-        ping24h:
           false
       }
     );
   }
 
-  const s =
-    sessions.get(
-      userId
-    );
-
-  s.lastMessageAt =
-    now();
-
-  return s;
-}
-
-function remember(
-  session,
-  role,
-  text
-) {
-  session.history.push(
-    {
-      role,
-      text
-    }
+  return sessions.get(
+    userId
   );
-
-  if (
-    session.history
-      .length > 10
-  ) {
-    session.history.shift();
-  }
 }
 
 // =====================================================
-// SAMCHE BOT - SINGLE CLEAN APP.JS
-// PART 2 / 3
-// HEALTH + OPENAI + BRAIN
-// =====================================================
-
-// =====================================================
-// HEALTH
-// =====================================================
-
-app.get("/", (req, res) => {
-  res.json({
-    ok: true,
-    model: MODEL,
-    sessions: sessions.size
-  });
-});
-
-app.get("/show-key", (req, res) => {
-  const key = getOpenAIKey();
-
-  res.json({
-    exists: !!key,
-    len: key.length,
-    first10: key
-      ? key.slice(0, 10)
-      : null,
-    last6: key
-      ? key.slice(-6)
-      : null
-  });
-});
-
-app.get(
-  "/test-openai",
-  async (req, res) => {
-    try {
-      const key =
-        getOpenAIKey();
-
-      const response =
-        await axios.post(
-          "https://api.openai.com/v1/responses",
-          {
-            model:
-              MODEL,
-            input:
-              "Hello"
-          },
-          {
-            headers: {
-              "Content-Type":
-                "application/json",
-              Authorization:
-                "Bearer " +
-                key
-            },
-            timeout:
-              30000
-          }
-        );
-
-      return res.json({
-        ok: true,
-        data:
-          response.data
-      });
-
-    } catch (error) {
-      return res
-        .status(500)
-        .json({
-          ok: false,
-          error:
-            error.response
-              ?.data ||
-            error.message
-        });
-    }
-  }
-);
-
-// =====================================================
-// LANGUAGE
-// =====================================================
-
-function detectLanguage(
-  text,
-  previous = "tr"
-) {
-  if (!text) {
-    return previous;
-  }
-
-  if (
-    /[\u0600-\u06FF]/.test(
-      text
-    )
-  ) {
-    return "ar";
-  }
-
-  const t =
-    normalizeText(
-      text
-    );
-
-  if (
-    /[çğıöşü]/i.test(
-      text
-    ) ||
-    /(merhaba|sirket|oturum|vize|maliyet)/.test(
-      t
-    )
-  ) {
-    return "tr";
-  }
-
-  if (
-    /(hello|company|visa|cost|dubai)/.test(
-      t
-    )
-  ) {
-    return "en";
-  }
-
-  return previous;
-}
-
-// =====================================================
-// GPT
+// OPENAI ASK
 // =====================================================
 
 async function askGPT(
-  session,
-  userText
+  message
 ) {
   try {
     const key =
       getOpenAIKey();
-
-    const prompt = `
-You are SamChe Company LLC premium Dubai consultant.
-
-Reply in ${
-      session.lang ===
-      "en"
-        ? "English"
-        : session.lang ===
-          "ar"
-        ? "Arabic"
-        : "Turkish"
-    }.
-
-User message:
-${userText}
-`;
 
     const response =
       await axios.post(
@@ -380,33 +279,41 @@ ${userText}
         {
           model:
             MODEL,
-          input:
-            prompt
+
+          input: `
+You are SamChe Company LLC professional Dubai consultant.
+
+Reply professionally in user's language.
+
+User:
+${message}
+`
         },
         {
           headers: {
-            "Content-Type":
-              "application/json",
             Authorization:
               "Bearer " +
-              key
+              key,
+            "Content-Type":
+              "application/json"
           },
           timeout:
             45000
         }
       );
 
-    const text =
+    return (
       response.data
         ?.output?.[0]
         ?.content?.[0]
-        ?.text
-        ?.trim();
+        ?.text ||
+      ""
+    ).trim();
 
-    return text || "";
-
-  } catch (error) {
-    log(
+  } catch (
+    error
+  ) {
+    console.log(
       "GPT ERROR:",
       error.response
         ?.data ||
@@ -418,137 +325,45 @@ ${userText}
 }
 
 // =====================================================
-// MAIN REPLY
+// WHATSAPP SEND
 // =====================================================
 
-async function buildReply(
-  session,
-  userText
-) {
-  session.lang =
-    detectLanguage(
-      userText,
-      session.lang
-    );
-
-  remember(
-    session,
-    "user",
-    userText
-  );
-
-  if (
-    !session.greeted
-  ) {
-    session.greeted =
-      true;
-
-    const greet =
-      session.lang ===
-      "en"
-        ? "Hello, welcome to SamChe Company LLC. How may I assist you regarding Dubai company setup, residency or visas?"
-        : session.lang ===
-          "ar"
-        ? "مرحباً بكم في SamChe Company LLC. كيف يمكنني مساعدتكم بخصوص تأسيس شركة أو إقامة في دبي؟"
-        : "Merhaba, SamChe Company LLC’ye hoş geldiniz. Dubai şirket kurulumu, oturum veya vizeler konusunda size nasıl yardımcı olabilirim?";
-
-    remember(
-      session,
-      "assistant",
-      greet
-    );
-
-    return greet;
-  }
-
-  let reply =
-    await askGPT(
-      session,
-      userText
-    );
-
-  if (
-    !reply ||
-    reply.length <
-      3
-  ) {
-    reply =
-      session.lang ===
-      "en"
-        ? "Please share more detail so I can guide you accurately."
-        : session.lang ===
-          "ar"
-        ? "يرجى مشاركة مزيد من التفاصيل حتى أتمكن من مساعدتكم بدقة."
-        : "Size doğru yönlendirme yapabilmem için biraz daha detay paylaşabilir misiniz?";
-  }
-
-  remember(
-    session,
-    "assistant",
-    reply
-  );
-
-  return reply;
-}
-
-// =====================================================
-// SAMCHE BOT - SINGLE CLEAN APP.JS
-// PART 3 / 3
-// WHATSAPP + WEBHOOK + CRON + START
-// =====================================================
-
-// =====================================================
-// SEND WHATSAPP
-// =====================================================
-
-async function sendWhatsAppMessage(
+async function sendWhatsApp(
   to,
   body
 ) {
   try {
-    const token =
-      getWAToken();
-
-    const phoneId =
-      getPhoneId();
-
     await axios.post(
-      `https://graph.facebook.com/v20.0/${phoneId}/messages`,
+      `https://graph.facebook.com/v20.0/${getPhoneId()}/messages`,
       {
         messaging_product:
           "whatsapp",
 
         to,
 
-        type: "text",
+        type:
+          "text",
 
         text: {
-          preview_url:
-            false,
-          body: String(
-            body
-          ).slice(
-            0,
-            4096
-          )
+          body
         }
       },
       {
         headers: {
-          "Content-Type":
-            "application/json",
           Authorization:
             "Bearer " +
-            token
-        },
-        timeout:
-          30000
+            getWAToken(),
+          "Content-Type":
+            "application/json"
+        }
       }
     );
 
-  } catch (error) {
-    log(
-      "SEND ERROR:",
+  } catch (
+    error
+  ) {
+    console.log(
+      "WA ERROR:",
       error.response
         ?.data ||
         error.message
@@ -562,7 +377,10 @@ async function sendWhatsAppMessage(
 
 app.get(
   "/webhook",
-  (req, res) => {
+  (
+    req,
+    res
+  ) => {
     const mode =
       req.query[
         "hub.mode"
@@ -603,7 +421,10 @@ app.get(
 
 app.post(
   "/webhook",
-  async (req, res) => {
+  async (
+    req,
+    res
+  ) => {
     res.sendStatus(
       200
     );
@@ -628,16 +449,13 @@ app.post(
         msg.from;
 
       const text =
-        safeText(
+        String(
           msg.text
             ?.body ||
             ""
-        );
+        ).trim();
 
-      if (
-        !from ||
-        !text
-      ) {
+      if (!text) {
         return;
       }
 
@@ -646,101 +464,41 @@ app.post(
           from
         );
 
-      session.ping10 =
-        false;
-      session.ping3h =
-        false;
-      session.ping24h =
-        false;
+      let reply =
+        "";
 
-      const reply =
-        await buildReply(
-          session,
-          text
-        );
+      if (
+        !session.greeted
+      ) {
+        session.greeted =
+          true;
 
-      await sendWhatsAppMessage(
+        reply =
+          "Merhaba, SamChe Company LLC’ye hoş geldiniz. Dubai şirket kurulumu, oturum ve vizeler konusunda size nasıl yardımcı olabilirim?";
+      } else {
+        reply =
+          await askGPT(
+            text
+          );
+      }
+
+      if (
+        !reply
+      ) {
+        reply =
+          "Size yardımcı olabilmem için talebinizi biraz daha detaylandırabilir misiniz?";
+      }
+
+      await sendWhatsApp(
         from,
         reply
       );
 
-    } catch (error) {
-      log(
+    } catch (
+      error
+    ) {
+      console.log(
         "WEBHOOK ERROR:",
-        error.response
-          ?.data ||
-          error.message
-      );
-    }
-  }
-);
-
-// =====================================================
-// FOLLOW-UP CRON
-// =====================================================
-
-cron.schedule(
-  "* * * * *",
-  async () => {
-    try {
-      for (const [
-        id,
-        s
-      ] of sessions) {
-        const mins =
-          (
-            now() -
-            s.lastMessageAt
-          ) /
-          60000;
-
-        let msg =
-          "";
-
-        if (
-          mins >=
-            10 &&
-          !s.ping10
-        ) {
-          s.ping10 =
-            true;
-          msg =
-            "Merhaba, yardımcı olabileceğim başka bir konu varsa memnuniyetle destek olurum.";
-        }
-
-        else if (
-          mins >=
-            180 &&
-          !s.ping3h
-        ) {
-          s.ping3h =
-            true;
-          msg =
-            "Dilerseniz işlemlerinizi birlikte planlayabiliriz.";
-        }
-
-        else if (
-          mins >=
-            1440 &&
-          !s.ping24h
-        ) {
-          s.ping24h =
-            true;
-          msg =
-            "Hazır olduğunuzda tekrar yazabilirsiniz.";
-        }
-
-        if (msg) {
-          await sendWhatsAppMessage(
-            id,
-            msg
-          );
-        }
-      }
-
-    } catch (error) {
-      log(
-        "CRON ERROR:",
         error.message
       );
     }
@@ -754,8 +512,9 @@ cron.schedule(
 server.listen(
   PORT,
   () => {
-    log(
-      `SAMCHE BOT STARTED ON ${PORT} USING ${MODEL}`
+    console.log(
+      `BOT LIVE ON ${PORT}`
     );
   }
 );
+
