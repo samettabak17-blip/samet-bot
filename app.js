@@ -1,70 +1,12 @@
 // =====================================================
-// SAMCHE COMPANY LLC
-// V5 ULTRA PROFESSIONAL BOT
-// PART A
-// CORE FOUNDATION + ENV + MEMORY + LANGUAGE + LOGIC
+// V5 PRO PATCH - PART 1
+// HARD LANGUAGE LOCK + SMART INTENT OVERRIDE
+// APPEND / REPLACE RELATED FUNCTIONS IN V5
 // =====================================================
 
-require("dotenv").config();
-
-const express = require("express");
-const axios = require("axios");
-const cron = require("node-cron");
-const http = require("http");
-
-const app = express();
-app.use(express.json({ limit: "10mb" }));
-
-const server = http.createServer(app);
-
 // =====================================================
-// REQUIRED ENV
+// NORMALIZE PRO
 // =====================================================
-
-const REQUIRED_ENV = [
-  "OPENAI_API_KEY",
-  "WHATSAPP_TOKEN",
-  "WHATSAPP_PHONE_ID",
-  "VERIFY_TOKEN"
-];
-
-for (const key of REQUIRED_ENV) {
-  if (!process.env[key]) {
-    console.error(`Missing ENV variable: ${key}`);
-    process.exit(1);
-  }
-}
-
-// =====================================================
-// CONSTANTS
-// =====================================================
-
-const PORT = process.env.PORT || 10000;
-
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN;
-const WHATSAPP_PHONE_ID = process.env.WHATSAPP_PHONE_ID;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
-
-const GPT_MODEL = "gpt-5-mini";
-
-// =====================================================
-// MEMORY STORE
-// =====================================================
-
-const sessions = new Map();
-
-// =====================================================
-// HELPERS
-// =====================================================
-
-function now() {
-  return Date.now();
-}
-
-function log(...args) {
-  console.log(new Date().toISOString(), ...args);
-}
 
 function normalizeText(text = "") {
   return text
@@ -76,84 +18,21 @@ function normalizeText(text = "") {
     .replace(/[ö]/g, "o")
     .replace(/[ş]/g, "s")
     .replace(/[ü]/g, "u")
-    .replace(/\s+/g, " ");
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // =====================================================
-// SESSION ENGINE
-// =====================================================
-
-function getSession(userId) {
-  if (!sessions.has(userId)) {
-    sessions.set(userId, {
-      userId,
-      createdAt: now(),
-      updatedAt: now(),
-
-      greeted: false,
-
-      language: "tr",
-
-      history: [],
-
-      lastTopic: null,
-      lastSubTopic: null,
-
-      sector: null,
-      visaNeed: null,
-      budget: null,
-
-      leadScore: 0,
-
-      ping10Sent: false,
-      ping3hSent: false,
-      ping24hSent: false,
-
-      lastMessageAt: now(),
-
-      lastUserText: null
-    });
-  }
-
-  const s = sessions.get(userId);
-  s.updatedAt = now();
-
-  return s;
-}
-
-// =====================================================
-// MEMORY HELPERS
-// =====================================================
-
-function rememberMessage(session, role, content) {
-  session.history.push({
-    role,
-    content,
-    at: now()
-  });
-
-  if (session.history.length > 20) {
-    session.history.shift();
-  }
-}
-
-function setTopic(session, topic, sub = null) {
-  session.lastTopic = topic;
-  session.lastSubTopic = sub;
-}
-
-function bumpLead(session, score = 1) {
-  session.leadScore += score;
-}
-
-// =====================================================
-// LANGUAGE ENGINE V5
+// HARD LANGUAGE LOCK ENGINE
+// RULE:
+// Turkish user never gets English reply
 // =====================================================
 
 function detectLanguage(text, previous = "tr") {
   if (!text) return previous;
 
-  // Arabic chars
+  // Arabic direct
   if (/[\u0600-\u06FF]/.test(text)) {
     return "ar";
   }
@@ -161,418 +40,236 @@ function detectLanguage(text, previous = "tr") {
   const raw = text.toLowerCase();
   const t = normalizeText(text);
 
-  const trWords = [
-    "merhaba","nasil","nasilsin","sirket","kurmak",
-    "oturum","vize","ucret","fiyat","dubai",
-    "calismak","istiyorum","ne kadar","yardim"
+  const turkishStrong = [
+    "merhaba",
+    "nasil",
+    "sirket",
+    "kurmak",
+    "oturum",
+    "vize",
+    "ucret",
+    "fiyat",
+    "dubai",
+    "calismak",
+    "istiyorum",
+    "yardim",
+    "neden",
+    "ne kadar",
+    "hangi",
+    "sadece"
   ];
 
-  const enWords = [
-    "hello","hi","company","setup","business",
-    "residency","visa","cost","price","how",
-    "want","would","like","services","dubai"
+  const englishStrong = [
+    "hello",
+    "hi",
+    "how",
+    "company",
+    "setup",
+    "business",
+    "residency",
+    "visa",
+    "cost",
+    "price",
+    "want",
+    "would",
+    "like",
+    "services",
+    "help"
   ];
 
   let tr = 0;
   let en = 0;
 
-  for (const w of trWords) {
-    if (t.includes(w)) tr++;
+  for (const word of turkishStrong) {
+    if (t.includes(word)) tr++;
   }
 
-  for (const w of enWords) {
-    if (raw.includes(w)) en++;
+  for (const word of englishStrong) {
+    if (raw.includes(word)) en++;
   }
 
   // Turkish chars bonus
-  if (/[çğıöşü]/i.test(text)) tr += 2;
+  if (/[çğıöşü]/i.test(text)) tr += 4;
 
-  if (tr >= en + 1) return "tr";
-  if (en >= tr + 1) return "en";
-
-  return previous;
-}
-
-// =====================================================
-// GREETING ENGINE
-// =====================================================
-
-function greetingMessage(lang = "tr") {
-  if (lang === "en") {
-    return `Hello, I’m here to assist you on behalf of SamChe Company LLC.
-
-I can help answer all your questions regarding company formation in Dubai, business plans, residency options, visas, costs, and the advisory services we provide afterward. How may I assist you today?`;
+  // Turkish grammar bonus
+  if (
+    t.includes(" istiyorum") ||
+    t.includes(" nasil") ||
+    t.includes(" nedir") ||
+    t.includes(" olur mu")
+  ) {
+    tr += 3;
   }
 
-  if (lang === "ar") {
-    return `مرحباً، أنا هنا لمساعدتكم نيابةً عن SamChe Company LLC.
+  // decisive lock
+  if (tr >= en) return "tr";
+  if (en > tr) return "en";
 
-يمكنني الإجابة على جميع استفساراتكم المتعلقة بتأسيس الشركات في دبي، خطط الأعمال، خيارات الإقامة، التأشيرات، التكاليف، والخدمات الاستشارية التي نقدمها بعد ذلك. كيف يمكنني مساعدتكم اليوم؟`;
-  }
-
-  return `Merhaba, SamChe Company LLC adına size yardımcı olmak için buradayım.
-
-Dubai’de şirket kuruluşu, iş planları, oturum seçenekleri, vizeler, maliyetler ve sonrasında sunduğumuz danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?`;
+  return previous || "tr";
 }
 
 // =====================================================
-// INTENT PREP
+// INTENT OVERRIDE ENGINE
+// No missing residency requests anymore
 // =====================================================
-
-function includesAny(text, list = []) {
-  return list.some(x => text.includes(x));
-}
 
 function detectIntent(text) {
   const t = normalizeText(text);
 
-  // company
-  if (
-    includesAny(t, [
-      "sirket",
-      "company",
-      "business setup",
-      "freezone",
-      "mainland",
-      "lisans"
-    ])
-  ) {
-    return "company";
+  // -------------------------------------------------
+  // RESIDENCY FIRST PRIORITY
+  // -------------------------------------------------
+  const residencyWords = [
+    "oturum",
+    "residency",
+    "residence",
+    "visa",
+    "vize",
+    "calismak istiyorum",
+    "dubai de calismak",
+    "dubaide calismak",
+    "dubai yasamak",
+    "yasamak istiyorum",
+    "tasinmak istiyorum",
+    "sponsorlu",
+    "work permit",
+    "job visa",
+    "sadece oturum",
+    "oturum almak istiyorum",
+    "calismak istiyom",
+    "calismak istiyorum"
+  ];
+
+  for (const w of residencyWords) {
+    if (t.includes(w)) {
+      return "residency";
+    }
   }
 
-  // residency
-  if (
-    includesAny(t, [
-      "oturum",
-      "residency",
-      "visa",
-      "vize",
-      "calismak istiyorum",
-      "dubaiye tasinmak",
-      "dubaide yasamak"
-    ])
-  ) {
-    return "residency";
+  // -------------------------------------------------
+  // COMPANY
+  // -------------------------------------------------
+  const companyWords = [
+    "sirket",
+    "company",
+    "business setup",
+    "freezone",
+    "free zone",
+    "mainland",
+    "lisans",
+    "trade license",
+    "kurulus",
+    "kurmak istiyorum"
+  ];
+
+  for (const w of companyWords) {
+    if (t.includes(w)) {
+      return "company";
+    }
   }
 
-  // ai
-  if (
-    includesAny(t, [
-      "chatbot",
-      "ai",
-      "yapay zeka",
-      "otomasyon",
-      "crm"
-    ])
-  ) {
-    return "ai";
+  // -------------------------------------------------
+  // AI
+  // -------------------------------------------------
+  const aiWords = [
+    "chatbot",
+    "ai",
+    "yapay zeka",
+    "otomasyon",
+    "crm",
+    "whatsapp bot",
+    "website bot"
+  ];
+
+  for (const w of aiWords) {
+    if (t.includes(w)) {
+      return "ai";
+    }
   }
 
-  // trust
-  if (
-    includesAny(t, [
-      "guven",
-      "gercek mi",
-      "dolandir",
-      "real?"
-    ])
-  ) {
-    return "trust";
+  // -------------------------------------------------
+  // TRUST
+  // -------------------------------------------------
+  const trustWords = [
+    "guven",
+    "güven",
+    "real mi",
+    "gercek mi",
+    "dolandirici",
+    "safe mi"
+  ];
+
+  for (const w of trustWords) {
+    if (t.includes(w)) {
+      return "trust";
+    }
   }
 
   return "general";
 }
 
 // =====================================================
-// SAMCHE COMPANY LLC
-// V5 ULTRA PROFESSIONAL BOT
-// PART B
-// RESPONSE ENGINES + GPT BRAIN + COMPANY + RESIDENCY
-// APPEND UNDER PART A
+// TOPIC SWITCH PATCH
+// If user changes topic, old topic ignored
 // =====================================================
 
-// =====================================================
-// CONTACT / BANK LOCKED TEXTS
-// =====================================================
-
-function liveAgentMessage(lang = "tr") {
-  if (lang === "en") {
-    return "To reach our professional advisory team, you may contact us via WhatsApp at +971 52 728 8586. Our live consultants will be happy to assist you.";
-  }
-
-  if (lang === "ar") {
-    return "للتواصل مع فريق الاستشارات المهنية لدينا، يمكنكم مراسلتنا عبر واتساب على ‎+971 52 728 8586. أو سيقوم مستشارونا المباشرون بمساعدتكم بكل سرور.";
-  }
-
-  return "Profesyonel danışmanlık ekibimize ulaşmak için: +971 52 728 8586 WhatsApp hattı üzerinden iletişim sağlayabilirsiniz. Canlı temsilcilerimiz size yardımcı olacaktır.";
-}
-
-function bankInfo() {
-  return `Account holder: SamChe Company LLC
-Account Type: USD $
-Account number: 9726414926
-IBAN: AE210860000009726414926
-BIC: WIOBAEADXXX
-Bank address:
-Etihad Airways Centre 5th Floor, Abu Dhabi, UAE
-
-mail: info@samchecompany.com
-telefon: +971 50 179 38 80 - +971 52 728 8586`;
+function forceTopic(session, intent) {
+  session.lastTopic = intent;
+  session.lastSubTopic = null;
 }
 
 // =====================================================
-// QUESTION ENGINE
+// LANGUAGE SAFE OUTPUT FILTER
+// If GPT returns wrong language => replace
 // =====================================================
 
-function closingQuestion(topic, lang = "tr") {
-  const map = {
-    company: {
-      tr: "Hangi sektörde faaliyet göstermeyi planlıyorsunuz?",
-      en: "Which sector are you planning to operate in?",
-      ar: "ما هو القطاع الذي تخططون للعمل فيه؟"
-    },
-    residency: {
-      tr: "Tek başınıza mı yoksa aile ile mi planlıyorsunuz?",
-      en: "Are you planning alone or with family members?",
-      ar: "هل تخططون بمفردكم أم مع العائلة؟"
-    },
-    ai: {
-      tr: "Bu sistemi WhatsApp için mi yoksa web siteniz için mi düşünüyorsunuz?",
-      en: "Are you considering this for WhatsApp or for your website?",
-      ar: "هل تفكرون بهذا النظام لواتساب أم للموقع الإلكتروني؟"
-    },
-    trust: {
-      tr: "Hangi hizmet için değerlendirme yaptığınızı paylaşırsanız daha net bilgi verebilirim.",
-      en: "If you share which service you are evaluating, I can guide you more clearly.",
-      ar: "إذا شاركتم معنا الخدمة التي تدرسونها يمكنني توضيح الصورة بشكل أدق."
-    },
-    general: {
-      tr: "Hangi konuda bilgi almak istediğinizi paylaşırsanız yardımcı olabilirim.",
-      en: "Please share which topic you need information about so I can assist you.",
-      ar: "يرجى توضيح الموضوع الذي ترغبون بالاستفسار عنه حتى أتمكن من مساعدتكم."
-    }
-  };
+function outputLooksEnglish(text = "") {
+  const t = text.toLowerCase();
 
-  return (map[topic] && map[topic][lang]) || map.general[lang] || map.general.tr;
-}
-
-// =====================================================
-// RESIDENCY DECISION ENGINE
-// =====================================================
-
-function residencyIntro(lang = "tr") {
-  if (lang === "en") {
-    return `There are several common ways to obtain legal residency in Dubai:
-
-1. Residency through real estate investment
-2. Sponsored residency solutions
-3. Residency through establishing your own company
-
-The most suitable route depends on your budget, timeline, and long-term plan. Which option interests you the most?`;
-  }
-
-  if (lang === "ar") {
-    return `توجد عدة طرق شائعة للحصول على إقامة قانونية في دبي:
-
-1. الإقامة عبر الاستثمار العقاري
-2. حلول الإقامة عن طريق الكفالة
-3. الإقامة من خلال تأسيس شركتكم الخاصة
-
-يعتمد الخيار الأنسب على الميزانية والمدة والخطة المستقبلية. ما الخيار الأقرب لاهتمامكم؟`;
-  }
-
-  return `Dubai’de yasal oturum elde etmek için genel olarak üç ana seçenek bulunmaktadır:
-
-1. Gayrimenkul yatırımı üzerinden oturum
-2. Sponsorlu oturum çözümleri
-3. Şirket kurarak yatırımcı / partner statüsünde oturum
-
-En doğru seçenek bütçenize, zaman planınıza ve hedefinize göre değişir. Hangi seçenekle ilgilendiğinizi paylaşabilir misiniz?`;
-}
-
-// =====================================================
-// COMPANY ENGINE
-// =====================================================
-
-function companyReply(session) {
-  const lang = session.language;
-
-  if (lang === "en") {
-    return `Company formation in Dubai is generally structured through two main models: Mainland and Free Zone.
-
-Mainland structures are often preferred for businesses requiring stronger onshore presence, physical operations, or certain regulated activities. Free Zone structures are commonly preferred for consultancy, digital, international trade, and flexible startup models.
-
-The right option depends on your sector, visa needs, and operational plan. ${closingQuestion("company", lang)}`;
-  }
-
-  if (lang === "ar") {
-    return `يتم تأسيس الشركات في دبي عادة عبر نموذجين رئيسيين: البر الرئيسي (Mainland) والمناطق الحرة (Free Zone).
-
-غالباً ما يكون البر الرئيسي مناسباً للأنشطة التي تحتاج حضوراً محلياً أقوى أو عمليات تشغيلية فعلية. أما المناطق الحرة فتُفضّل عادةً للاستشارات والأعمال الرقمية والتجارة الدولية والنماذج المرنة.
-
-يعتمد الخيار الأنسب على القطاع وعدد التأشيرات وخطة التشغيل. ${closingQuestion("company", lang)}`;
-  }
-
-  return `Dubai’de şirket kuruluşu genel olarak iki ana yapı üzerinden planlanır: Mainland ve Free Zone.
-
-Mainland yapılar; fiziksel operasyon, yerel pazar hedefi veya belirli faaliyet türleri için daha uygun olabilir. Free Zone yapılar ise danışmanlık, dijital hizmetler, uluslararası ticaret ve esnek başlangıç modellerinde sık tercih edilir.
-
-Doğru model; sektörünüz, vize ihtiyacınız ve operasyon planınıza göre belirlenir. ${closingQuestion("company", lang)}`;
-}
-
-// =====================================================
-// TRUST ENGINE
-// =====================================================
-
-function trustReply(lang = "tr") {
-  if (lang === "en") {
-    return `SamChe Company LLC operates with a professional and transparent service approach. Our processes are managed within legal frameworks, with clear communication and structured planning at every stage. The right way to evaluate any provider is clarity, consistency, and professionalism. ${closingQuestion("trust", lang)}`;
-  }
-
-  if (lang === "ar") {
-    return `تعمل SamChe Company LLC بمنهج مهني وشفاف. تتم إدارة الإجراءات ضمن الأطر القانونية مع وضوح في التواصل وتنظيم في كل مرحلة. أفضل طريقة لتقييم أي جهة هي الشفافية والاتساق والاحترافية. ${closingQuestion("trust", lang)}`;
-  }
-
-  return `SamChe Company LLC süreçlerini profesyonel ve şeffaf şekilde yöneten kurumsal bir yapıyla hizmet vermektedir. Her aşamada net bilgilendirme, planlama ve yasal çerçevede ilerleme esas alınır. Herhangi bir hizmet sağlayıcıyı değerlendirirken en önemli unsurlar şeffaflık, tutarlılık ve profesyonelliktir. ${closingQuestion("trust", lang)}`;
-}
-
-// =====================================================
-// AI ENGINE
-// =====================================================
-
-function aiReply(lang = "tr") {
-  if (lang === "en") {
-    return `We provide AI-powered systems such as WhatsApp chatbots, website assistants, lead qualification automation, CRM integrations, and custom business workflows designed to improve speed and conversion. ${closingQuestion("ai", lang)}`;
-  }
-
-  if (lang === "ar") {
-    return `نقدم أنظمة مدعومة بالذكاء الاصطناعي مثل روبوتات واتساب، مساعدي المواقع، أتمتة تأهيل العملاء، تكامل CRM، وحلول مخصصة لتحسين السرعة والتحويلات. ${closingQuestion("ai", lang)}`;
-  }
-
-  return `WhatsApp chatbotları, web site asistanları, lead toplama otomasyonları, CRM entegrasyonları ve işletmeye özel yapay zekâ çözümleri sunuyoruz. Amaç; hız, verimlilik ve dönüşüm oranlarını artırmaktır. ${closingQuestion("ai", lang)}`;
-}
-
-// =====================================================
-// GPT CORE
-// =====================================================
-
-async function askGPT(session, userText) {
-  const systemPrompt = `
-You are the official premium AI consultant of SamChe Company LLC.
-
-Rules:
-- Be professional, strategic, warm and intelligent.
-- Never redirect user to another company, lawyer, authority or institution.
-- Give detailed and satisfying answers.
-- Match user's language.
-- Never be short unless user explicitly asks.
-- End answers with a relevant guiding question.
-- Focus on Dubai company setup, residency, business growth, AI automation.
-`;
-
-  const messages = [
-    { role: "system", content: systemPrompt }
+  const enWords = [
+    "the",
+    "your",
+    "company",
+    "please",
+    "would",
+    "assist",
+    "regarding",
+    "hello"
   ];
 
-  for (const item of session.history.slice(-8)) {
-    messages.push({
-      role: item.role,
-      content: item.content
-    });
+  let score = 0;
+
+  for (const w of enWords) {
+    if (t.includes(w)) score++;
   }
 
-  messages.push({
-    role: "user",
-    content: userText
-  });
-
-  const response = await axios.post(
-    "https://api.openai.com/v1/chat/completions",
-    {
-      model: GPT_MODEL,
-      messages,
-      temperature: 0.55
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      timeout: 45000
-    }
-  );
-
-  return response.data.choices[0].message.content.trim();
+  return score >= 2;
 }
 
-// =====================================================
-// SAMCHE COMPANY LLC
-// V5 ULTRA PROFESSIONAL BOT
-// PART C
-// ROUTER + WHATSAPP + FOLLOWUP + START
-// APPEND UNDER PART B
-// =====================================================
+function enforceLanguage(session, reply) {
+  if (!reply) return reply;
 
-// =====================================================
-// WHATSAPP SEND ENGINE
-// =====================================================
-
-async function sendWhatsAppMessage(to, body) {
-  try {
-    await axios.post(
-      `https://graph.facebook.com/v20.0/${WHATSAPP_PHONE_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        type: "text",
-        text: {
-          preview_url: false,
-          body
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 30000
-      }
-    );
-
-    log("SENT:", to);
-
-  } catch (error) {
-    log(
-      "SEND ERROR:",
-      error?.response?.data || error.message
-    );
-  }
-}
-
-// =====================================================
-// DUPLICATE SHIELD
-// =====================================================
-
-function isDuplicate(session, text) {
-  const t = normalizeText(text);
-
+  // Turkish locked user
   if (
-    session.lastUserText &&
-    session.lastUserText === t &&
-    now() - session.lastMessageAt < 8000
+    session.language === "tr" &&
+    outputLooksEnglish(reply)
   ) {
-    return true;
+    return "Size en doğru şekilde yardımcı olabilmem için talebinizi anladım. Dubai’de oturum, şirket kuruluşu, vizeler veya maliyetler konusunda detay paylaşabilirim. Hangi konu ile ilerlemek istersiniz?";
   }
 
-  session.lastUserText = t;
-  return false;
+  return reply;
 }
 
 // =====================================================
-// MAIN RESPONSE ROUTER
+// V5 PRO PATCH - PART 2
+// REPLACE buildReply() FUNCTION FULLY
+// HARD ROUTING + NO STUPID FALLBACK + DETAIL FLOOR
 // =====================================================
 
 async function buildReply(session, userText) {
+  // -----------------------------------------------
+  // LANGUAGE DETECT + HARD LOCK
+  // -----------------------------------------------
   const lang = detectLanguage(
     userText,
     session.language
@@ -583,20 +280,26 @@ async function buildReply(session, userText) {
 
   const clean = normalizeText(userText);
 
-  // first greeting
+  // -----------------------------------------------
+  // FIRST GREETING ONLY
+  // -----------------------------------------------
   if (!session.greeted) {
     session.greeted = true;
+
+    const greet = greetingMessage(lang);
 
     rememberMessage(
       session,
       "assistant",
-      greetingMessage(lang)
+      greet
     );
 
-    return greetingMessage(lang);
+    return greet;
   }
 
-  // duplicate
+  // -----------------------------------------------
+  // DUPLICATE SHIELD
+  // -----------------------------------------------
   if (isDuplicate(session, clean)) {
     return null;
   }
@@ -607,72 +310,79 @@ async function buildReply(session, userText) {
     userText
   );
 
-  // direct payment intent
+  // -----------------------------------------------
+  // HOT LEAD PAYMENT ROUTE
+  // -----------------------------------------------
   if (
     clean.includes("odeme yapacagim") ||
-    clean.includes("payment now") ||
+    clean.includes("payment") ||
+    clean.includes("baslayalim") ||
     clean.includes("evrak gonderecegim") ||
-    clean.includes("baslayalim")
+    clean.includes("ready to start")
   ) {
     bumpLead(session, 5);
 
-    const msg =
+    let payText =
       lang === "en"
         ? `Thank you. Since you are ready to proceed, I’m sharing our payment details below.\n\n${bankInfo()}`
         : lang === "ar"
         ? `شكراً لكم. بما أنكم جاهزون للبدء، أشارك معكم تفاصيل الدفع أدناه.\n\n${bankInfo()}`
         : `Teşekkür ederim. Sürece başlamaya hazır olduğunuz için ödeme bilgilerini aşağıda paylaşıyorum.\n\n${bankInfo()}`;
 
-    rememberMessage(session, "assistant", msg);
-    return msg;
+    rememberMessage(
+      session,
+      "assistant",
+      payText
+    );
+
+    return payText;
   }
 
-  // live agent repeated insist
+  // -----------------------------------------------
+  // LIVE AGENT REQUEST
+  // -----------------------------------------------
   if (
     clean.includes("canli temsilci") ||
+    clean.includes("temsilci") ||
     clean.includes("human") ||
-    clean.includes("live agent") ||
-    clean.includes("temsilci")
+    clean.includes("live agent")
   ) {
     session.agentRequests =
       (session.agentRequests || 0) + 1;
 
-    if (session.agentRequests >= 3) {
-      const msg = liveAgentMessage(lang);
-      rememberMessage(session, "assistant", msg);
+    if (session.agentRequests >= 2) {
+      const msg =
+        liveAgentMessage(lang);
+
+      rememberMessage(
+        session,
+        "assistant",
+        msg
+      );
+
       return msg;
     }
   }
 
-  // detect intent
-  const intent = detectIntent(clean);
+  // -----------------------------------------------
+  // INTENT DETECT
+  // -----------------------------------------------
+  const intent =
+    detectIntent(clean);
 
-  // -------------------------------------------------
-  // COMPANY
-  // -------------------------------------------------
-  if (intent === "company") {
-    setTopic(session, "company");
-    bumpLead(session, 2);
+  forceTopic(
+    session,
+    intent
+  );
 
-    const msg = companyReply(session);
-
-    rememberMessage(
-      session,
-      "assistant",
-      msg
-    );
-
-    return msg;
-  }
-
-  // -------------------------------------------------
-  // RESIDENCY
-  // -------------------------------------------------
+  // =================================================
+  // RESIDENCY ROUTE (HIGH PRIORITY)
+  // =================================================
   if (intent === "residency") {
-    setTopic(session, "residency");
     bumpLead(session, 2);
 
-    const msg = residencyIntro(lang);
+    let msg =
+      residencyIntro(lang);
 
     rememberMessage(
       session,
@@ -683,14 +393,32 @@ async function buildReply(session, userText) {
     return msg;
   }
 
-  // -------------------------------------------------
-  // AI
-  // -------------------------------------------------
+  // =================================================
+  // COMPANY ROUTE
+  // =================================================
+  if (intent === "company") {
+    bumpLead(session, 2);
+
+    let msg =
+      companyReply(session);
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return msg;
+  }
+
+  // =================================================
+  // AI ROUTE
+  // =================================================
   if (intent === "ai") {
-    setTopic(session, "ai");
     bumpLead(session, 2);
 
-    const msg = aiReply(lang);
+    let msg =
+      aiReply(lang);
 
     rememberMessage(
       session,
@@ -701,13 +429,12 @@ async function buildReply(session, userText) {
     return msg;
   }
 
-  // -------------------------------------------------
-  // TRUST
-  // -------------------------------------------------
+  // =================================================
+  // TRUST ROUTE
+  // =================================================
   if (intent === "trust") {
-    setTopic(session, "trust");
-
-    const msg = trustReply(lang);
+    let msg =
+      trustReply(lang);
 
     rememberMessage(
       session,
@@ -718,16 +445,83 @@ async function buildReply(session, userText) {
     return msg;
   }
 
-  // -------------------------------------------------
-  // GPT SMART FALLBACK
-  // -------------------------------------------------
-  setTopic(session, "general");
+  // =================================================
+  // GENERAL INTELLIGENT ROUTE
+  // =================================================
+
+  // If Turkish user asks anything,
+  // never ask stupid vague clarification directly
+
+  if (
+    lang === "tr" &&
+    clean.length >= 4
+  ) {
+    // Dubai city question
+    if (
+      clean.includes("dubai nasil") ||
+      clean.includes("dubai iyi mi") ||
+      clean.includes("dubai nasil bir yer")
+    ) {
+      const msg =
+        `Dubai; güvenli yaşam yapısı, güçlü ekonomi, uluslararası iş ortamı ve modern şehir planlaması ile öne çıkan bir merkezdir. Vergi avantajları, yüksek yaşam standardı ve hızlı iş süreçleri nedeniyle girişimciler ile profesyoneller tarafından sık tercih edilir. Ancak yaşam maliyeti ve hedeflenen yaşam tarzına göre bütçe planlaması önemlidir. Dubai’yi yaşam, iş kurma veya yatırım açısından mı değerlendiriyorsunuz?`;
+
+      rememberMessage(
+        session,
+        "assistant",
+        msg
+      );
+
+      return msg;
+    }
+
+    // cost question
+    if (
+      clean.includes("maliyet") ||
+      clean.includes("ucret") ||
+      clean.includes("fiyat")
+    ) {
+      const msg =
+        `Maliyet konusu; seçilecek yapı, faaliyet alanı, vize ihtiyacı ve emirliğe göre değişmektedir. Bu nedenle tek rakam vermek yerine ihtiyacınıza göre net tablo çıkarmak daha doğru olur. Şirket kuruluşu, oturum veya yapay zekâ hizmetlerinden hangisi için maliyet öğrenmek istiyorsunuz?`;
+
+      rememberMessage(
+        session,
+        "assistant",
+        msg
+      );
+
+      return msg;
+    }
+  }
+
+  // =================================================
+  // GPT CONTROLLED FALLBACK
+  // =================================================
 
   try {
-    const msg = await askGPT(
-      session,
-      userText
-    );
+    let msg =
+      await askGPT(
+        session,
+        userText
+      );
+
+    msg =
+      enforceLanguage(
+        session,
+        msg
+      );
+
+    // short answer fix
+    if (
+      msg &&
+      msg.length < 80
+    ) {
+      msg +=
+        " " +
+        closingQuestion(
+          "general",
+          lang
+        );
+    }
 
     rememberMessage(
       session,
@@ -738,14 +532,17 @@ async function buildReply(session, userText) {
     return msg;
 
   } catch (error) {
-    log("GPT ERROR:", error.message);
+    log(
+      "GPT PATCH ERROR:",
+      error.message
+    );
 
     const fallback =
       lang === "en"
-        ? `I understood your message. Please share a little more detail so I can guide you accurately. ${closingQuestion("general", lang)}`
+        ? `I understood your request. Please share a little more detail so I can guide you properly. ${closingQuestion("general", lang)}`
         : lang === "ar"
-        ? `تم فهم رسالتكم. يرجى توضيح بعض التفاصيل الإضافية حتى أتمكن من توجيهكم بدقة. ${closingQuestion("general", lang)}`
-        : `Mesajınızı anladım. Sizi en doğru şekilde yönlendirebilmem için biraz daha detay paylaşabilirsiniz. ${closingQuestion("general", lang)}`;
+        ? `تم فهم طلبكم. يرجى توضيح بعض التفاصيل حتى أتمكن من توجيهكم بالشكل المناسب. ${closingQuestion("general", lang)}`
+        : `Talebinizi anladım. Size en doğru yönlendirmeyi yapabilmem için biraz daha detay paylaşabilirsiniz. ${closingQuestion("general", lang)}`;
 
     rememberMessage(
       session,
@@ -756,6 +553,1208 @@ async function buildReply(session, userText) {
     return fallback;
   }
 }
+
+// =====================================================
+// V5 PRO PATCH - PART 3
+// HUMAN ALERT MODE + SMART PING UPGRADE + FINAL PATCH
+// APPEND UNDER PART 2
+// =====================================================
+
+// =====================================================
+// ADMIN SETTINGS
+// Add ENV:
+// ADMIN_NUMBER=971501793880
+// =====================================================
+
+const ADMIN_NUMBER =
+  process.env.ADMIN_NUMBER || "";
+
+// =====================================================
+// HUMAN ALERT CONTROL
+// =====================================================
+
+async function sendAdminAlert(message) {
+  try {
+    if (!ADMIN_NUMBER) return;
+
+    await sendWhatsAppMessage(
+      ADMIN_NUMBER,
+      message
+    );
+
+  } catch (error) {
+    log(
+      "ADMIN ALERT ERROR:",
+      error.message
+    );
+  }
+}
+
+function shouldTriggerHumanAlert(
+  session,
+  clean
+) {
+  const hotWords = [
+    "odeme",
+    "payment",
+    "baslayalim",
+    "ready",
+    "today",
+    "numara ver",
+    "arayin",
+    "call me",
+    "evrak",
+    "fiyat ver",
+    "teklif ver",
+    "konusalim",
+    "whatsapp"
+  ];
+
+  for (const w of hotWords) {
+    if (clean.includes(w)) {
+      return true;
+    }
+  }
+
+  if (
+    session.leadScore >= 7
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+async function maybeSendHumanAlert(
+  session,
+  userText
+) {
+  const clean =
+    normalizeText(userText);
+
+  if (
+    session.alertSent &&
+    now() -
+      session.alertSent <
+      21600000
+  ) {
+    return;
+  }
+
+  if (
+    !shouldTriggerHumanAlert(
+      session,
+      clean
+    )
+  ) {
+    return;
+  }
+
+  session.alertSent =
+    now();
+
+  const alert =
+`🔥 SAMCHE HOT LEAD
+
+User: ${session.userId}
+Language: ${session.language}
+Topic: ${session.lastTopic || "general"}
+Lead Score: ${session.leadScore}
+
+Last Message:
+${userText}`;
+
+  await sendAdminAlert(
+    alert
+  );
+}
+
+// =====================================================
+// SMART TOPIC PINGS UPGRADE
+// Replace old cron if needed
+// =====================================================
+
+cron.schedule("* * * * *", async () => {
+  try {
+    const current =
+      now();
+
+    for (const [id, s] of sessions) {
+      const diff =
+        current -
+        s.lastMessageAt;
+
+      const mins =
+        diff / 60000;
+
+      const hrs =
+        diff / 3600000;
+
+      let msg = null;
+
+      // ---------------------------------------------
+      // 10 MIN
+      // ---------------------------------------------
+      if (
+        mins >= 10 &&
+        !s.ping10Sent
+      ) {
+        s.ping10Sent = true;
+
+        if (
+          s.lastTopic ===
+          "company"
+        ) {
+          msg =
+            s.language === "en"
+              ? "If you share your sector and visa needs, I can guide you toward the most suitable Dubai company structure."
+              : s.language === "ar"
+              ? "إذا شاركتم القطاع وعدد التأشيرات المطلوبة يمكنني توجيهكم نحو أنسب هيكل شركة في دبي."
+              : "Sektörünüzü ve vize ihtiyacınızı paylaşırsanız size en uygun Dubai şirket yapısı konusunda yönlendirme sunabilirim.";
+        }
+
+        else if (
+          s.lastTopic ===
+          "residency"
+        ) {
+          msg =
+            s.language === "en"
+              ? "If your Dubai residency plan is still active, I can help clarify the most suitable route based on your budget and timeline."
+              : s.language === "ar"
+              ? "إذا كانت خطة الإقامة في دبي ما زالت قائمة، يمكنني توضيح الأنسب حسب الميزانية والمدة."
+              : "Dubai oturum planınız devam ediyorsa bütçe ve zaman planınıza göre en uygun seçeneği netleştirebilirim.";
+        }
+
+        else if (
+          s.lastTopic ===
+          "ai"
+        ) {
+          msg =
+            s.language === "en"
+              ? "If you'd like to automate lead generation or customer replies, I can suggest the most efficient AI solution."
+              : s.language === "ar"
+              ? "إذا رغبتم بأتمتة العملاء أو الردود يمكنني اقتراح أنسب حل بالذكاء الاصطناعي."
+              : "Müşteri kazanımı veya otomatik cevaplama hedefiniz varsa size en verimli yapay zekâ çözümünü önerebilirim.";
+        }
+
+        else {
+          msg =
+            s.language === "en"
+              ? "If your plan is still active, feel free to continue whenever you're ready."
+              : s.language === "ar"
+              ? "إذا كانت خطتكم مستمرة يمكننا المتابعة في أي وقت يناسبكم."
+              : "Planınız devam ediyorsa hazır olduğunuzda dilediğiniz zaman devam edebiliriz.";
+        }
+      }
+
+      // ---------------------------------------------
+      // 3 HOUR
+      // ---------------------------------------------
+      else if (
+        hrs >= 3 &&
+        !s.ping3hSent
+      ) {
+        s.ping3hSent = true;
+
+        if (
+          s.lastTopic ===
+          "company"
+        ) {
+          msg =
+            s.language === "en"
+              ? "Choosing the right setup at the beginning can save significant cost and time later. We can continue whenever you'd like."
+              : s.language === "ar"
+              ? "اختيار الهيكل الصحيح من البداية قد يوفر وقتاً وتكلفة لاحقاً. يمكننا المتابعة متى شئتم."
+              : "Başlangıçta doğru şirket yapısını seçmek ileride ciddi zaman ve maliyet avantajı sağlayabilir. Dilerseniz devam edebiliriz.";
+        }
+
+        else {
+          msg =
+            s.language === "en"
+              ? "If your Dubai plans are still under evaluation, I’d be happy to continue from where we left off."
+              : s.language === "ar"
+              ? "إذا كانت خطط دبي ما زالت قيد الدراسة يسعدني المتابعة من حيث توقفنا."
+              : "Dubai planınız hâlâ değerlendiriliyorsa kaldığımız yerden devam etmekten memnuniyet duyarım.";
+        }
+      }
+
+      // ---------------------------------------------
+      // 24 HOUR
+      // ---------------------------------------------
+      else if (
+        hrs >= 24 &&
+        !s.ping24hSent
+      ) {
+        s.ping24hSent = true;
+
+        msg =
+          s.language === "en"
+            ? "Whenever you're ready regarding your Dubai plans, I’ll be here to assist professionally."
+            : s.language === "ar"
+            ? "متى ما كنتم جاهزين بخصوص خططكم في دبي سأكون هنا للمساعدة بكل احترافية."
+            : "Dubai planınızla ilgili hazır olduğunuzda profesyonel şekilde yardımcı olmak için burada olacağım.";
+      }
+
+      if (msg) {
+        await sendWhatsAppMessage(
+          id,
+          msg
+        );
+      }
+    }
+
+  } catch (error) {
+    log(
+      "SMART PING ERROR:",
+      error.message
+    );
+  }
+});
+
+// =====================================================
+// PATCH buildReply HOOK
+// Add this single line inside buildReply()
+// right after rememberMessage(user)
+// =====================================================
+
+// await maybeSendHumanAlert(session, userText);
+
+// =====================================================
+// FINAL NOTE
+// Delete old ping cron if duplicated.
+// Keep only latest cron block.
+// =====================================================
+
+// =====================================================
+// V5 PRO PATCH - PART 4
+// QUALITY CONTROL + MEMORY UPGRADE + HUMAN MODE
+// APPEND UNDER PART 3
+// =====================================================
+
+// =====================================================
+// HUMAN MODE SWITCH
+// If admin manually talks, bot pauses
+// =====================================================
+
+function isBotPaused(session) {
+  if (!session.pauseUntil) return false;
+  return now() < session.pauseUntil;
+}
+
+function pauseBot(session, hours = 6) {
+  session.pauseUntil =
+    now() + hours * 3600000;
+}
+
+// =====================================================
+// If user requests real human strongly
+// =====================================================
+
+function wantsHuman(clean) {
+  const words = [
+    "canli temsilci",
+    "temsilci",
+    "human",
+    "real person",
+    "manager",
+    "yetkili",
+    "biri arasın",
+    "beni arayin",
+    "arayin"
+  ];
+
+  return words.some(w =>
+    clean.includes(w)
+  );
+}
+
+// =====================================================
+// RESPONSE QUALITY FLOOR
+// Never weak replies
+// =====================================================
+
+function enhanceWeakReply(
+  session,
+  text
+) {
+  if (!text) return text;
+
+  let msg = text.trim();
+
+  // too short
+  if (msg.length < 120) {
+    msg +=
+      " " +
+      closingQuestion(
+        session.lastTopic ||
+          "general",
+        session.language
+      );
+  }
+
+  // one line fix
+  if (
+    msg.split(" ").length <
+    12
+  ) {
+    msg +=
+      " Size en doğru yönlendirmeyi yapabilmem için birkaç detay paylaşabilirsiniz.";
+  }
+
+  return msg;
+}
+
+// =====================================================
+// SMART MEMORY EXTRACTION
+// =====================================================
+
+function extractBusinessData(
+  session,
+  clean
+) {
+  // visa count
+  const visaMatch =
+    clean.match(
+      /(\d+)\s*(visa|vize)/
+    );
+
+  if (visaMatch) {
+    session.visaNeed =
+      visaMatch[1];
+  }
+
+  // sectors
+  const sectors = [
+    "emlak",
+    "restaurant",
+    "restoran",
+    "cafe",
+    "danismanlik",
+    "consulting",
+    "software",
+    "yazilim",
+    "trading",
+    "ticaret",
+    "beauty",
+    "guzellik"
+  ];
+
+  for (const s of sectors) {
+    if (
+      clean.includes(s)
+    ) {
+      session.sector =
+        s;
+      break;
+    }
+  }
+
+  // budget
+  const budget =
+    clean.match(
+      /(\d+)\s*(aed|usd|tl)/
+    );
+
+  if (budget) {
+    session.budget =
+      budget[0];
+  }
+}
+
+// =====================================================
+// DYNAMIC DETAIL FLOOR
+// =====================================================
+
+function makeDetailedIfNeeded(
+  session,
+  text
+) {
+  if (!text) return text;
+
+  if (
+    text.length > 220
+  ) {
+    return text;
+  }
+
+  if (
+    session.lastTopic ===
+    "company"
+  ) {
+    return (
+      text +
+      " Şirket kuruluşunda doğru yapı seçimi; vergi planlaması, banka hesabı süreci, vize kapasitesi ve ilerideki operasyonel esneklik açısından önem taşır."
+    );
+  }
+
+  if (
+    session.lastTopic ===
+    "residency"
+  ) {
+    return (
+      text +
+      " Oturum süreçlerinde doğru yolun seçilmesi; maliyet, hız ve uzun vadeli uygunluk açısından önemli fark yaratabilir."
+    );
+  }
+
+  return text;
+}
+
+// =====================================================
+// ADMIN MANUAL MODE
+// If admin writes #pause + usernumber
+// future expandable
+// =====================================================
+
+function parseAdminCommand(
+  from,
+  text
+) {
+  if (
+    !ADMIN_NUMBER ||
+    from !==
+      ADMIN_NUMBER
+  ) {
+    return null;
+  }
+
+  const clean =
+    normalizeText(text);
+
+  if (
+    clean.startsWith(
+      "pause "
+    )
+  ) {
+    const parts =
+      clean.split(" ");
+
+    return {
+      type: "pause",
+      target:
+        parts[1]
+    };
+  }
+
+  return null;
+}
+
+// =====================================================
+// PATCH buildReply INTEGRATION NOTES
+// Add inside buildReply():
+//
+// const clean = normalizeText(userText);
+// extractBusinessData(session, clean);
+//
+// if (isBotPaused(session)) return null;
+//
+// if (wantsHuman(clean)) {
+//   pauseBot(session, 6);
+//   return liveAgentMessage(session.language);
+// }
+//
+// before every final return:
+// msg = enhanceWeakReply(session, msg);
+// msg = makeDetailedIfNeeded(session, msg);
+// =====================================================
+
+// =====================================================
+// SMART MEMORY CLEANUP
+// remove inactive sessions after 30 days
+// =====================================================
+
+cron.schedule(
+  "0 3 * * *",
+  () => {
+    try {
+      const limit =
+        now() -
+        30 *
+          24 *
+          3600000;
+
+      for (const [
+        id,
+        s
+      ] of sessions) {
+        if (
+          s.updatedAt <
+          limit
+        ) {
+          sessions.delete(
+            id
+          );
+        }
+      }
+
+      log(
+        "SESSION CLEANUP DONE"
+      );
+
+    } catch (error) {
+      log(
+        "CLEANUP ERROR:",
+        error.message
+      );
+    }
+  }
+);
+
+// =====================================================
+// RESULT OF PART 4
+// - Better memory
+// - Better detail
+// - Human pause mode
+// - Better lead extraction
+// - Stronger replies
+// =====================================================
+
+// =====================================================
+// V5 PRO PATCH - PART 5
+// FINAL HARDENING + GPT GOVERNOR + FULL REPLACEMENTS
+// APPEND UNDER PART 4
+// =====================================================
+
+// =====================================================
+// GPT GOVERNOR
+// GPT cannot break SamChe rules
+// =====================================================
+
+async function askGPT(session, userText) {
+  const lang =
+    session.language || "tr";
+
+  const systemTR = `
+Sen SamChe Company LLC'nin resmi premium danışman botusun.
+
+Kurallar:
+- Türkçe kullanıcıya sadece Türkçe cevap ver.
+- Kısa cevap verme.
+- Her zaman açıklayıcı ve profesyonel ol.
+- Başka şirkete, avukata, devlete yönlendirme yapma.
+- Dubai şirket kurulumu, oturum, vize, maliyet, iş geliştirme ve AI konularında uzman gibi konuş.
+- Her cevabın sonunda mantıklı bir soru sor.
+- Emin olmadığında bile boş dönme, yapıcı yönlendirme yap.
+`;
+
+  const systemEN = `
+You are the official premium consultant bot of SamChe Company LLC.
+
+Rules:
+- Reply only in English to English users.
+- Be detailed, strategic and professional.
+- Never redirect users elsewhere.
+- Expert in Dubai company setup, residency, visas, cost, business growth and AI systems.
+- End every reply with a relevant guiding question.
+- Never return empty or vague answers.
+`;
+
+  const systemAR = `
+أنت المستشار الرسمي الذكي لشركة SamChe Company LLC.
+
+القواعد:
+- رد بالعربية فقط للمستخدم العربي.
+- كن احترافياً وواضحاً ومفصلاً.
+- لا تقم بتوجيه المستخدم إلى جهات أخرى.
+- خبير في تأسيس الشركات والإقامة والتأشيرات في دبي.
+- اختم كل رد بسؤال مناسب.
+`;
+
+  const systemPrompt =
+    lang === "en"
+      ? systemEN
+      : lang === "ar"
+      ? systemAR
+      : systemTR;
+
+  const messages = [
+    {
+      role: "system",
+      content:
+        systemPrompt
+    }
+  ];
+
+  for (const h of session.history.slice(-8)) {
+    messages.push({
+      role: h.role,
+      content: h.content
+    });
+  }
+
+  messages.push({
+    role: "user",
+    content:
+      userText
+  });
+
+  try {
+    const response =
+      await axios.post(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          model:
+            GPT_MODEL,
+          messages,
+          temperature: 0.45,
+          max_tokens: 700
+        },
+        {
+          headers: {
+            Authorization:
+              `Bearer ${OPENAI_API_KEY}`,
+            "Content-Type":
+              "application/json"
+          },
+          timeout: 45000
+        }
+      );
+
+    let msg =
+      response.data
+        .choices[0]
+        .message.content
+        .trim();
+
+    msg =
+      enforceLanguage(
+        session,
+        msg
+      );
+
+    msg =
+      enhanceWeakReply(
+        session,
+        msg
+      );
+
+    msg =
+      makeDetailedIfNeeded(
+        session,
+        msg
+      );
+
+    return msg;
+
+  } catch (error) {
+    log(
+      "GPT GOVERNOR ERROR:",
+      error.message
+    );
+
+    return safeFallback(
+      session
+    );
+  }
+}
+
+// =====================================================
+// SAFE FALLBACK
+// =====================================================
+
+function safeFallback(
+  session
+) {
+  const lang =
+    session.language ||
+    "tr";
+
+  if (lang === "en") {
+    return `I understood your request. I can assist with Dubai company setup, residency options, visas, costs, and business growth solutions. Which area would you like to focus on?`;
+  }
+
+  if (lang === "ar") {
+    return `تم فهم طلبكم. يمكنني مساعدتكم في تأسيس الشركات في دبي، خيارات الإقامة، التأشيرات، التكاليف، وتطوير الأعمال. ما المجال الذي ترغبون بالتركيز عليه؟`;
+  }
+
+  return `Talebinizi anladım. Dubai’de şirket kuruluşu, oturum seçenekleri, vizeler, maliyetler ve iş geliştirme konularında yardımcı olabilirim. Hangi alana odaklanmak istersiniz?`;
+}
+
+// =====================================================
+// MESSAGE SANITY FILTER
+// removes bad outputs
+// =====================================================
+
+function sanitizeReply(
+  session,
+  text
+) {
+  if (!text) {
+    return safeFallback(
+      session
+    );
+  }
+
+  let msg =
+    text.trim();
+
+  // nonsense repeats
+  if (
+    msg.length < 10
+  ) {
+    return safeFallback(
+      session
+    );
+  }
+
+  // forbidden redirects
+  const banned = [
+    "consult a lawyer",
+    "contact government",
+    "ask another company",
+    "freezone authority",
+    "seek legal advice"
+  ];
+
+  for (const b of banned) {
+    if (
+      msg
+        .toLowerCase()
+        .includes(b)
+    ) {
+      return safeFallback(
+        session
+      );
+    }
+  }
+
+  return msg;
+}
+
+// =====================================================
+// FULL RESPONSE FINALIZER
+// Use before sendWhatsAppMessage
+// =====================================================
+
+function finalizeReply(
+  session,
+  text
+) {
+  let msg =
+    sanitizeReply(
+      session,
+      text
+    );
+
+  msg =
+    enforceLanguage(
+      session,
+      msg
+    );
+
+  msg =
+    enhanceWeakReply(
+      session,
+      msg
+    );
+
+  msg =
+    makeDetailedIfNeeded(
+      session,
+      msg
+    );
+
+  return msg;
+}
+
+// =====================================================
+// PATCH WEBHOOK NOTE
+// Replace:
+//
+// await sendWhatsAppMessage(from, reply);
+//
+// With:
+//
+// const finalMsg = finalizeReply(session, reply);
+// await sendWhatsAppMessage(from, finalMsg);
+// =====================================================
+
+// =====================================================
+// FINAL RESULT OF PART 5
+// - GPT disciplined
+// - no wrong language
+// - no weak answers
+// - no empty replies
+// - no rule breaks
+// - stronger premium consultant behavior
+// =====================================================
+
+// =====================================================
+// V5 PRO PATCH - PART 6
+// FULL buildReply() FINAL ELITE VERSION
+// REPLACE ENTIRE buildReply FUNCTION
+// =====================================================
+
+async function buildReply(session, userText) {
+  // -------------------------------------------------
+  // PREP
+  // -------------------------------------------------
+  const clean =
+    normalizeText(userText);
+
+  session.language =
+    detectLanguage(
+      userText,
+      session.language
+    );
+
+  session.lastMessageAt =
+    now();
+  session.updatedAt =
+    now();
+
+  extractBusinessData(
+    session,
+    clean
+  );
+
+  // -------------------------------------------------
+  // ADMIN / HUMAN MODE
+  // -------------------------------------------------
+  if (
+    isBotPaused(session)
+  ) {
+    return null;
+  }
+
+  if (
+    wantsHuman(clean)
+  ) {
+    pauseBot(
+      session,
+      6
+    );
+
+    const msg =
+      liveAgentMessage(
+        session.language
+      );
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return finalizeReply(
+      session,
+      msg
+    );
+  }
+
+  // -------------------------------------------------
+  // FIRST GREETING
+  // -------------------------------------------------
+  if (
+    !session.greeted
+  ) {
+    session.greeted =
+      true;
+
+    const greet =
+      greetingMessage(
+        session.language
+      );
+
+    rememberMessage(
+      session,
+      "assistant",
+      greet
+    );
+
+    return finalizeReply(
+      session,
+      greet
+    );
+  }
+
+  // -------------------------------------------------
+  // DUPLICATE
+  // -------------------------------------------------
+  if (
+    isDuplicate(
+      session,
+      clean
+    )
+  ) {
+    return null;
+  }
+
+  rememberMessage(
+    session,
+    "user",
+    userText
+  );
+
+  // -------------------------------------------------
+  // HUMAN ALERT HOT LEAD
+  // -------------------------------------------------
+  await maybeSendHumanAlert(
+    session,
+    userText
+  );
+
+  // -------------------------------------------------
+  // PAYMENT / READY ROUTE
+  // -------------------------------------------------
+  if (
+    clean.includes(
+      "odeme"
+    ) ||
+    clean.includes(
+      "payment"
+    ) ||
+    clean.includes(
+      "baslayalim"
+    ) ||
+    clean.includes(
+      "ready"
+    ) ||
+    clean.includes(
+      "evrak"
+    )
+  ) {
+    bumpLead(
+      session,
+      5
+    );
+
+    let msg =
+      session.language ===
+      "en"
+        ? `Thank you. Since you are ready to proceed, I’m sharing our payment details below.\n\n${bankInfo()}`
+        : session.language ===
+          "ar"
+        ? `شكراً لكم. بما أنكم جاهزون للبدء، أشارك معكم تفاصيل الدفع أدناه.\n\n${bankInfo()}`
+        : `Teşekkür ederim. Sürece başlamaya hazır olduğunuz için ödeme bilgilerini aşağıda paylaşıyorum.\n\n${bankInfo()}`;
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return finalizeReply(
+      session,
+      msg
+    );
+  }
+
+  // -------------------------------------------------
+  // INTENT DETECT
+  // -------------------------------------------------
+  const intent =
+    detectIntent(
+      clean
+    );
+
+  forceTopic(
+    session,
+    intent
+  );
+
+  // =================================================
+  // RESIDENCY (TOP PRIORITY)
+  // =================================================
+  if (
+    intent ===
+    "residency"
+  ) {
+    bumpLead(
+      session,
+      3
+    );
+
+    const msg =
+      residencyIntro(
+        session.language
+      );
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return finalizeReply(
+      session,
+      msg
+    );
+  }
+
+  // =================================================
+  // COMPANY
+  // =================================================
+  if (
+    intent ===
+    "company"
+  ) {
+    bumpLead(
+      session,
+      3
+    );
+
+    const msg =
+      companyReply(
+        session
+      );
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return finalizeReply(
+      session,
+      msg
+    );
+  }
+
+  // =================================================
+  // AI
+  // =================================================
+  if (
+    intent ===
+    "ai"
+  ) {
+    bumpLead(
+      session,
+      2
+    );
+
+    const msg =
+      aiReply(
+        session.language
+      );
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return finalizeReply(
+      session,
+      msg
+    );
+  }
+
+  // =================================================
+  // TRUST
+  // =================================================
+  if (
+    intent ===
+    "trust"
+  ) {
+    const msg =
+      trustReply(
+        session.language
+      );
+
+    rememberMessage(
+      session,
+      "assistant",
+      msg
+    );
+
+    return finalizeReply(
+      session,
+      msg
+    );
+  }
+
+  // =================================================
+  // SPECIAL TURKISH SMART ROUTES
+  // =================================================
+  if (
+    session.language ===
+    "tr"
+  ) {
+    // Dubai question
+    if (
+      clean.includes(
+        "dubai nasil"
+      ) ||
+      clean.includes(
+        "dubai iyi mi"
+      ) ||
+      clean.includes(
+        "dubai nasil bir yer"
+      )
+    ) {
+      const msg =
+        `Dubai; güvenli yaşam yapısı, uluslararası iş ortamı, güçlü ekonomi ve modern şehir düzeni ile öne çıkan bir merkezdir. Vergi avantajları ve hızlı iş süreçleri nedeniyle girişimciler tarafından sık tercih edilir. Yaşam maliyeti ise yaşam tarzına göre değişebilir. Dubai’yi yaşamak, yatırım yapmak veya şirket kurmak açısından mı değerlendiriyorsunuz?`;
+
+      rememberMessage(
+        session,
+        "assistant",
+        msg
+      );
+
+      return finalizeReply(
+        session,
+        msg
+      );
+    }
+
+    // Cost question
+    if (
+      clean.includes(
+        "maliyet"
+      ) ||
+      clean.includes(
+        "ucret"
+      ) ||
+      clean.includes(
+        "fiyat"
+      ) ||
+      clean.includes(
+        "ne kadar"
+      )
+    ) {
+      const msg =
+        `Maliyet konusu; seçilecek yapı, faaliyet alanı, vize ihtiyacı ve hedefe göre değişmektedir. Bu nedenle tek rakam vermek yerine ihtiyacınıza göre daha doğru tablo çıkarmak gerekir. Şirket kuruluşu, oturum veya yapay zekâ hizmetlerinden hangisi için maliyet öğrenmek istiyorsunuz?`;
+
+      rememberMessage(
+        session,
+        "assistant",
+        msg
+      );
+
+      return finalizeReply(
+        session,
+        msg
+      );
+    }
+  }
+
+  // =================================================
+  // GPT GOVERNED FINAL ROUTE
+  // =================================================
+  const msg =
+    await askGPT(
+      session,
+      userText
+    );
+
+  rememberMessage(
+    session,
+    "assistant",
+    msg
+  );
+
+  return finalizeReply(
+    session,
+    msg
+  );
+}
+
+// =====================================================
+// V5 PRO PATCH - PART 7
+// FINAL WEBHOOK + ADMIN COMMANDS + DUPLICATE CLEANUP
+// REPLACE / UPGRADE WEBHOOK SECTION
+// =====================================================
 
 // =====================================================
 // WEBHOOK VERIFY
@@ -784,7 +1783,129 @@ app.get("/webhook", (req, res) => {
 });
 
 // =====================================================
-// WEBHOOK RECEIVE
+// ADMIN COMMAND ENGINE
+// ADMIN_NUMBER can send:
+// pause USERNUMBER
+// resume USERNUMBER
+// status USERNUMBER
+// =====================================================
+
+function adminCommandAllowed(from) {
+  if (!ADMIN_NUMBER) return false;
+
+  const a =
+    String(
+      ADMIN_NUMBER
+    ).replace(/\D/g, "");
+
+  const b =
+    String(from).replace(
+      /\D/g,
+      ""
+    );
+
+  return a === b;
+}
+
+function parseAdminCommand(text = "") {
+  const clean =
+    normalizeText(text);
+
+  const parts =
+    clean.split(" ");
+
+  const cmd =
+    parts[0];
+
+  const target =
+    parts[1];
+
+  if (
+    ["pause", "resume", "status"]
+      .includes(cmd) &&
+    target
+  ) {
+    return {
+      cmd,
+      target
+    };
+  }
+
+  return null;
+}
+
+async function runAdminCommand(
+  from,
+  command
+) {
+  const target =
+    command.target;
+
+  const session =
+    getSession(
+      target
+    );
+
+  if (
+    command.cmd ===
+    "pause"
+  ) {
+    pauseBot(
+      session,
+      24
+    );
+
+    await sendWhatsAppMessage(
+      from,
+      `✅ Bot paused for ${target} (24h).`
+    );
+
+    return true;
+  }
+
+  if (
+    command.cmd ===
+    "resume"
+  ) {
+    session.pauseUntil =
+      null;
+
+    await sendWhatsAppMessage(
+      from,
+      `✅ Bot resumed for ${target}.`
+    );
+
+    return true;
+  }
+
+  if (
+    command.cmd ===
+    "status"
+  ) {
+    const status =
+      isBotPaused(
+        session
+      )
+        ? "PAUSED"
+        : "ACTIVE";
+
+    await sendWhatsAppMessage(
+      from,
+      `📊 ${target}
+Status: ${status}
+Topic: ${session.lastTopic || "general"}
+Lead Score: ${session.leadScore}
+Language: ${session.language}`
+    );
+
+    return true;
+  }
+
+  return false;
+}
+
+// =====================================================
+// MAIN WEBHOOK RECEIVE
 // =====================================================
 
 app.post("/webhook", async (req, res) => {
@@ -801,18 +1922,59 @@ app.post("/webhook", async (req, res) => {
 
     if (!msg) return;
 
-    if (msg.type !== "text") return;
+    if (
+      msg.type !==
+      "text"
+    ) return;
 
-    const from = msg.from;
+    const from =
+      msg.from;
+
     const text =
-      msg.text?.body || "";
+      msg.text?.body ||
+      "";
 
-    if (!from || !text) return;
+    if (
+      !from ||
+      !text
+    ) return;
 
-    log("TEXT IN:", from, text);
+    log(
+      "TEXT IN:",
+      from,
+      text
+    );
 
+    // -----------------------------------------
+    // ADMIN COMMANDS
+    // -----------------------------------------
+    if (
+      adminCommandAllowed(
+        from
+      )
+    ) {
+      const cmd =
+        parseAdminCommand(
+          text
+        );
+
+      if (cmd) {
+        await runAdminCommand(
+          from,
+          cmd
+        );
+
+        return;
+      }
+    }
+
+    // -----------------------------------------
+    // NORMAL USER FLOW
+    // -----------------------------------------
     const session =
-      getSession(from);
+      getSession(
+        from
+      );
 
     const reply =
       await buildReply(
@@ -822,14 +1984,20 @@ app.post("/webhook", async (req, res) => {
 
     if (!reply) return;
 
+    const finalMsg =
+      finalizeReply(
+        session,
+        reply
+      );
+
     await sendWhatsAppMessage(
       from,
-      reply
+      finalMsg
     );
 
   } catch (error) {
     log(
-      "WEBHOOK ERROR:",
+      "WEBHOOK FINAL ERROR:",
       error.message
     );
   }
@@ -842,109 +2010,16 @@ app.post("/webhook", async (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    bot: "SAMCHE V5 ULTRA PROFESSIONAL",
+    bot: "SAMCHE V5 PRO ELITE",
     status: "online",
-    sessions: sessions.size
+    sessions:
+      sessions.size,
+    memory: "active",
+    pings: "active",
+    alerts: ADMIN_NUMBER
+      ? "active"
+      : "off"
   });
-});
-
-// =====================================================
-// SMART PING ENGINE
-// 10 MIN / 3 HOUR / 24 HOUR
-// =====================================================
-
-cron.schedule("* * * * *", async () => {
-  try {
-    const current = now();
-
-    for (const [id, s] of sessions) {
-      const diff =
-        current -
-        s.lastMessageAt;
-
-      const mins =
-        diff / 60000;
-
-      const hrs =
-        diff / 3600000;
-
-      let msg = null;
-
-      // 10 min
-      if (
-        mins >= 10 &&
-        !s.ping10Sent
-      ) {
-        s.ping10Sent = true;
-
-        if (
-          s.lastTopic ===
-          "company"
-        ) {
-          msg =
-            s.language === "en"
-              ? "If you share the sector you are considering, I can guide you more precisely regarding the most suitable company structure."
-              : "Düşündüğünüz sektörü paylaşırsanız size en uygun şirket yapısı konusunda daha net yönlendirme sunabilirim.";
-        }
-
-        else if (
-          s.lastTopic ===
-          "residency"
-        ) {
-          msg =
-            s.language === "en"
-              ? "If your Dubai residency plan is still active, I can help clarify the most suitable route based on budget and timeline."
-              : "Dubai oturum planınız devam ediyorsa bütçe ve hedefinize göre en uygun seçeneği netleştirebilirim.";
-        }
-
-        else {
-          msg =
-            s.language === "en"
-              ? "If your plan is still active, feel free to continue whenever you are ready."
-              : "Planınız devam ediyorsa dilediğiniz zaman devam edebiliriz.";
-        }
-      }
-
-      // 3h
-      else if (
-        hrs >= 3 &&
-        !s.ping3hSent
-      ) {
-        s.ping3hSent = true;
-
-        msg =
-          s.language === "en"
-            ? "The right structure at the beginning can save both time and cost later. If you'd like, we can continue from where we left off."
-            : "Başlangıçta doğru yapı seçimi ileride hem zaman hem maliyet avantajı sağlar. Dilerseniz kaldığımız yerden devam edebiliriz.";
-      }
-
-      // 24h
-      else if (
-        hrs >= 24 &&
-        !s.ping24hSent
-      ) {
-        s.ping24hSent = true;
-
-        msg =
-          s.language === "en"
-            ? "If your Dubai plans are still on your agenda, I’ll be happy to assist whenever you’re ready."
-            : "Dubai planınız hâlâ gündeminizdeyse hazır olduğunuzda memnuniyetle yardımcı olabilirim.";
-      }
-
-      if (msg) {
-        await sendWhatsAppMessage(
-          id,
-          msg
-        );
-      }
-    }
-
-  } catch (error) {
-    log(
-      "PING ERROR:",
-      error.message
-    );
-  }
 });
 
 // =====================================================
@@ -953,6 +2028,18 @@ cron.schedule("* * * * *", async () => {
 
 server.listen(PORT, () => {
   log(
-    `SAMCHE V5 ULTRA PROFESSIONAL STARTED ON PORT ${PORT}`
+    `SAMCHE V5 PRO ELITE STARTED ON PORT ${PORT}`
   );
 });
+
+// =====================================================
+// FINAL RESULT OF PART 7
+// -----------------------------------------------------
+// ✅ Strong webhook
+// ✅ Admin commands
+// ✅ Pause / resume users
+// ✅ Human takeover mode
+// ✅ Status checks
+// ✅ Finalized replies
+// ✅ Production grade behavior
+// =====================================================
