@@ -1,8 +1,9 @@
 // =====================================================
 // SAMCHE PRO CONSULTANT ENGINE
+// FINAL CLEAN APP.JS
 // PART 1 / 3
 // FOUNDATION + ENV + SERVER + MEMORY + LANGUAGE
-// COPY THIS FIRST INTO app.js
+// COPY FIRST
 // =====================================================
 
 require("dotenv").config();
@@ -17,7 +18,9 @@ const cron = require("node-cron");
 // =====================================================
 
 const PORT =
-  Number(process.env.PORT || 10000);
+  Number(
+    process.env.PORT || 10000
+  );
 
 const OPENAI_API_KEY =
   process.env.OPENAI_API_KEY || "";
@@ -39,7 +42,8 @@ const MODEL =
 // APP
 // =====================================================
 
-const app = express();
+const app =
+  express();
 
 app.use(
   express.json({
@@ -48,7 +52,9 @@ app.use(
 );
 
 const server =
-  http.createServer(app);
+  http.createServer(
+    app
+  );
 
 // =====================================================
 // HELPERS
@@ -60,12 +66,15 @@ function now() {
 
 function log(...args) {
   console.log(
-    new Date().toISOString(),
+    new Date()
+      .toISOString(),
     ...args
   );
 }
 
-function normalizeText(text = "") {
+function normalizeText(
+  text = ""
+) {
   return String(text)
     .toLowerCase()
     .trim()
@@ -80,7 +89,9 @@ function normalizeText(text = "") {
     .trim();
 }
 
-function safeText(text = "") {
+function safeText(
+  text = ""
+) {
   return String(text)
     .trim()
     .slice(0, 3000);
@@ -93,7 +104,9 @@ function safeText(text = "") {
 const sessions =
   new Map();
 
-function getSession(userId) {
+function getSession(
+  userId
+) {
   if (
     !sessions.has(
       userId
@@ -104,20 +117,27 @@ function getSession(userId) {
       {
         userId,
 
-        greeted: false,
+        greeted:
+          false,
 
-        lang: "tr",
+        lang:
+          "tr",
 
-        topic: "general",
+        topic:
+          "general",
 
         lastMessageAt:
           now(),
 
-        ping10: false,
-        ping3h: false,
-        ping24h: false,
+        ping10:
+          false,
+        ping3h:
+          false,
+        ping24h:
+          false,
 
-        history: []
+        history:
+          []
       }
     );
   }
@@ -138,11 +158,13 @@ function remember(
   role,
   text
 ) {
-  session.history.push({
-    role,
-    text,
-    at: now()
-  });
+  session.history.push(
+    {
+      role,
+      text,
+      at: now()
+    }
+  );
 
   if (
     session.history
@@ -153,7 +175,7 @@ function remember(
 }
 
 // =====================================================
-// LANGUAGE ENGINE
+// LANGUAGE
 // =====================================================
 
 function detectLanguage(
@@ -173,20 +195,29 @@ function detectLanguage(
   }
 
   const raw =
-    String(text).toLowerCase();
+    String(text)
+      .toLowerCase();
 
   const t =
-    normalizeText(text);
+    normalizeText(
+      text
+    );
 
   if (
-    /[çğıöşü]/i.test(text) ||
-    /(merhaba|sirket|oturum|vize|fiyat|maliyet|yardim|dubai)/.test(t)
+    /[çğıöşü]/i.test(
+      text
+    ) ||
+    /(merhaba|oturum|sirket|maliyet|fiyat|yardim|dubai)/.test(
+      t
+    )
   ) {
     return "tr";
   }
 
   if (
-    /(hello|company|visa|residency|price|cost|help|dubai)/.test(raw)
+    /(hello|company|visa|residency|cost|price|help|dubai)/.test(
+      raw
+    )
   ) {
     return "en";
   }
@@ -198,14 +229,20 @@ function detectLanguage(
 // GREETING
 // =====================================================
 
-function greeting(lang) {
-  if (lang === "en") {
+function greeting(
+  lang
+) {
+  if (
+    lang === "en"
+  ) {
     return `Hello, I’m here to assist you on behalf of SamChe Company LLC.
 
 I can help with Dubai company setup, residency options, visas, costs and business advisory services. How may I assist you today?`;
   }
 
-  if (lang === "ar") {
+  if (
+    lang === "ar"
+  ) {
     return `مرحباً، أنا هنا لمساعدتكم نيابةً عن SamChe Company LLC.
 
 يمكنني مساعدتكم في تأسيس الشركات في دبي، الإقامة، التأشيرات والتكاليف والخدمات الاستشارية. كيف يمكنني مساعدتكم اليوم؟`;
@@ -220,19 +257,26 @@ Dubai’de şirket kuruluşu, iş planları, oturum seçenekleri, vizeler, maliy
 // HEALTHCHECK
 // =====================================================
 
-app.get("/", (req, res) => {
-  res.json({
-    ok: true,
-    bot: "SAMCHE PRO CONSULTANT ENGINE",
-    sessions:
-      sessions.size
-  });
-});
+app.get(
+  "/",
+  (
+    req,
+    res
+  ) => {
+    res.json({
+      ok: true,
+      bot: "SAMCHE PRO FINAL",
+      sessions:
+        sessions.size
+    });
+  }
+);
 
 // =====================================================
 // SAMCHE PRO CONSULTANT ENGINE
+// FINAL CLEAN APP.JS
 // PART 2 / 3
-// MASTER PROMPT + GPT BRAIN + MAIN LOGIC
+// RULE ENGINE + GPT + MAIN BRAIN
 // COPY UNDER PART 1
 // =====================================================
 
@@ -240,24 +284,34 @@ app.get("/", (req, res) => {
 // TOPIC DETECTION
 // =====================================================
 
-function detectTopic(text = "") {
+function detectTopic(
+  text = ""
+) {
   const t =
-    normalizeText(text);
+    normalizeText(
+      text
+    );
 
   if (
-    /(oturum|ikamet|visa|vize|residency|sponsor|golden visa|family visa)/.test(t)
+    /(oturum|ikamet|visa|vize|residency|sponsor|golden visa|family visa)/.test(
+      t
+    )
   ) {
     return "residency";
   }
 
   if (
-    /(sirket|company|mainland|freezone|free zone|license|lisans|kurulum|kurmak)/.test(t)
+    /(sirket|company|kurulum|kurmak|mainland|freezone|free zone|license|lisans)/.test(
+      t
+    )
   ) {
     return "company";
   }
 
   if (
-    /(ai|chatbot|bot|otomasyon|yapay zeka|whatsapp bot)/.test(t)
+    /(ai|chatbot|bot|otomasyon|yapay zeka)/.test(
+      t
+    )
   ) {
     return "ai";
   }
@@ -266,98 +320,125 @@ function detectTopic(text = "") {
 }
 
 // =====================================================
-// FALLBACK
+// STATIC REPLIES
 // =====================================================
 
-function fallback(lang) {
-  if (lang === "en") {
-    return "Please share a little more detail so I can guide you accurately.";
+function residencyReply(
+  lang
+) {
+  if (
+    lang === "en"
+  ) {
+    return `Dubai has 3 common residency options:
+
+• Sponsored residency
+• Residency through real-estate investment
+• Residency by opening your own company
+
+Which option interests you most?`;
   }
 
-  if (lang === "ar") {
-    return "يرجى مشاركة تفاصيل أكثر حتى أتمكن من مساعدتكم بدقة.";
+  if (
+    lang === "ar"
+  ) {
+    return `يوجد 3 خيارات شائعة للإقامة في دبي:
+
+• إقامة برعاية
+• إقامة عبر الاستثمار العقاري
+• إقامة عبر تأسيس شركة
+
+أي خيار يهمكم أكثر؟`;
   }
 
-  return "Size en doğru yönlendirmeyi yapabilmem için talebinizi biraz daha detaylandırabilir misiniz?";
+  return `Dubai’de 3 yaygın oturum seçeneği vardır:
+
+• Sponsorlu oturum
+• Gayrimenkul yoluyla oturum
+• Şirket kurarak yatırımcı oturumu
+
+Hangi seçenekle ilgileniyorsunuz?`;
+}
+
+function fallback(
+  lang
+) {
+  if (
+    lang === "en"
+  ) {
+    return `Please share a little more detail so I can guide you accurately.`;
+  }
+
+  if (
+    lang === "ar"
+  ) {
+    return `يرجى مشاركة تفاصيل أكثر حتى أتمكن من مساعدتكم بدقة.`;
+  }
+
+  return `Size en doğru yönlendirmeyi yapabilmem için talebinizi biraz daha detaylandırabilir misiniz?`;
 }
 
 // =====================================================
-// MASTER SYSTEM PROMPT
+// SYSTEM PROMPT
 // =====================================================
 
 function buildSystemPrompt(
   session
 ) {
-  const lang =
-    session.lang;
-
-  if (lang === "en") {
+  if (
+    session.lang ===
+    "en"
+  ) {
     return `
-You are SamChe Company LLC Senior Consultant.
+You are SamChe Company LLC Senior Dubai Consultant.
 
-Behave like a premium Dubai business consultant.
+Reply only in English.
 
 Rules:
-- Reply only in English.
-- Give detailed, practical, professional answers.
-- Never give empty replies.
-- Never say you don't know without helping.
-- If user asks about residency in Dubai, ALWAYS first explain these 3 common options:
-1) Sponsored residency
-2) Residency through real estate investment
-3) Residency by opening a company
-Then continue guidance.
-- If user asks company setup, explain Mainland / Free Zone when relevant.
+- Give detailed, practical answers.
+- Behave like premium consultant.
+- Never give empty reply.
+- If company setup asked, explain Mainland / Free Zone when relevant.
+- Give price ranges when possible.
 - Ask smart follow-up questions.
-- Sound trustworthy and premium.
-- Keep answers useful, sales-oriented, consultant style.
+- Be helpful and sales oriented.
 `;
   }
 
-  if (lang === "ar") {
+  if (
+    session.lang ===
+    "ar"
+  ) {
     return `
 أنت مستشار أول لدى SamChe Company LLC.
 
-تصرف كمستشار أعمال محترف في دبي.
+أجب بالعربية فقط.
 
 القواعد:
-- أجب بالعربية فقط.
-- قدم إجابات مفصلة وعملية.
-- لا تقدم إجابات فارغة.
-- إذا سأل المستخدم عن الإقامة في دبي، اشرح أولاً 3 خيارات شائعة:
-1) إقامة برعاية
-2) إقامة عبر الاستثمار العقاري
-3) إقامة عبر تأسيس شركة
-ثم أكمل التوجيه.
-- إذا سأل عن تأسيس شركة، اشرح البر الرئيسي والمنطقة الحرة عند الحاجة.
+- قدم إجابات احترافية ومفصلة.
+- لا تقدم ردود فارغة.
+- اشرح تأسيس الشركات والإقامة بشكل عملي.
 - اطرح أسئلة ذكية.
-- كن احترافياً وموثوقاً.
 `;
   }
 
   return `
-"SamChe Company LLC'nin resmi kıdemli uzman AI asistanıyım. Kullanıcıya 'sen' diye hitap ederim ve kendimden 'ben' olarak bahsederim. 
-Dubai'de şirket kuruluşu, vizeler, maliyetler ve iş stratejileri konusunda net ve güven veren bir dille cevap veririm.
+Sen SamChe Company LLC kıdemli Dubai danışmanısın.
+
+Sadece Türkçe cevap ver.
 
 Kurallar:
-- Sadece Kullanıcı dilinde cevap ver.
-- Ayrıntılı, profesyonel ve güven veren cevaplar ver.
+- Ayrıntılı ve profesyonel cevap ver.
 - Asla boş cevap verme.
-- Kullanıcıyı yanıtsız bırakma.
-- Dubai oturumu sorulursa HER ZAMAN önce şu 3 yaygın seçeneği açıkla:
-1) Sponsorlu oturum
-2) Gayrimenkul yatırımı ile oturum
-3) Şirket kurarak yatırımcı oturumu
-Sonra yönlendirme yap.
-- Şirket kurulumu sorulursa uygun yerde Mainland ve Free Zone farkını açıkla.
+- Şirket kuruluşu sorulursa Mainland / Free Zone farkını uygun yerde açıkla.
+- Uygunsa maliyet aralığı ver.
 - Akıllı takip soruları sor.
-- Kurumsal, premium, çözüm odaklı konuş.
-- Aynı cümleleri tekrar etme.
+- Premium danışman gibi davran.
+- Aynı cümleyi tekrar etme.
 `;
 }
 
 // =====================================================
-// GPT BRAIN
+// GPT ENGINE
 // =====================================================
 
 async function askGPT(
@@ -377,7 +458,8 @@ async function askGPT(
 
     for (const h of session.history) {
       messages.push({
-        role: h.role,
+        role:
+          h.role,
         content:
           h.text
       });
@@ -393,9 +475,10 @@ async function askGPT(
       await axios.post(
         "https://api.openai.com/v1/chat/completions",
         {
-          model: MODEL,
+          model:
+            MODEL,
           messages,
-          temperature: 0.45,
+          temperature: 0.4,
           max_tokens: 550
         },
         {
@@ -427,7 +510,9 @@ async function askGPT(
   } catch (error) {
     log(
       "GPT ERROR:",
-      error.message
+      error.response
+        ?.data ||
+        error.message
     );
 
     return fallback(
@@ -461,6 +546,47 @@ async function buildReply(
     userText
   );
 
+  // FIRST MESSAGE = GREETING ONLY
+  if (
+    !session.greeted
+  ) {
+    session.greeted =
+      true;
+
+    const msg =
+      greeting(
+        session.lang
+      );
+
+    remember(
+      session,
+      "assistant",
+      msg
+    );
+
+    return msg;
+  }
+
+  // HARD RULE: RESIDENCY
+  if (
+    session.topic ===
+    "residency"
+  ) {
+    const msg =
+      residencyReply(
+        session.lang
+      );
+
+    remember(
+      session,
+      "assistant",
+      msg
+    );
+
+    return msg;
+  }
+
+  // GPT FOR EVERYTHING ELSE
   let reply =
     await askGPT(
       session,
@@ -474,20 +600,6 @@ async function buildReply(
       );
   }
 
-  if (
-    !session.greeted
-  ) {
-    session.greeted =
-      true;
-
-    reply =
-      greeting(
-        session.lang
-      ) +
-      "\n\n" +
-      reply;
-  }
-
   remember(
     session,
     "assistant",
@@ -499,13 +611,14 @@ async function buildReply(
 
 // =====================================================
 // SAMCHE PRO CONSULTANT ENGINE
+// FINAL CLEAN APP.JS
 // PART 3 / 3
-// WHATSAPP WEBHOOK + CRON + STARTUP
+// WEBHOOK + CRON + STARTUP
 // COPY UNDER PART 2
 // =====================================================
 
 // =====================================================
-// SEND MESSAGE
+// SEND WHATSAPP MESSAGE
 // =====================================================
 
 async function sendWhatsAppMessage(
@@ -518,10 +631,15 @@ async function sendWhatsAppMessage(
       {
         messaging_product:
           "whatsapp",
+
         to,
+
         type: "text",
+
         text: {
-          preview_url: false,
+          preview_url:
+            false,
+
           body: String(
             body
           ).slice(
@@ -534,16 +652,21 @@ async function sendWhatsAppMessage(
         headers: {
           Authorization:
             `Bearer ${WHATSAPP_TOKEN}`,
+
           "Content-Type":
             "application/json"
         },
-        timeout: 30000
+
+        timeout:
+          30000
       }
     );
   } catch (error) {
     log(
       "SEND ERROR:",
-      error.message
+      error.response
+        ?.data ||
+        error.message
     );
   }
 }
@@ -586,7 +709,7 @@ app.get(
 );
 
 // =====================================================
-// RECEIVE MESSAGE
+// RECEIVE WEBHOOK
 // =====================================================
 
 app.post(
@@ -608,9 +731,14 @@ app.post(
           ?.messages?.[0];
 
       if (
-        !msg ||
+        !msg
+      ) {
+        return;
+      }
+
+      if (
         msg.type !==
-          "text"
+        "text"
       ) {
         return;
       }
@@ -637,10 +765,13 @@ app.post(
           from
         );
 
+      // reset cron flags
       session.ping10 =
         false;
+
       session.ping3h =
         false;
+
       session.ping24h =
         false;
 
@@ -660,14 +791,16 @@ app.post(
     ) {
       log(
         "WEBHOOK ERROR:",
-        error.message
+        error.response
+          ?.data ||
+          error.message
       );
     }
   }
 );
 
 // =====================================================
-// CRON FOLLOW-UP
+// CRON FOLLOW UPS
 // =====================================================
 
 cron.schedule(
@@ -688,7 +821,7 @@ cron.schedule(
         let msg =
           "";
 
-        // 10 minutes
+        // 10 MIN
         if (
           mins >=
             10 &&
@@ -719,7 +852,7 @@ cron.schedule(
           }
         }
 
-        // 3 hours
+        // 3 HOUR
         else if (
           mins >=
             180 &&
@@ -750,7 +883,7 @@ cron.schedule(
           }
         }
 
-        // 24 hours
+        // 24 HOUR
         else if (
           mins >=
             1440 &&
@@ -810,7 +943,7 @@ server.listen(
   PORT,
   () => {
     log(
-      `SAMCHE PRO CONSULTANT ENGINE STARTED ON ${PORT}`
+      `SAMCHE PRO FINAL STARTED ON ${PORT}`
     );
   }
 );
