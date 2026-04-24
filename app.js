@@ -604,10 +604,21 @@ async function askGPT(
 // MAIN BRAIN
 // =====================================================
 
+// =====================================================
+// GPT-FIRST FINAL CORE
+// buildReply() REPLACEMENT
+// CHATGPT ALWAYS PRIORITY
+// USE THIS OVER CURRENT buildReply()
+// =====================================================
+
 async function buildReply(
   session,
   userText
 ) {
+  // ---------------------------------
+  // detect language / topic
+  // ---------------------------------
+
   session.lang =
     detectLanguage(
       userText,
@@ -625,7 +636,10 @@ async function buildReply(
     userText
   );
 
-  // first message
+  // ---------------------------------
+  // first message greeting only
+  // ---------------------------------
+
   if (
     !session.greeted
   ) {
@@ -646,51 +660,131 @@ async function buildReply(
     return msg;
   }
 
-  // hard rules
+  // ---------------------------------
+  // SPECIAL CONTEXT INJECTION
+  // (rules go into GPT prompt,
+  // not static replies)
+  // ---------------------------------
+
+  let enrichedText =
+    userText;
+
+  // residency generic ask
   if (
     session.topic ===
-    "residency"
+      "residency" &&
+    userText.length <
+      40
   ) {
-    const msg =
-      residencyReply(
-        session.lang
-      );
+    if (
+      session.lang ===
+      "en"
+    ) {
+      enrichedText =
+        `User asks about Dubai residency.
 
-    remember(
-      session,
-      "assistant",
-      msg
-    );
+Explain first these 3 common options:
+1) Sponsored residency
+2) Real-estate residency
+3) Residency by opening a company
 
-    return msg;
+Then answer user request.
+
+User message: ${userText}`;
+    }
+
+    else if (
+      session.lang ===
+      "ar"
+    ) {
+      enrichedText =
+        `المستخدم يسأل عن الإقامة في دبي.
+
+اشرح أولاً 3 خيارات شائعة:
+1) إقامة برعاية
+2) إقامة عبر العقار
+3) إقامة عبر تأسيس شركة
+
+ثم أجب على سؤاله.
+
+رسالة المستخدم: ${userText}`;
+    }
+
+    else {
+      enrichedText =
+        `Kullanıcı Dubai oturumu hakkında soruyor.
+
+Önce şu 3 yaygın seçeneği açıkla:
+1) Sponsorlu oturum
+2) Gayrimenkul ile oturum
+3) Şirket kurarak yatırımcı oturumu
+
+Ardından kullanıcının sorusunu cevapla.
+
+Kullanıcı mesajı: ${userText}`;
+    }
   }
 
-  if (
+  // company generic ask
+  else if (
     session.topic ===
-    "company"
+      "company" &&
+    userText.length <
+      45
   ) {
-    const msg =
-      companyReply(
-        session.lang
-      );
+    if (
+      session.lang ===
+      "en"
+    ) {
+      enrichedText =
+        `User asks about Dubai company setup.
 
-    remember(
-      session,
-      "assistant",
-      msg
-    );
+Explain briefly Mainland vs Free Zone and ask smart follow-up question.
 
-    return msg;
+User message: ${userText}`;
+    }
+
+    else if (
+      session.lang ===
+      "ar"
+    ) {
+      enrichedText =
+        `المستخدم يسأل عن تأسيس شركة في دبي.
+
+اشرح باختصار الفرق بين البر الرئيسي والمنطقة الحرة ثم اطرح سؤال متابعة ذكي.
+
+رسالة المستخدم: ${userText}`;
+    }
+
+    else {
+      enrichedText =
+        `Kullanıcı Dubai'de şirket kurulumu soruyor.
+
+Kısaca Mainland ve Free Zone farkını açıkla, sonra akıllı takip sorusu sor.
+
+Kullanıcı mesajı: ${userText}`;
+    }
   }
 
-  // GPT
+  // ---------------------------------
+  // GPT ALWAYS FIRST
+  // ---------------------------------
+
   let reply =
     await askGPT(
       session,
-      userText
+      enrichedText
     );
 
-  if (!reply) {
+  // ---------------------------------
+  // fallback only if GPT fails
+  // ---------------------------------
+
+  if (
+    !reply ||
+    reply.trim()
+      .length < 3
+  ) {
     reply =
       fallback(
         session.lang
@@ -705,7 +799,6 @@ async function buildReply(
 
   return reply;
 }
-
 // =====================================================
 // SAMCHE COMPANY PRO CONSULTANT BOT
 // FINAL APP.JS
