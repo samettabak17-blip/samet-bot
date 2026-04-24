@@ -170,21 +170,59 @@ function remember(
 // HEALTH
 // =====================================================
 
-app.get(
-  "/",
-  (
-    req,
-    res
-  ) => {
-    res.json({
+app.get("/", (req, res) => {
+  res.json({
+    ok: true,
+    model: MODEL,
+    sessions: sessions.size
+  });
+});
+
+// =====================================================
+// OPENAI TEST
+// =====================================================
+
+app.get("/test-openai", async (req, res) => {
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: MODEL,
+        messages: [
+          {
+            role: "user",
+            content: "Hello"
+          }
+        ],
+        max_tokens: 30,
+        temperature: 0
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 30000
+      }
+    );
+
+    return res.json({
       ok: true,
-      model:
-        MODEL,
-      sessions:
-        sessions.size
+      model: MODEL,
+      reply:
+        response.data?.choices?.[0]?.message?.content || null
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      model: MODEL,
+      error:
+        error.response?.data ||
+        error.message
     });
   }
-);
+});
 
 // =====================================================
 // SAMCHE COMPANY BOT
