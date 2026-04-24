@@ -312,40 +312,214 @@ function fallback(lang = "tr") {
 }
 
 // =====================================================
-// TOPIC DETECTION
+// TOPIC DETECTION PRO
+// SMART INTENT ENGINE
 // =====================================================
 
-function detectTopic(text) {
+function detectTopic(text = "") {
   const t = normalizeText(text);
 
-  if (
-    t.includes("oturum") ||
-    t.includes("visa") ||
-    t.includes("vize") ||
-    t.includes("residency") ||
-    t.includes("sponsorlu")
-  ) {
-    return "residency";
+  // -------------------------------------------------
+  // KEY GROUPS
+  // -------------------------------------------------
+
+  const residencyWords = [
+    "oturum",
+    "ikamet",
+    "residency",
+    "resident",
+    "visa",
+    "vize",
+    "calisma izni",
+    "work permit",
+    "yasamak",
+    "tasinmak",
+    "dubaiye gelmek",
+    "dubaiye tasinmak",
+    "sponsorlu",
+    "sponsor",
+    "golden visa",
+    "freelance visa",
+    "family visa",
+    "aile vizesi"
+  ];
+
+  const companyWords = [
+    "sirket",
+    "firma",
+    "company",
+    "business",
+    "kurulum",
+    "kurmak",
+    "kuracagim",
+    "setup",
+    "establish",
+    "license",
+    "lisans",
+    "mainland",
+    "freezone",
+    "free zone",
+    "trade license",
+    "ticaret lisansi",
+    "ofis",
+    "office"
+  ];
+
+  const aiWords = [
+    "ai",
+    "chatbot",
+    "bot",
+    "automation",
+    "otomasyon",
+    "whatsapp bot",
+    "website bot",
+    "lead generation",
+    "crm bot",
+    "yapay zeka"
+  ];
+
+  const priceWords = [
+    "fiyat",
+    "ucret",
+    "ücret",
+    "maliyet",
+    "cost",
+    "price",
+    "fee",
+    "ne kadar",
+    "how much",
+    "kaç para"
+  ];
+
+  const trustWords = [
+    "guven",
+    "güven",
+    "guvenilir",
+    "real mi",
+    "scam",
+    "fake",
+    "dolandirici",
+    "yasal mi",
+    "legal mi"
+  ];
+
+  // -------------------------------------------------
+  // SCORE SYSTEM
+  // -------------------------------------------------
+
+  let score = {
+    residency: 0,
+    company: 0,
+    ai: 0,
+    trust: 0
+  };
+
+  for (const w of residencyWords) {
+    if (t.includes(w)) score.residency += 2;
   }
 
-  if (
-    t.includes("sirket") ||
-    t.includes("company") ||
-    t.includes("mainland") ||
-    t.includes("freezone")
-  ) {
-    return "company";
+  for (const w of companyWords) {
+    if (t.includes(w)) score.company += 2;
   }
 
-  if (
-    t.includes("ai") ||
-    t.includes("chatbot") ||
-    t.includes("otomasyon")
-  ) {
-    return "ai";
+  for (const w of aiWords) {
+    if (t.includes(w)) score.ai += 2;
   }
 
-  return "general";
+  for (const w of trustWords) {
+    if (t.includes(w)) score.trust += 2;
+  }
+
+  // -------------------------------------------------
+  // PRICE BOOSTERS
+  // -------------------------------------------------
+
+  const hasPrice =
+    priceWords.some(w => t.includes(w));
+
+  if (hasPrice) {
+    if (score.residency > 0) {
+      score.residency += 3;
+    }
+
+    if (score.company > 0) {
+      score.company += 3;
+    }
+
+    if (score.ai > 0) {
+      score.ai += 3;
+    }
+  }
+
+  // -------------------------------------------------
+  // CONTEXT SMART RULES
+  // -------------------------------------------------
+
+  // company setup intent
+  if (
+    t.includes("dubai") &&
+    (
+      t.includes("kurmak") ||
+      t.includes("setup") ||
+      t.includes("company")
+    )
+  ) {
+    score.company += 5;
+  }
+
+  // move to dubai intent
+  if (
+    t.includes("dubai") &&
+    (
+      t.includes("yasamak") ||
+      t.includes("calismak") ||
+      t.includes("tasinmak")
+    )
+  ) {
+    score.residency += 5;
+  }
+
+  // sponsor direct
+  if (
+    t.includes("sponsor")
+  ) {
+    score.residency += 6;
+  }
+
+  // whatsapp bot direct
+  if (
+    t.includes("whatsapp") &&
+    t.includes("bot")
+  ) {
+    score.ai += 6;
+  }
+
+  // -------------------------------------------------
+  // PICK WINNER
+  // -------------------------------------------------
+
+  let winner = "general";
+  let max = 0;
+
+  for (const key in score) {
+    if (score[key] > max) {
+      max = score[key];
+      winner = key;
+    }
+  }
+
+  // -------------------------------------------------
+  // FALLBACKS
+  // -------------------------------------------------
+
+  if (
+    max === 0 &&
+    hasPrice
+  ) {
+    return "general";
+  }
+
+  return winner;
 }
 
 // =====================================================
@@ -485,74 +659,56 @@ async function askGPT(session, userText) {
 // =====================================================
 
 async function buildReply(session, userText) {
-  session.language =
-    detectLanguage(
-      userText,
-      session.language
-    );
-
-  // First greeting
-  if (!session.greeted) {
-    session.greeted = true;
-    return greeting(session.language);
-  }
+  session.language = detectLanguage(
+    userText,
+    session.language
+  );
 
   remember(session, "user", userText);
 
-  session.topic =
-    detectTopic(userText);
+  const topic = detectTopic(userText);
+  session.topic = topic;
 
-  const clean =
-    normalizeText(userText);
+  let mainReply = "";
 
-  // Residency rules
-  if (session.topic === "residency") {
+  if (topic === "residency") {
+    const clean = normalizeText(userText);
 
     if (
       clean.includes("sponsorlu") ||
       clean.includes("sponsor")
     ) {
-      const msg =
-        sponsoredReply(session.language);
-
-      remember(session, "assistant", msg);
-      return msg;
+      mainReply = sponsoredReply(session.language);
+    } else {
+      mainReply = residencyMain(session.language);
     }
-
-    const msg =
-      residencyMain(session.language);
-
-    remember(session, "assistant", msg);
-    return msg;
   }
 
-  // Company rules
-  if (session.topic === "company") {
-    const msg =
-      companyReply(session.language);
-
-    remember(session, "assistant", msg);
-    return msg;
+  else if (topic === "company") {
+    mainReply = companyReply(session.language);
   }
 
-  // AI rules
-  if (session.topic === "ai") {
-    const msg =
-      aiReply(session.language);
-
-    remember(session, "assistant", msg);
-    return msg;
+  else if (topic === "ai") {
+    mainReply = aiReply(session.language);
   }
 
-  // GPT support
-  const msg =
-    await askGPT(session, userText);
+  else {
+    mainReply = await askGPT(session, userText);
+  }
 
-  remember(session, "assistant", msg);
+  // first message greeting + answer
+  if (!session.greeted) {
+    session.greeted = true;
+    mainReply =
+      greeting(session.language) +
+      "\n\n" +
+      mainReply;
+  }
 
-  return msg;
+  remember(session, "assistant", mainReply);
+
+  return mainReply;
 }
-
 // =====================================================
 // SAMCHE INTELLIGENCE CORE
 // PART C
