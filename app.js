@@ -3,7 +3,17 @@
 // HARD LANGUAGE LOCK + SMART INTENT OVERRIDE
 // APPEND / REPLACE RELATED FUNCTIONS IN V5
 // =====================================================
+require("dotenv").config();
 
+const express = require("express");
+const axios = require("axios");
+const http = require("http");
+const cron = require("node-cron");
+
+const app = express();
+app.use(express.json({ limit: "10mb" }));
+
+const server = http.createServer(app);
 // =====================================================
 // NORMALIZE PRO
 // =====================================================
