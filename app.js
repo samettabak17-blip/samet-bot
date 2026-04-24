@@ -75,7 +75,9 @@ function corporateFallback(lang) {
 //  GEMINI 2.0 FLASH CALL
 // -------------------------------
 async function callGemini(prompt) {
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" + process.env.GEMINI_API_KEY;
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
 
   try {
     const response = await axios.post(
@@ -83,26 +85,21 @@ async function callGemini(prompt) {
       {
         contents: [
           {
-            role: "user", // Google artık "Bu mesajı kim gönderdi?" bilgisini net istiyor.
             parts: [{ text: prompt }]
           }
-        ],
-        // Ekstra: Yanıtın kesilmemesi için bunları da eklemiş olduk
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ]
       },
-      { headers: { "Content-Type": "application/json" } }
+      {
+        headers: { "Content-Type": "application/json" }
+      }
     );
 
-    // Yanıtı okuma kısmı
-    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    const reply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
+    return reply?.trim() || null;
   } catch (err) {
-    console.error("Gemini API hatası detay:", err.response?.data || err.message);
+    console.error("Gemini API error:", err.response?.data || err.message);
     return null;
   }
 }
