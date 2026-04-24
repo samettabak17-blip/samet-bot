@@ -1,12 +1,10 @@
 // =====================================================
-// SAMCHE COMPANY BOT
-// FINAL WORKING APP.JS
+// SAMCHE BOT - CLEAN PRODUCTION APP.JS
 // PART 1 / 3
-// STABLE ENV + EXPRESS + MEMORY
-// GPT-4O-MINI READY
+// CLEAN ENV + SERVER + MEMORY
 // =====================================================
 
-require("dotenv").config();
+require("dotenv").config({ override: false });
 
 const express = require("express");
 const axios = require("axios");
@@ -14,103 +12,42 @@ const http = require("http");
 const cron = require("node-cron");
 
 // =====================================================
-// ENV (FIXED)
+// ENV
 // =====================================================
 
-const PORT =
-  Number(
-    process.env.PORT || 10000
-  );
+function env(name, fallback = "") {
+  return String(process.env[name] || fallback).trim();
+}
 
-const OPENAI_API_KEY =
-  (
-    process.env
-      .OPENAI_API_KEY ||
-    ""
-  ).trim();
+const PORT = Number(env("PORT", "10000"));
 
-const WHATSAPP_TOKEN =
-  (
-    process.env
-      .WHATSAPP_TOKEN ||
-    ""
-  ).trim();
-
-const WHATSAPP_PHONE_ID =
-  (
-    process.env
-      .WHATSAPP_PHONE_ID ||
-    ""
-  ).trim();
-
-const VERIFY_TOKEN =
-  (
-    process.env
-      .VERIFY_TOKEN ||
-    ""
-  ).trim();
-
-const MODEL =
-  (
-    process.env
-      .OPENAI_MODEL ||
-    "gpt-4o-mini"
-  ).trim();
+const OPENAI_API_KEY = env("OPENAI_API_KEY");
+const WHATSAPP_TOKEN = env("WHATSAPP_TOKEN");
+const WHATSAPP_PHONE_ID = env("WHATSAPP_PHONE_ID");
+const VERIFY_TOKEN = env("VERIFY_TOKEN");
+const MODEL = env("OPENAI_MODEL", "gpt-4o-mini");
 
 // =====================================================
-// STARTUP CHECK
+// STARTUP LOG
 // =====================================================
 
-console.log(
-  "=== ENV STATUS ==="
-);
-
-console.log(
-  "OPENAI KEY:",
-  !!OPENAI_API_KEY
-);
-
-console.log(
-  "WA TOKEN:",
-  !!WHATSAPP_TOKEN
-);
-
-console.log(
-  "PHONE ID:",
-  !!WHATSAPP_PHONE_ID
-);
-
-console.log(
-  "VERIFY:",
-  !!VERIFY_TOKEN
-);
-
-console.log(
-  "MODEL:",
-  MODEL
-);
-
-console.log(
-  "=================="
-);
+console.log("=== SAMCHE BOT STARTUP ===");
+console.log("PORT:", PORT);
+console.log("MODEL:", MODEL);
+console.log("OPENAI KEY:", !!OPENAI_API_KEY);
+console.log("OPENAI LEN:", OPENAI_API_KEY.length);
+console.log("WA TOKEN:", !!WHATSAPP_TOKEN);
+console.log("PHONE ID:", !!WHATSAPP_PHONE_ID);
+console.log("==========================");
 
 // =====================================================
 // APP
 // =====================================================
 
-const app =
-  express();
+const app = express();
+app.use(express.json({ limit: "10mb" }));
 
-app.use(
-  express.json({
-    limit: "10mb"
-  })
-);
-
-const server =
-  http.createServer(
-    app
-  );
+const server = http.createServer(app);
 
 // =====================================================
 // HELPERS
@@ -121,24 +58,14 @@ function now() {
 }
 
 function log(...args) {
-  console.log(
-    new Date()
-      .toISOString(),
-    ...args
-  );
+  console.log(new Date().toISOString(), ...args);
 }
 
-function safeText(
-  text = ""
-) {
-  return String(text)
-    .trim()
-    .slice(0, 3000);
+function safeText(text = "") {
+  return String(text).trim().slice(0, 3000);
 }
 
-function normalizeText(
-  text = ""
-) {
+function normalizeText(text = "") {
   return String(text)
     .toLowerCase()
     .replace(/[ç]/g, "c")
@@ -156,66 +83,34 @@ function normalizeText(
 // MEMORY
 // =====================================================
 
-const sessions =
-  new Map();
+const sessions = new Map();
 
-function getSession(
-  userId
-) {
-  if (
-    !sessions.has(
-      userId
-    )
-  ) {
-    sessions.set(
+function getSession(userId) {
+  if (!sessions.has(userId)) {
+    sessions.set(userId, {
       userId,
-      {
-        userId,
-        greeted:
-          false,
-        lang:
-          "tr",
-        history:
-          [],
-        lastMessageAt:
-          now(),
-        ping10:
-          false,
-        ping3h:
-          false,
-        ping24h:
-          false
-      }
-    );
+      greeted: false,
+      lang: "tr",
+      history: [],
+      lastMessageAt: now(),
+      ping10: false,
+      ping3h: false,
+      ping24h: false
+    });
   }
 
-  const s =
-    sessions.get(
-      userId
-    );
-
-  s.lastMessageAt =
-    now();
-
+  const s = sessions.get(userId);
+  s.lastMessageAt = now();
   return s;
 }
 
-function remember(
-  session,
-  role,
-  text
-) {
-  session.history.push(
-    {
-      role,
-      text
-    }
-  );
+function remember(session, role, text) {
+  session.history.push({
+    role,
+    text: String(text).slice(0, 4000)
+  });
 
-  if (
-    session.history
-      .length > 10
-  ) {
+  if (session.history.length > 10) {
     session.history.shift();
   }
 }
@@ -224,85 +119,65 @@ function remember(
 // HEALTH
 // =====================================================
 
-app.get(
-  "/",
-  (
-    req,
-    res
-  ) => {
-    res.json({
+app.get("/", (req, res) => {
+  res.json({
+    ok: true,
+    model: MODEL,
+    sessions: sessions.size
+  });
+});
+
+app.get("/env-check", (req, res) => {
+  res.json({
+    keyExists: !!OPENAI_API_KEY,
+    keyLength: OPENAI_API_KEY.length,
+    keyPrefix: OPENAI_API_KEY
+      ? OPENAI_API_KEY.slice(0, 7)
+      : null
+  });
+});
+
+app.get("/test-openai", async (req, res) => {
+  try {
+    const response = await axios.post(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        model: MODEL,
+        messages: [
+          { role: "user", content: "Hello" }
+        ],
+        temperature: 0,
+        max_tokens: 30
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer " + OPENAI_API_KEY
+        },
+        timeout: 30000
+      }
+    );
+
+    return res.json({
       ok: true,
-      model:
-        MODEL,
-      sessions:
-        sessions.size
+      reply:
+        response.data?.choices?.[0]
+          ?.message?.content || null
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      error:
+        error.response?.data ||
+        error.message
     });
   }
-);
-
-app.get(
-  "/test-openai",
-  async (
-    req,
-    res
-  ) => {
-    try {
-      const r =
-        await axios.post(
-          "https://api.openai.com/v1/chat/completions",
-          {
-            model:
-              MODEL,
-            messages: [
-              {
-                role: "user",
-                content:
-                  "Hello"
-              }
-            ],
-            max_tokens: 30,
-            temperature: 0
-          },
-          {
-            headers: {
-              Authorization:
-                `Bearer ${OPENAI_API_KEY}`,
-              "Content-Type":
-                "application/json"
-            },
-            timeout:
-              30000
-          }
-        );
-
-      return res.json({
-        ok: true,
-        reply:
-          r.data
-            ?.choices?.[0]
-            ?.message
-            ?.content
-      });
-
-    } catch (
-      error
-    ) {
-      return res
-        .status(500)
-        .json({
-          ok: false,
-          error:
-            error.response
-              ?.data ||
-            error.message
-        });
-    }
-  }
-);
+});
 
 // =====================================================
-// SAMCHE COMPANY BOT
-// FINAL WORKING APP.JS
+// SAMCHE BOT - CLEAN PRODUCTION APP.JS
 // PART 2 / 3
 // LANGUAGE + GPT + BRAIN
 // =====================================================
@@ -359,7 +234,7 @@ function detectLanguage(
 }
 
 // =====================================================
-// GREETING
+// TEXTS
 // =====================================================
 
 function greeting(
@@ -370,7 +245,7 @@ function greeting(
   ) {
     return `Hello, I’m here to assist you on behalf of SamChe Company LLC.
 
-I can help with Dubai company setup, residency, visas, costs and business advisory services. How may I assist you today?`;
+I can help with Dubai company setup, residency, visas, costs and advisory services. How may I assist you today?`;
   }
 
   if (
@@ -385,10 +260,6 @@ I can help with Dubai company setup, residency, visas, costs and business adviso
 
 Dubai’de şirket kuruluşu, oturum seçenekleri, vizeler, maliyetler ve danışmanlık hizmetleriyle ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?`;
 }
-
-// =====================================================
-// FALLBACK
-// =====================================================
 
 function fallback(
   lang
@@ -423,19 +294,18 @@ You are SamChe Company LLC senior Dubai consultant.
 
 Reply only in English.
 
-Be premium, practical, confident and clear.
+Be professional, detailed, confident and useful.
 
-You help with:
+Main expertise:
 - Dubai company setup
 - Mainland vs Free Zone
 - Residency options
-- Visa processes
-- Costs
-- Business expansion
+- Visa procedures
+- Approximate costs
+- Business growth
 
-Always give useful answers.
 Never reply empty.
-Ask smart follow-up questions.
+Ask useful follow-up questions.
 `;
   }
 
@@ -468,7 +338,6 @@ Uzmanlık alanların:
 - Yaklaşık maliyetler
 - İş büyütme
 
-Her zaman faydalı cevap ver.
 Boş cevap verme.
 Akıllı takip soruları sor.
 `;
@@ -521,12 +390,14 @@ async function askGPT(
         },
         {
           headers: {
-            Authorization:
-              `Bearer ${OPENAI_API_KEY}`,
             "Content-Type":
-              "application/json"
+              "application/json",
+            Authorization:
+              "Bearer " +
+              OPENAI_API_KEY
           },
-          timeout: 45000
+          timeout:
+            45000
         }
       );
 
@@ -604,18 +475,17 @@ async function buildReply(
       t
     )
   ) {
-    prompt =
-      `
-Kullanıcı Dubai oturumu soruyor.
+    prompt = `
+Kullanıcı Dubai oturumu hakkında bilgi istiyor.
 
-3 ana yöntemi uygun olduğunda açıkla:
+Uygun olduğunda 3 temel yolu anlat:
 1 Sponsorlu oturum
 2 Gayrimenkul ile oturum
 3 Şirket kurarak yatırımcı oturumu
 
-Ardından kullanıcının sorusunu profesyonel şekilde cevapla.
+Sonra kullanıcının sorusunu profesyonel şekilde cevapla.
 
-Kullanıcı mesajı:
+Mesaj:
 ${userText}
 `;
   }
@@ -625,15 +495,14 @@ ${userText}
       t
     )
   ) {
-    prompt =
-      `
-Kullanıcı Dubai şirket kurulumu soruyor.
+    prompt = `
+Kullanıcı Dubai şirket kurulumu hakkında soruyor.
 
-Gerekirse Mainland ve Free Zone farkını anlat.
+Gerekirse Mainland ve Free Zone farkını açıkla.
 Maliyet sorulursa yaklaşık aralık ver.
 Profesyonel danışman gibi cevapla.
 
-Kullanıcı mesajı:
+Mesaj:
 ${userText}
 `;
   }
@@ -665,14 +534,13 @@ ${userText}
 }
 
 // =====================================================
-// SAMCHE COMPANY BOT
-// FINAL WORKING APP.JS
+// SAMCHE BOT - CLEAN PRODUCTION APP.JS
 // PART 3 / 3
 // WEBHOOK + FOLLOWUP + START
 // =====================================================
 
 // =====================================================
-// SEND WHATSAPP MESSAGE
+// SEND WHATSAPP
 // =====================================================
 
 async function sendWhatsAppMessage(
@@ -704,10 +572,11 @@ async function sendWhatsAppMessage(
       },
       {
         headers: {
-          Authorization:
-            `Bearer ${WHATSAPP_TOKEN}`,
           "Content-Type":
-            "application/json"
+            "application/json",
+          Authorization:
+            "Bearer " +
+            WHATSAPP_TOKEN
         },
         timeout:
           30000
@@ -827,10 +696,8 @@ app.post(
 
       session.ping10 =
         false;
-
       session.ping3h =
         false;
-
       session.ping24h =
         false;
 
@@ -956,14 +823,14 @@ cron.schedule(
 );
 
 // =====================================================
-// START SERVER
+// START
 // =====================================================
 
 server.listen(
   PORT,
   () => {
     log(
-      `SAMCHE BOT STARTED ON PORT ${PORT} USING ${MODEL}`
+      `SAMCHE BOT STARTED ON ${PORT} USING ${MODEL}`
     );
   }
 );
