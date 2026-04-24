@@ -235,16 +235,7 @@ async function callGPT(prompt) {
       "https://api.openai.com/v1/responses",
       {
         model: "gpt-5-mini",
-        input: [
-          {
-            role: "system",
-            content: SYSTEM_RULES
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
+        input: `${SYSTEM_RULES}\n\nUser: ${prompt}`
       },
       {
         headers: {
@@ -254,13 +245,13 @@ async function callGPT(prompt) {
       }
     );
 
-    // GPT‑5‑mini OUTPUT FORMAT
     return response.data.output_text || "Sistemde geçici bir yoğunluk var.";
   } catch (err) {
     console.error("❌ GPT-5-mini API Hatası:", err.response?.data || err.message);
     return "Sistemde geçici bir hata oluştu. Birazdan tekrar dene.";
   }
 }
+
 
 // --------------------------------------
 //  WHATSAPP WEBHOOK
