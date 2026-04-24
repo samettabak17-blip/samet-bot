@@ -132,21 +132,24 @@ async function callGPT(prompt) {
 // --------------------------------------
 app.post("/webhook", async (req, res) => {
   try {
-    const message = req.body?.message?.text?.body;
-    const from = req.body?.message?.from;
+    const entry = req.body?.entry?.[0];
+    const changes = entry?.changes?.[0];
+    const value = changes?.value;
+    const messageObj = value?.messages?.[0];
 
-    if (!message || !from) {
+    if (!messageObj) {
       return res.sendStatus(200);
     }
 
+    const from = messageObj.from;
+    const message = messageObj.text?.body;
+
     console.log("📩 Gelen mesaj:", message);
 
-    // GPT‑5‑mini cevabı
     const reply = await callGPT(message);
 
-    // WhatsApp API'ye gönder
     await axios.post(
-      "https://graph.facebook.com/v19.0/" + process.env.WHATSAPP_PHONE_ID + "/messages",
+      `https://graph.facebook.com/v19.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
       {
         messaging_product: "whatsapp",
         to: from,
@@ -166,6 +169,7 @@ app.post("/webhook", async (req, res) => {
     res.sendStatus(200);
   }
 });
+
 
 // --------------------------------------
 //  CRON — Sistem Stabilite Ping
