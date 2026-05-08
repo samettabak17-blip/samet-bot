@@ -71,11 +71,12 @@ function corporateFallback(lang) {
 }
 
 // -------------------------------
-//  GEMINI CALL  1.5 PRO (2026 FORMAT)
+//  GEMINI 1.5 PRO (FINAL FIX)
 // -------------------------------
 async function callGemini(prompt) {
+  // v1beta yerine v1 kullanmak Render üzerinde daha stabildir
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -85,12 +86,9 @@ async function callGemini(prompt) {
         contents: [
           {
             role: "user",
-            parts: [
-              { text: prompt }
-            ]
+            parts: [{ text: prompt }]
           }
         ],
-        // Boş dönmeyi engelleyen kritik güncelleme: Güvenlik filtrelerini kapatıyoruz
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -108,11 +106,11 @@ async function callGemini(prompt) {
 
     return reply?.trim() || null;
   } catch (err) {
+    // BURASI ÇOK ÖNEMLİ: Logları kontrol edin, Render panelinde ne hata yazıyor?
     console.error("Gemini API error:", err.response?.data || err.message);
     return null;
   }
 }
-
 
 
 
