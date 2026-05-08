@@ -286,8 +286,58 @@ app.post("/webhook", async (req, res) => {
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
-    const text = message.text?.body || "";
+
+    // -----------------------------
+    //  TÜM MESAJ TÜRLERİNİ YAKALA
+    // -----------------------------
+    let text = "";
+
+    // Normal text
+    if (message.text?.body) {
+      text = message.text.body;
+    }
+
+    // Button reply
+    else if (message.button?.text) {
+      text = message.button.text;
+    }
+
+    // Interactive button reply
+    else if (message.interactive?.button_reply?.title) {
+      text = message.interactive.button_reply.title;
+    }
+
+    // Interactive list reply
+    else if (message.interactive?.list_reply?.title) {
+      text = message.interactive.list_reply.title;
+    }
+
+    // Image caption
+    else if (message.image?.caption) {
+      text = message.image.caption;
+    }
+
+    // Document caption
+    else if (message.document?.caption) {
+      text = message.document.caption;
+    }
+
+    // Fallback
+    text = text.trim();
+
+    // Eğer hâlâ boşsa → Google’a boş prompt gitmesin
+    if (!text) {
+      console.log("⚠ WhatsApp mesajı boş geldi, Google'a gönderilmedi.");
+      return res.sendStatus(200);
+    }
+
     const lower = text.toLowerCase();
+
+    // Buradan sonrası senin mevcut akışın
+    // callGemini(text) burada artık BOŞ gitmeyecek
+
+    // ...
+
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
