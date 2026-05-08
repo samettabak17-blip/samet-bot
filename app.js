@@ -75,8 +75,9 @@ function corporateFallback(lang) {
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=" +
+  process.env.GEMINI_API_KEY;
+
 
   try {
     const response = await axios.post(
@@ -276,8 +277,64 @@ app.post("/webhook", async (req, res) => {
     if (!message) return res.sendStatus(200);
 
     const from = message.from;
-    const text = message.text?.body || "";
+
+    // -----------------------------
+    //  TÜM MESAJ TÜRLERİNİ YAKALA
+    // -----------------------------
+    let text = "";
+
+    // Normal text
+    if (message.text?.body) {
+      text = message.text.body;
+    }
+
+    // Button reply
+    else if (message.button?.text) {
+      text = message.button.text;
+    }
+
+    // Interactive button reply
+    else if (message.interactive?.button_reply?.title) {
+      text = message.interactive.button_reply.title;
+    }
+
+    // Interactive list reply
+    else if (message.interactive?.list_reply?.title) {
+      text = message.interactive.list_reply.title;
+    }
+
+    // Image caption
+    else if (message.image?.caption) {
+      text = message.image.caption;
+    }
+
+    // Document caption
+    else if (message.document?.caption) {
+      text = message.document.caption;
+    }
+
+    // Fallback
+    text = text.trim();
+    if (!text) return res.sendStatus(200);
+
     const lower = text.toLowerCase();
+
+    // -----------------------------
+    //  BURADAN SONRASI SENİN MEVCUT AKIŞIN
+    // -----------------------------
+
+    // ÖRNEK:
+    // const reply = await callGemini(text);
+    // await sendMessage(from, reply);
+
+    res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
+
 
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
