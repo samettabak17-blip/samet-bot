@@ -287,11 +287,12 @@ app.post("/webhook", async (req, res) => {
 
     text = text.trim();
 
-    // 1) MEDYA / BOŞ MESAJ FİLTRESİ
-    // Metin (text) varsa, diğer türleri engellemiyoruz ki caption'ı okuyabilsin.
+    // -----------------------------
+    //  GEÇERSİZ / DESTEKLENMEYEN MESAJ FİLTRESİ
+    // -----------------------------
     const isInvalid =
       !text ||
-      text.trim() === "" ||
+      text === "" ||
       message.type === "audio" ||
       message.type === "voice" ||
       message.type === "video" ||
@@ -300,10 +301,28 @@ app.post("/webhook", async (req, res) => {
     if (isInvalid) {
       await sendMessage(
         from,
-        "Gönderdiğiniz içeriği görüntüleyemiyorum veya sesli komutları işleyemiyorum. Lütfen mesajınızı yazılı olarak iletir misiniz?"
+        "Gönderdiğiniz içeriği işleyemiyorum. Lütfen mesajınızı yazılı olarak iletin."
       );
       return res.sendStatus(200);
     }
+
+    // -----------------------------
+    //  GEMINI CEVABI AL
+    // -----------------------------
+    const reply = await callGemini(text);
+
+    // -----------------------------
+    //  WHATSAPP'A MESAJ GÖNDER
+    // -----------------------------
+    await sendMessage(from, reply);
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Webhook error:", err);
+    return res.sendStatus(200);
+  }
+});
 
 
 
