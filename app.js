@@ -302,22 +302,6 @@ app.post("/webhook", async (req, res) => {
 
     const lower = text.toLowerCase();
 
-    // -----------------------------
-    //  BURADAN SONRASI SENİN MEVCUT AKIŞIN
-    // -----------------------------
-    // const reply = await callGemini(text);
-    // await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
-
-
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
