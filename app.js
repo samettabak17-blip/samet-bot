@@ -338,6 +338,7 @@ app.post("/webhook", async (req, res) => {
     }
 
 
+
     // 2) İLK MESAJ (SESSION OLUŞTURMA)
     if (!sessions[from]) {
       sessions[from] = {
