@@ -269,19 +269,30 @@ app.post("/webhook", async (req, res) => {
 
     const from = message.from;
 
+    // -----------------------------
+    //  TÜM MESAJ TÜRLERİNİ YAKALA
+    // -----------------------------
     let text = "";
 
-    if (message.text?.body) text = message.text.body;
-    else if (message.button?.text) text = message.button.text;
-    else if (message.interactive?.button_reply?.title)
+    if (message.text?.body) {
+      text = message.text.body;
+    } else if (message.button?.text) {
+      text = message.button.text;
+    } else if (message.interactive?.button_reply?.title) {
       text = message.interactive.button_reply.title;
-    else if (message.interactive?.list_reply?.title)
+    } else if (message.interactive?.list_reply?.title) {
       text = message.interactive.list_reply.title;
-    else if (message.image?.caption) text = message.image.caption;
-    else if (message.document?.caption) text = message.document.caption;
+    } else if (message.image?.caption) {
+      text = message.image.caption;
+    } else if (message.document?.caption) {
+      text = message.document.caption;
+    }
 
-    text = text.trim();
+    text = (text || "").trim();
 
+    // -----------------------------
+    //  GEÇERSİZ / DESTEKLENMEYEN MESAJ FİLTRESİ
+    // -----------------------------
     const isInvalid =
       !text ||
       text === "" ||
@@ -297,16 +308,6 @@ app.post("/webhook", async (req, res) => {
       );
       return res.sendStatus(200);
     }
-
-    const reply = await callGemini(text);
-
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(200);
-  }
 
 
     // 2) İLK MESAJ (SESSION OLUŞTURMA)
