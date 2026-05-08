@@ -70,13 +70,13 @@ function corporateFallback(lang) {
   );
 }
 
-
 // -------------------------------
-//  GEMINI 1.5 PRO - COMPLEX PROMPT ENGINE
+//  GEMINI CALL PRO 2
 // -------------------------------
 async function callGemini(prompt) {
-  // En gelişmiş model ismi
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-2.5-pro:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
 
   try {
     const response = await axios.post(
@@ -88,44 +88,34 @@ async function callGemini(prompt) {
             parts: [{ text: prompt }]
           }
         ],
-        // Karmaşık ve uzun içeriklerde engellenmemesi için ayarlar
-        safetySettings: [
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ],
         generationConfig: {
-          temperature: 0.7, // Yaratıcılık dengesi
+          temperature: 0.7,
           topP: 0.95,
-          topK: 64,
-          maxOutputTokens: 8192, // Uzun yanıtlar için kapasiteyi artırdık
-          responseMimeType: "text/plain"
-        }
+          topK: 40,
+          maxOutputTokens: 2048
+        },
+        safetySettings: [
+          {
+            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+            threshold: "BLOCK_NONE"
+          }
+        ]
       },
-      { 
-        headers: { "Content-Type": "application/json" },
-        // GECİKMELİ YANITLAR İÇİN KRİTİK: Zaman aşımını 60 saniyeye çıkardık
-        timeout: 60000 
+      {
+        headers: { "Content-Type": "application/json" }
       }
     );
 
-    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const reply =
+      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
-    if (!reply) {
-      // Neden boş döndüğünü loglardan takip etmek için:
-      const reason = response.data?.candidates?.[0]?.finishReason;
-      console.error("Yanıt Boş. Sebep:", reason);
-      return null;
-    }
-
-    return reply.trim();
+    return reply?.trim() || null;
   } catch (err) {
-    // Hatanın tam kaynağını görmek için detaylı log:
-    console.error("Gemini Engine Error:", err.response?.data || err.message);
+    console.error("Gemini API error:", err.response?.data || err.message);
     return null;
   }
 }
+
 
 // -------------------------------
 //  STATIC TEXTS
