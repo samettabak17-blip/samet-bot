@@ -72,11 +72,11 @@ function corporateFallback(lang) {
 
 
 // -------------------------------
-//  GEMINI PRO LATEST CALL
+//  GEMINI PRO LATEST (2026 FORMAT)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -85,6 +85,7 @@ async function callGemini(prompt) {
       {
         contents: [
           {
+            role: "user",
             parts: [
               { text: prompt }
             ]
@@ -105,6 +106,7 @@ async function callGemini(prompt) {
     return null;
   }
 }
+
 
 
 
