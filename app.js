@@ -280,6 +280,14 @@ app.get("/webhook", (req, res) => {
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
 app.post("/webhook", async (req, res) => {
+
+  // 🔥 TEST 1 — Google URL doğru mu?
+  console.log(
+    "TEST_URL:",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=" +
+      process.env.GEMINI_API_KEY
+  );
+
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!message) return res.sendStatus(200);
@@ -310,7 +318,6 @@ app.post("/webhook", async (req, res) => {
 
     const lower = text.toLowerCase();
 
-
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
     const isInvalid =
       message.type === "image" ||
@@ -329,6 +336,7 @@ app.post("/webhook", async (req, res) => {
       );
       return res.sendStatus(200);
     }
+
 
     // 2) İLK MESAJ (SESSION OLUŞTURMA)
     if (!sessions[from]) {
