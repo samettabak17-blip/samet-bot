@@ -74,9 +74,7 @@ function corporateFallback(lang) {
 //  GEMINI CALL (2.5 PRO EXP - 2026)
 // -------------------------------
 async function callGemini(prompt) {
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=" + process.env.GEMINI_API_KEY;
 
   try {
     if (!prompt || prompt.trim() === "") {
@@ -111,8 +109,7 @@ async function callGemini(prompt) {
       }
     );
 
-    const reply =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
     if (!reply) {
       const reason = response.data?.candidates?.[0]?.finishReason || "bilinmiyor";
@@ -127,6 +124,7 @@ async function callGemini(prompt) {
     return `API Hatası: ${errorDetail}`;
   }
 }
+
 
 
 
