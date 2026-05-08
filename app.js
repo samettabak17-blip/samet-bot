@@ -74,28 +74,18 @@ function corporateFallback(lang) {
 //  GEMINI CALL PRO 2 (STABLE 2026)
 // -------------------------------
 async function callGemini(prompt) {
-  // MODEL İSMİ DÜZELTİLDİ: gemini-1.5-pro en kararlı versiyondur.
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
+  // Model ismini 2.5 pro exp olarak korudum madem çalışıyor
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
+    // 1. ADIM: Gelen mesaj boş mu?
+    if (!prompt) return "Hata: Boş mesaj algılandı.";
+
     const response = await axios.post(
       url,
       {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }]
-          }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048
-        },
-        // TÜM GÜVENLİK FİLTRELERİ KAPATILDI (Boş dönmeyi engellemek için)
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -103,29 +93,26 @@ async function callGemini(prompt) {
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ]
       },
-      {
-        headers: { "Content-Type": "application/json" },
-        timeout: 45000 // WhatsApp gecikmeleri için 45 saniye bekleme süresi
-      }
+      { timeout: 50000 } // WhatsApp için süreyi artırdık
     );
 
-    // Yanıtın içinde text var mı kontrol et, yoksa hata nedenini logla
-    const candidate = response.data?.candidates?.[0];
-    const reply = candidate?.content?.parts?.[0]?.text;
+    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!reply) {
-      console.error("Gemini yanıt üretmedi. Bitiş Nedeni:", candidate?.finishReason);
-      return "Üzgünüm, şu an bu soruyu yanıtlayamıyorum."; // null yerine string dönmek botun çökmesini engeller
+      // Eğer boş dönüyorsa nedeni buradadır:
+      const reason = response.data?.candidates?.[0]?.finishReason;
+      return `Model yanıt üretmedi. Sebep: ${reason}`;
     }
 
     return reply.trim();
+
   } catch (err) {
-    // Render loglarında hatayı net görmek için detaylı çıktı
-    console.error("Gemini API error:", err.response?.data || err.message);
-    return "Bağlantı hatası: Mesaj işlenemedi.";
+    // 2. ADIM: Eğer hata verirse null dönme, hatayı mesaj olarak dön ki WhatsApp'ta gör
+    const errorDetail = err.response?.data?.error?.message || err.message;
+    console.error("Gemini Hatası:", errorDetail);
+    return `API Hatası: ${errorDetail}`;
   }
 }
-
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
