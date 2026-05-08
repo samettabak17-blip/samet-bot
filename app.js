@@ -71,24 +71,19 @@ function corporateFallback(lang) {
 }
 
 // -------------------------------
-//  GEMINI 1.5 PRO (FINAL FIX)
+//  GEMINI PRO LATEST (2026 FORMAT)
 // -------------------------------
 async function callGemini(prompt) {
-  // v1beta yerine v1 kullanmak Render üzerinde daha stabildir
-  const url =
-    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=" +
-    process.env.GEMINI_API_KEY;
+  // En güncel ve geniş kapsamlı model
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
+    console.log("Gemini'ye giden mesaj:", prompt); // Prompt boş mu gidiyor kontrol et
+
     const response = await axios.post(
       url,
       {
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: prompt }]
-          }
-        ],
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -96,23 +91,29 @@ async function callGemini(prompt) {
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ]
       },
-      {
-        headers: { "Content-Type": "application/json" }
-      }
+      { headers: { "Content-Type": "application/json" }, timeout: 25000 } // 25 sn zaman aşımı
     );
 
-    const reply =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!reply) {
+      // Eğer yanıt metni yoksa bitiş sebebini logla
+      console.log("Boş Dönme Nedeni (FinishReason):", response.data?.candidates?.[0]?.finishReason);
+      return "Üzgünüm, model bir yanıt oluşturamadı.";
+    }
 
-    return reply?.trim() || null;
+    return reply.trim();
+
   } catch (err) {
-    // BURASI ÇOK ÖNEMLİ: Logları kontrol edin, Render panelinde ne hata yazıyor?
-    console.error("Gemini API error:", err.response?.data || err.message);
+    // HATA TESTİ BURADA: Render loglarında bu kısmı oku
+    if (err.response) {
+      console.error("GOOGLE API HATASI DETAYI:", JSON.stringify(err.response.data, null, 2));
+    } else {
+      console.error("SİSTEM HATASI:", err.message);
+    }
     return null;
   }
 }
-
-
 
 // -------------------------------
 //  STATIC TEXTS
