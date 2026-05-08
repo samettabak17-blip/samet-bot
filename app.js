@@ -311,7 +311,7 @@ app.post("/webhook", async (req, res) => {
     }
 
     // -----------------------------
-    //  2) İLK MESAJ (SESSION OLUŞTURMA)
+    //  İLK MESAJ (SESSION OLUŞTURMA)
     // -----------------------------
     if (!sessions[from]) {
       sessions[from] = {
@@ -364,11 +364,7 @@ app.post("/webhook", async (req, res) => {
       }
 
       const lang = session.lang;
-      const intro = introAfterLang[lang] || "";
-      const services = servicesList[lang] || "";
-      const contact = contactText[lang] || "";
-
-      await sendMessage(from, intro + services + "\n\n" + contact);
+      await sendMessage(from, introAfterLang[lang] || "");
       return res.sendStatus(200);
     }
 
@@ -411,6 +407,8 @@ app.post("/webhook", async (req, res) => {
     const historyText = session.history
       .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
       .join("\n");
+
+
 
 
     // -------------------------------
@@ -1414,7 +1412,7 @@ ${text}
 `;
     }
 
-    // -----------------------------
+   // -----------------------------
     //  GEMINI CEVABI
     // -----------------------------
     const reply = await callGemini(prompt);
@@ -1438,7 +1436,6 @@ ${text}
 //  PING & FOLLOW-UP MESSAGES HELPERS
 // -----------------------------------------------------
 function getPingMessage(lang, topic) {
-  // Basit, stabil bir ping metni; orijinal mantığı bozmadan:
   if (lang === "tr") {
     return "Size daha iyi yardımcı olabilmem için, devam etmek istediğiniz bir konu var mı?";
   }
