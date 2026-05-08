@@ -103,9 +103,6 @@ async function callGemini(prompt) {
   }
 }
 
-
-
-
 // -------------------------------
 //  STATIC TEXTS
 // -------------------------------
@@ -153,7 +150,6 @@ const contactText = {
   en: "To reach our professional advisory team, you may contact us via WhatsApp at +971 52 728 8586. Our live consultants will be happy to assist you.",
   ar: "للتواصل مع فريق الاستشارات المهنية لدينا، يمكنكم مراسلتنا عبر واتساب على ‎+971 52 728 8586. أو  سيقوم مستشارونا المباشرون بمساعدتكم بكل سرور.",
 };
-
 
 // -------------------------------
 //  TOPIC DETECTION & INTENT SCORE
@@ -242,7 +238,7 @@ function calculateIntentScore(text, currentScore = 0) {
   if (score > 100) score = 100;
 
   return score;
-
+}
 
 // -------------------------------
 //  WEBHOOK VERIFY
@@ -273,30 +269,19 @@ app.post("/webhook", async (req, res) => {
 
     const from = message.from;
 
-    // -----------------------------
-    //  TÜM MESAJ TÜRLERİNİ YAKALA
-    // -----------------------------
     let text = "";
 
-    if (message.text?.body) {
-      text = message.text.body;
-    } else if (message.button?.text) {
-      text = message.button.text;
-    } else if (message.interactive?.button_reply?.title) {
+    if (message.text?.body) text = message.text.body;
+    else if (message.button?.text) text = message.button.text;
+    else if (message.interactive?.button_reply?.title)
       text = message.interactive.button_reply.title;
-    } else if (message.interactive?.list_reply?.title) {
+    else if (message.interactive?.list_reply?.title)
       text = message.interactive.list_reply.title;
-    } else if (message.image?.caption) {
-      text = message.image.caption;
-    } else if (message.document?.caption) {
-      text = message.document.caption;
-    }
+    else if (message.image?.caption) text = message.image.caption;
+    else if (message.document?.caption) text = message.document.caption;
 
     text = text.trim();
 
-    // -----------------------------
-    //  GEÇERSİZ / DESTEKLENMEYEN MESAJ FİLTRESİ
-    // -----------------------------
     const isInvalid =
       !text ||
       text === "" ||
@@ -313,18 +298,11 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // -----------------------------
-    //  GEMINI CEVABI AL
-    // -----------------------------
     const reply = await callGemini(text);
 
-    // -----------------------------
-    //  WHATSAPP'A MESAJ GÖNDER
-    // -----------------------------
     await sendMessage(from, reply);
 
     return res.sendStatus(200);
-
   } catch (err) {
     console.error("Webhook error:", err);
     return res.sendStatus(200);
