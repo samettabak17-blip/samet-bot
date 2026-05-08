@@ -243,6 +243,7 @@ function calculateIntentScore(text, currentScore = 0) {
 
   return score;
 }
+
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -325,7 +326,6 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(200);
   }
 });
-
 
 
 
