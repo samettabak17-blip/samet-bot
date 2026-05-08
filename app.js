@@ -72,13 +72,12 @@ function corporateFallback(lang) {
 
 
 // -------------------------------
-//  GEMINI 2.0 FLASH CALL
+//  GEMINI 2.5 PRO CALL
 // -------------------------------
 async function callGemini(prompt) {
-const url =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" +
-  process.env.GEMINI_API_KEY;
-
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
 
   try {
     const response = await axios.post(
@@ -86,7 +85,9 @@ const url =
       {
         contents: [
           {
-            parts: [{ text: prompt }]
+            parts: [
+              { text: prompt }
+            ]
           }
         ]
       },
@@ -104,6 +105,7 @@ const url =
     return null;
   }
 }
+
 
 // -------------------------------
 //  STATIC TEXTS
