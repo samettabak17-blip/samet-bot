@@ -70,13 +70,12 @@ function corporateFallback(lang) {
   );
 }
 
-
 // -------------------------------
-//  GEMINI PRO LATEST (2026 FORMAT)
+//  GEMINI CALL  1.5 PRO (2026 FORMAT)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-latest:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -90,6 +89,13 @@ async function callGemini(prompt) {
               { text: prompt }
             ]
           }
+        ],
+        // Boş dönmeyi engelleyen kritik güncelleme: Güvenlik filtrelerini kapatıyoruz
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ]
       },
       {
@@ -106,8 +112,6 @@ async function callGemini(prompt) {
     return null;
   }
 }
-
-
 
 
 
