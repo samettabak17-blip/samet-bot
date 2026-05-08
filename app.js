@@ -260,14 +260,6 @@ app.get("/webhook", (req, res) => {
 //  WEBHOOK MESSAGE HANDLER
 // -------------------------------
 app.post("/webhook", async (req, res) => {
-
-  // 🔥 TEST 1 — Google URL doğru mu?
-  console.log(
-    "TEST_URL:",
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=" +
-      process.env.GEMINI_API_KEY
-  );
-
   try {
     const message = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
     if (!message) return res.sendStatus(200);
@@ -294,20 +286,16 @@ app.post("/webhook", async (req, res) => {
     }
 
     text = text.trim();
-    if (!text) return res.sendStatus(200);
-
-    const lower = text.toLowerCase();
 
     // 1) MEDYA / BOŞ MESAJ FİLTRESİ
+    // Metin (text) varsa, diğer türleri engellemiyoruz ki caption'ı okuyabilsin.
     const isInvalid =
-      message.type === "image" ||
+      !text ||
+      text.trim() === "" ||
       message.type === "audio" ||
       message.type === "voice" ||
       message.type === "video" ||
-      message.type === "sticker" ||
-      message.type === "document" ||
-      !text ||
-      text.trim() === "";
+      message.type === "sticker";
 
     if (isInvalid) {
       await sendMessage(
