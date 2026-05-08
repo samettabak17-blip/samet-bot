@@ -75,7 +75,7 @@ function corporateFallback(lang) {
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
