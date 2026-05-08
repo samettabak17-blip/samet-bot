@@ -70,47 +70,59 @@ function corporateFallback(lang) {
   );
 }
 
+
 // -------------------------------
-//  GEMINI PRO LATEST (2026 FORMAT)
+//  GEMINI 1.5 PRO - COMPLEX PROMPT ENGINE
 // -------------------------------
 async function callGemini(prompt) {
-  // En güncel ve geniş kapsamlı model
+  // En gelişmiş model ismi
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
   try {
-    console.log("Gemini'ye giden mesaj:", prompt); // Prompt boş mu gidiyor kontrol et
-
     const response = await axios.post(
       url,
       {
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }]
+          }
+        ],
+        // Karmaşık ve uzun içeriklerde engellenmemesi için ayarlar
         safetySettings: [
           { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
           { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
-        ]
+        ],
+        generationConfig: {
+          temperature: 0.7, // Yaratıcılık dengesi
+          topP: 0.95,
+          topK: 64,
+          maxOutputTokens: 8192, // Uzun yanıtlar için kapasiteyi artırdık
+          responseMimeType: "text/plain"
+        }
       },
-      { headers: { "Content-Type": "application/json" }, timeout: 25000 } // 25 sn zaman aşımı
+      { 
+        headers: { "Content-Type": "application/json" },
+        // GECİKMELİ YANITLAR İÇİN KRİTİK: Zaman aşımını 60 saniyeye çıkardık
+        timeout: 60000 
+      }
     );
 
     const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!reply) {
-      // Eğer yanıt metni yoksa bitiş sebebini logla
-      console.log("Boş Dönme Nedeni (FinishReason):", response.data?.candidates?.[0]?.finishReason);
-      return "Üzgünüm, model bir yanıt oluşturamadı.";
+      // Neden boş döndüğünü loglardan takip etmek için:
+      const reason = response.data?.candidates?.[0]?.finishReason;
+      console.error("Yanıt Boş. Sebep:", reason);
+      return null;
     }
 
     return reply.trim();
-
   } catch (err) {
-    // HATA TESTİ BURADA: Render loglarında bu kısmı oku
-    if (err.response) {
-      console.error("GOOGLE API HATASI DETAYI:", JSON.stringify(err.response.data, null, 2));
-    } else {
-      console.error("SİSTEM HATASI:", err.message);
-    }
+    // Hatanın tam kaynağını görmek için detaylı log:
+    console.error("Gemini Engine Error:", err.response?.data || err.message);
     return null;
   }
 }
