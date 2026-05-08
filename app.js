@@ -71,12 +71,13 @@ function corporateFallback(lang) {
   );
 }
 
+
 // -------------------------------
-//  GEMINI CALL (2.5 PRO EXP - 2026)
+//  GEMINI CALL (2.0/1.5 PRO - GÜVENLİK FİLTRELERİ AŞILDI)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-   "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -88,14 +89,35 @@ async function callGemini(prompt) {
             parts: [{ text: prompt }],
           },
         ],
+        // --- GÜVENLİK FİLTRELERİNİ AŞAN BÖLÜM ---
+        safetySettings: [
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ],
+        // --- YANITIN KARARLILIĞINI ARTIRAN BÖLÜM ---
+        generationConfig: {
+          temperature: 0.7, // Daha profesyonel ve tutarlı yanıtlar için
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 2048,
+        }
       },
       {
         headers: { "Content-Type": "application/json" },
       }
     );
 
-    const reply =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    // Yanıtı alırken hem normal metni hem de olası boş dönme durumlarını kontrol eder
+    const candidate = response.data?.candidates?.[0];
+    
+    // Eğer model güvenlik nedeniyle engellendiyse logla
+    if (candidate?.finishReason === "SAFETY") {
+      console.warn("⚠️ Uyarı: Model güvenlik filtresine takıldı, ancak BLOCK_NONE ile bu minimize edildi.");
+    }
+
+    const reply = candidate?.content?.parts?.[0]?.text || null;
 
     return reply?.trim() || null;
   } catch (err) {
