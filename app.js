@@ -283,37 +283,20 @@ app.post("/webhook", async (req, res) => {
     // -----------------------------
     let text = "";
 
-    // Normal text
     if (message.text?.body) {
       text = message.text.body;
-    }
-
-    // Button reply
-    else if (message.button?.text) {
+    } else if (message.button?.text) {
       text = message.button.text;
-    }
-
-    // Interactive button reply
-    else if (message.interactive?.button_reply?.title) {
+    } else if (message.interactive?.button_reply?.title) {
       text = message.interactive.button_reply.title;
-    }
-
-    // Interactive list reply
-    else if (message.interactive?.list_reply?.title) {
+    } else if (message.interactive?.list_reply?.title) {
       text = message.interactive.list_reply.title;
-    }
-
-    // Image caption
-    else if (message.image?.caption) {
+    } else if (message.image?.caption) {
       text = message.image.caption;
-    }
-
-    // Document caption
-    else if (message.document?.caption) {
+    } else if (message.document?.caption) {
       text = message.document.caption;
     }
 
-    // Fallback
     text = text.trim();
     if (!text) return res.sendStatus(200);
 
@@ -322,18 +305,17 @@ app.post("/webhook", async (req, res) => {
     // -----------------------------
     //  BURADAN SONRASI SENİN MEVCUT AKIŞIN
     // -----------------------------
-
-    // ÖRNEK:
     // const reply = await callGemini(text);
     // await sendMessage(from, reply);
 
-    res.sendStatus(200);
+    return res.sendStatus(200);
 
   } catch (err) {
     console.error("Webhook error:", err);
     return res.sendStatus(500);
   }
 });
+
 
 
 
