@@ -74,52 +74,32 @@ function corporateFallback(lang) {
 //  GEMINI CALL (2.5 PRO EXP - 2026)
 // -------------------------------
 async function callGemini(prompt) {
- const url =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-pro-preview:generateContent?key=" +
-  process.env.GEMINI_API_KEY;
-
-
-  const FALLBACK =
-    "Size en doğru bilgiyi sunabilmem için konuyu biraz daha netleştirebilir misiniz? Böylece ihtiyacınıza en uygun yönlendirmeyi sağlayabilirim.";
+  const url =
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" +
+    process.env.GEMINI_API_KEY;
 
   try {
-    if (!prompt || !prompt.trim()) {
-      return FALLBACK;
-    }
-
     const response = await axios.post(
       url,
       {
         contents: [
           {
-            role: "user",
             parts: [{ text: prompt }]
           }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048
-        }
+        ]
       },
       {
-        headers: { "Content-Type": "application/json" },
-        timeout: 50000
+        headers: { "Content-Type": "application/json" }
       }
     );
 
     const reply =
       response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
-    if (!reply) {
-      return FALLBACK;
-    }
-
-    return reply.trim();
+    return reply?.trim() || null;
   } catch (err) {
     console.error("Gemini API error:", err.response?.data || err.message);
-    return FALLBACK;
+    return null;
   }
 }
 
