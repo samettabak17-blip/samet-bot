@@ -77,10 +77,6 @@ async function callGemini(prompt) {
   const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=" + process.env.GEMINI_API_KEY;
 
   try {
-    if (!prompt || prompt.trim() === "") {
-      return "Hata: Boş mesaj algılandı.";
-    }
-
     const response = await axios.post(
       url,
       {
@@ -89,41 +85,20 @@ async function callGemini(prompt) {
             role: "user",
             parts: [{ text: prompt }]
           }
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 2048
-        },
-        safetySettings: [
-          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" }
         ]
       },
       {
-        headers: { "Content-Type": "application/json" },
-        timeout: 50000
+        headers: { "Content-Type": "application/json" }
       }
     );
 
-    const reply = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
-
-    if (!reply) {
-      const reason = response.data?.candidates?.[0]?.finishReason || "bilinmiyor";
-      return `Model yanıt üretmedi. Sebep: ${reason}`;
-    }
-
-    return reply.trim();
+    return response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
 
   } catch (err) {
-    const errorDetail = err.response?.data?.error?.message || err.message;
-    console.error("Gemini API error:", errorDetail);
-    return `API Hatası: ${errorDetail}`;
+    return "API Hatası: " + (err.response?.data?.error?.message || err.message);
   }
 }
+
 
 
 
