@@ -71,11 +71,11 @@ function corporateFallback(lang) {
 }
 
 // -------------------------------
-//  GEMINI CALL (2.5 PRO - 2026)
+//  GEMINI CALL (2.5 PRO EXP - 2026)
 // -------------------------------
 async function callGemini(prompt) {
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -127,6 +127,7 @@ async function callGemini(prompt) {
     return `API Hatası: ${errorDetail}`;
   }
 }
+
 
 
 // -------------------------------
