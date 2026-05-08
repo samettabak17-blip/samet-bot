@@ -71,11 +71,12 @@ function corporateFallback(lang) {
 }
 
 // -------------------------------
-//  GEMINI CALL PRO 2
+//  GEMINI CALL PRO 2 (STABLE 2026)
 // -------------------------------
 async function callGemini(prompt) {
+  // MODEL İSMİ DÜZELTİLDİ: gemini-1.5-pro en kararlı versiyondur.
   const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-exp-02-05:generateContent?key=" +
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" +
     process.env.GEMINI_API_KEY;
 
   try {
@@ -94,28 +95,36 @@ async function callGemini(prompt) {
           topK: 40,
           maxOutputTokens: 2048
         },
+        // TÜM GÜVENLİK FİLTRELERİ KAPATILDI (Boş dönmeyi engellemek için)
         safetySettings: [
-          {
-            category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-            threshold: "BLOCK_NONE"
-          }
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
         ]
       },
       {
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        timeout: 45000 // WhatsApp gecikmeleri için 45 saniye bekleme süresi
       }
     );
 
-    const reply =
-      response.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    // Yanıtın içinde text var mı kontrol et, yoksa hata nedenini logla
+    const candidate = response.data?.candidates?.[0];
+    const reply = candidate?.content?.parts?.[0]?.text;
 
-    return reply?.trim() || null;
+    if (!reply) {
+      console.error("Gemini yanıt üretmedi. Bitiş Nedeni:", candidate?.finishReason);
+      return "Üzgünüm, şu an bu soruyu yanıtlayamıyorum."; // null yerine string dönmek botun çökmesini engeller
+    }
+
+    return reply.trim();
   } catch (err) {
+    // Render loglarında hatayı net görmek için detaylı çıktı
     console.error("Gemini API error:", err.response?.data || err.message);
-    return null;
+    return "Bağlantı hatası: Mesaj işlenemedi.";
   }
 }
-
 
 // -------------------------------
 //  STATIC TEXTS
