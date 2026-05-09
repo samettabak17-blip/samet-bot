@@ -4,202 +4,350 @@ import axios from "axios";
 import dotenv from "dotenv";
 dotenv.config();
 
-// --------------------------------------
-//  WHATSAPP SEND MESSAGE HELPER
-// --------------------------------------
-async function sendWhatsAppMessage(to, text) {
+// ------------------------------------------------------
+// GLOBAL SESSIONS STORE (app.js ile aynı yapı)
+// ------------------------------------------------------
+const sessions = {}; 
+// Eğer app.js’de sessions tutuluyorsa → Redis veya JSON’a taşıyabiliriz.
+// Şimdilik worker bağımsız çalışsın diye burada tanımlıyoruz.
+
+// ------------------------------------------------------
+// WHATSAPP SEND MESSAGE (ESKİ SİSTEMLE UYUMLU)
+// ------------------------------------------------------
+async function sendMessage(to, text) {
   try {
-    await axios.post(
-      `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
-      {
-        messaging_product: "whatsapp",
-        to,
-        text: { body: text }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-    console.log("Follow-up sent:", to);
+    const url = `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`;
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to: to,
+      type: "text",
+      text: { body: text }
+    };
+
+    const headers = {
+      Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+      "Content-Type": "application/json"
+    };
+
+    const res = await axios.post(url, payload, { headers });
+
+    console.log("[SEND] WhatsApp SENT:", res.data);
   } catch (err) {
-    console.log("WhatsApp send error:", err.response?.data || err.message);
+    console.error("[SEND] WhatsApp ERROR:", err.response?.data || err.message);
   }
 }
 
-const FOLLOW_UP_MESSAGES = {
-  general: {
-    "10m": {
-      tr: "Dubai’de yaşamak, çalışmak veya kendi işinizi kurmak… hepsi doğru adımlarla düşündüğünüzden çok daha ulaşılabilir. Dilerseniz paylaştığım bilgilerin ötesine geçip, Dubai’deki yaşamınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Ne dersiniz, devam edelim mi?",
-      en: "Living, working, or starting your own business in Dubai is far more achievable than it may seem when approached with the right steps. If you’d like, we can go beyond the information shared and clarify the actions that will genuinely bring you closer to your Dubai goals. Shall we continue?",
-      ar: "العيش أو العمل أو تأسيس عملك الخاص في دبي… كل ذلك أقرب مما تتخيل عند اتخاذ الخطوات الصحيحة. إذا رغبت، يمكننا تجاوز المعلومات التي شاركتها وتحديد الخطوات التي تقرّبك فعليًا من حياتك في دبي. ما رأيك، نتابع؟"
-    },
-    "3h": {
-      tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim ve sürecinizin yarım kalmasını istemedim. Dubai’de yaşamak, çalışmak veya iş kurmak düşündüğünüzden çok daha ulaşılabilir. Hazırsanız, Dubai’deki planlarınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Ne dersiniz, devam edelim mi?",
-      en: "Hello. I noticed we haven’t been in touch for a while, and I didn’t want your process to remain incomplete. Living, working, or starting a business in Dubai is far more achievable than it seems. If you're ready, we can clarify the steps that will genuinely move you closer to your Dubai goals. Shall we continue?",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولا أريد أن يتوقف مساركم هنا. العيش أو العمل أو تأسيس عمل في دبي أقرب مما يبدو. إذا كنتم جاهزين، يمكننا تحديد الخطوات التي تقرّبكم فعليًا من أهدافكم في دبي. ما رأيكم، نتابع؟"
-    },
-    "24h": {
-      tr: "Merhaba. Dün paylaştığımız bilgilerle ilgili tekrar iletişimde olmadığımızı fark ettim. Dubai’de yaşam, çalışma ve iş fırsatları doğru planlandığında gerçekten güçlü bir kapı aralıyor. Hazırsanız, Dubai’deki hedeflerinize sizi yaklaştıracak adımları birlikte netleştirebiliriz.",
-      en: "Hello. I noticed we haven’t reconnected since the information we discussed yesterday. When planned correctly, Dubai’s living, working, and business opportunities open a truly powerful door. If you're ready, we can clarify the steps that will bring you closer to your goals in Dubai.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل بعد المعلومات التي شاركناها أمس. عند التخطيط الصحيح، تفتح دبي بابًا قويًا للعيش والعمل والفرص التجارية. إذا كنتم جاهزين، يمكننا تحديد الخطوات التي تقرّبكم من أهدافكم في دبي."
-    },
-    "48h": {
-      tr: "Merhaba. Yaklaşık 48 saattir iletişim kuramadığımızı fark ettim ve sürecinizin askıda kalmasını istemedim. Dubai ile ilgili hedeflerinizi netleştirmek isterseniz, sizin için en doğru adımları birlikte belirleyebiliriz.",
-      en: "Hello. I noticed we haven’t been in touch for about 48 hours, and I didn’t want your process to remain on hold. If you'd like to clarify your Dubai goals, we can define the right steps together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ حوالي 48 ساعة ولا أريد أن يتوقف مساركم. إذا رغبتم في توضيح أهدافكم في دبي، يمكننا تحديد الخطوات المناسبة معًا."
-    },
-    "7d": {
-      tr: "Merhaba. Yaklaşık bir haftadır iletişimde olmadığımızı fark ettim. Dubai ile ilgili planlarınız hâlâ geçerliyse, sizin için en doğru stratejiyi birlikte oluşturabiliriz. Hazırsanız kaldığımız yerden devam edebiliriz.",
-      en: "Hello. I noticed we haven’t reconnected for about a week. If your Dubai plans are still active, we can build the right strategy together. We can continue whenever you're ready.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ حوالي أسبوع. إذا كانت خططكم في دبي ما زالت قائمة، يمكننا بناء الاستراتيجية المناسبة معًا. أنا جاهز للمتابعة متى شئتم."
-    }
-  },
+// -----------------------------------------------------
+// 10 DAKİKA PING MESAJLARI (KURUMSAL – PROFESYONEL – SATIŞ ODAKLI)
+// -----------------------------------------------------
+function getPingMessage(lang, topic) {
+  const messages = {
+   tr: {
+      general:
+        "Dubai’de yaşamak, çalışmak veya kendi işinizi kurmak… hepsi doğru adımlarla düşündüğünüzden çok daha ulaşılabilir. Dilerseniz paylaştığım bilgilerin ötesine geçip, Dubai’deki yaşamınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Ne dersiniz, devam edelim mi?",
 
-  company: {
-    "10m": {
-      tr: "Dubai’de yaşamak, çalışmak veya kendi işinizi kurmak… hepsi doğru adımlarla düşündüğünüzden çok daha ulaşılabilir. Şirket yapınızı konuştuğumuz noktadan devam etmek isterseniz, sizin için en doğru modeli birlikte netleştirebiliriz.",
-      en: "Living, working, or building a business in Dubai is more achievable than it seems. If you'd like to continue from where we left off regarding your company structure, we can define the ideal model together.",
-      ar: "العيش أو العمل أو تأسيس شركة في دبي أقرب مما يبدو. إذا رغبت في متابعة ما بدأناه حول هيكل شركتك، يمكننا تحديد النموذج الأنسب معًا."
-    },
-    "3h": {
-      tr: "Merhaba. Bir süre iletişimde olmadığımızı fark ettim. Dubai’de doğru şirket yapısını seçmek uzun vadeli avantaj sağlar. Hazırsanız, sizin için en doğru modeli birlikte netleştirebiliriz.",
-      en: "Hello. I noticed we haven’t been in touch. Choosing the right company structure in Dubai provides long‑term advantages. If you're ready, we can define the ideal model together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة. اختيار الهيكل الصحيح للشركة في دبي يمنحكم مزايا طويلة المدى. إذا كنتم جاهزين، يمكننا تحديد النموذج الأنسب معًا."
-    },
-    "24h": {
-      tr: "Merhaba. Dün şirket yapısıyla ilgili konuşmuştuk. Dubai’de doğru kurulum güçlü bir başlangıç sağlar. Hazırsanız, sizin için en uygun yapıyı birlikte oluşturabiliriz.",
-      en: "Hello. Yesterday we discussed your company structure. The right setup in Dubai creates a strong foundation. If you're ready, we can build the ideal structure together.",
-      ar: "مرحبًا. تحدثنا أمس عن هيكل شركتكم. الإعداد الصحيح في دبي يمنحكم انطلاقة قوية. إذا كنتم جاهزين، يمكننا بناء الهيكل الأنسب معًا."
-    },
-    "48h": {
-      tr: "Merhaba. Yaklaşık 48 saattir iletişim sağlayamadık. Dubai’de doğru şirket yapısını seçmek uzun vadeli avantaj sağlar. Hazırsanız, sizin için en uygun modeli birlikte netleştirebiliriz.",
-      en: "Hello. It’s been about 48 hours since our last contact. Choosing the right company structure in Dubai provides long‑term advantages. If you're ready, we can define the ideal model together.",
-      ar: "مرحبًا. مرّ حوالي 48 ساعة دون تواصل. اختيار الهيكل الصحيح للشركة في دبي يمنحكم مزايا طويلة المدى. إذا كنتم جاهزين، يمكننا تحديد النموذج الأنسب معًا."
-    },
-    "7d": {
-      tr: "Merhaba. Yaklaşık bir haftadır iletişimde olmadığımızı fark ettim. Şirket kurma planınız hâlâ geçerliyse, sizin için en doğru yapıyı birlikte oluşturabiliriz.",
-      en: "Hello. It’s been nearly a week since we last connected. If your company setup plan is still active, we can build the ideal structure together.",
-      ar: "مرحبًا. مرّ ما يقارب أسبوع منذ آخر تواصل بيننا. إذا كانت خطة تأسيس الشركة ما زالت قائمة، يمكننا بناء الهيكل الأنسب معًا."
-    }
-  },
+      company:
+        "Dubai’de doğru şirket yapısını seçmek, hem vergi avantajlarınızı hem de uzun vadeli operasyonel özgürlüğünüzü doğrudan etkiler. Profilinize en uygun modeli birlikte tasarlayabiliriz; doğru yapı gerçekten büyük fark yaratır. Hazırsanız süreci birlikte şekillendirebiliriz, devam edelim mi?",
 
-  residency: {
-    "10m": {
-      tr: "Dubai’de yaşamak veya oturum almak düşündüğünüzden çok daha ulaşılabilir. Hazırsanız, sizin için en doğru oturum yolunu birlikte netleştirebiliriz.",
-      en: "Living in Dubai or obtaining residency is more achievable than it seems. If you're ready, we can define the best residency path together.",
-      ar: "العيش في دبي أو الحصول على الإقامة أقرب مما يبدو. إذا كنتم جاهزين، يمكننا تحديد أفضل مسار للإقامة معًا."
-    },
-    "3h": {
-      tr: "Merhaba. Bir süredir iletişimde olmadığımızı fark ettim. Dubai’de oturum süreci doğru planlandığında oldukça hızlı ilerler. Hazırsanız birlikte devam edebiliriz.",
-      en: "Hello. I noticed we haven’t been in touch. The residency process in Dubai moves quickly when planned correctly. If you're ready, we can continue together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة. إجراءات الإقامة في دبي تتقدم بسرعة عند التخطيط الصحيح. إذا كنتم جاهزين، يمكننا المتابعة معًا."
-    },
-    "24h": {
-      tr: "Merhaba. Dün oturum süreciyle ilgili konuşmuştuk. Hazırsanız, Dubai’deki yaşam planınıza en uygun yolu birlikte netleştirebiliriz.",
-      en: "Hello. Yesterday we discussed your residency process. If you're ready, we can clarify the best path for your Dubai plans.",
-      ar: "مرحبًا. تحدثنا أمس عن إجراءات الإقامة. إذا كنتم جاهزين، يمكننا تحديد المسار الأنسب لخطتكم في دبي."
-    },
-    "48h": {
-      tr: "Merhaba. Yaklaşık 48 saattir iletişimde olmadığımızı fark ettim. Dubai’de oturum süreci doğru planlandığında oldukça hızlı ilerler. Hazırsanız, sizin için en uygun yolu birlikte netleştirebiliriz.",
-      en: "Hello. I noticed we haven’t been in touch for about 48 hours. The residency process in Dubai moves quickly when planned correctly. If you're ready, we can clarify the best path together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ حوالي 48 ساعة. إجراءات الإقامة في دبي تتقدم بسرعة عند التخطيط الصحيح. إذا كنتم جاهزين، يمكننا تحديد المسار الأنسب معًا."
-    },
-    "7d": {
-      tr: "Merhaba. Yaklaşık bir haftadır iletişim kuramadık. Dubai’de oturum planınız hâlâ devam ediyorsa, sizin için en doğru stratejiyi birlikte oluşturabiliriz.",
-      en: "Hello. It’s been nearly a week since our last contact. If your residency plan is still active, we can build the right strategy together.",
-      ar: "مرحبًا. مرّ ما يقارب أسبوع دون تواصل. إذا كانت خطة الإقامة ما زالت قائمة، يمكننا بناء الاستراتيجية المناسبة معًا."
-    }
-  },
+      residency:
+        "Dubai’de oturum almak, burada kuracağınız yaşamın temelini oluşturur. Sizin için en sorunsuz ve en doğru yolu belirlemek isterseniz, süreci çok daha hızlı ve net bir çerçevede ilerletebiliriz. Hazır olduğunuzda bir sonraki adımı birlikte planlayabiliriz; devam edelim mi?",
 
-  cost: {
-    "10m": {
-      tr: "Dubai’de yaşam ve iş maliyetleri doğru planlandığında düşündüğünüzden çok daha yönetilebilir. Hazırsanız bütçenize en uygun modeli birlikte netleştirebiliriz.",
-      en: "Dubai’s living and business costs are far more manageable when planned correctly. If you're ready, we can define the most suitable model together.",
-      ar: "تكاليف المعيشة والعمل في دبي يمكن إدارتها بسهولة أكبر عند التخطيط الصحيح. إذا كنتم جاهزين، يمكننا تحديد النموذج الأنسب معًا."
-    },
-    "3h": {
-      tr: "Merhaba. Bir süredir iletişimde olmadığımızı fark ettim. Dubai’de bütçenizi doğru konumlandırmak büyük avantaj sağlar. Hazırsanız birlikte ilerleyebiliriz.",
-      en: "Hello. I noticed we haven’t been in touch. Positioning your budget correctly in Dubai provides major advantages. If you're ready, we can continue together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة. تحديد ميزانيتكم بشكل صحيح في دبي يمنحكم أفضلية كبيرة. إذا كنتم جاهزين، يمكننا المتابعة معًا."
-    },
-    "24h": {
-      tr: "Merhaba. Dün maliyetlerle ilgili konuşmuştuk. Hazırsanız, Dubai’deki bütçe planınızı birlikte optimize edebiliriz.",
-      en: "Hello. Yesterday we discussed Dubai costs. If you're ready, we can optimize your budget plan together.",
-      ar: "مرحبًا. تحدثنا أمس عن التكاليف. إذا كنتم جاهزين، يمكننا تحسين خطة ميزانيتكم معًا."
-    },
-    "48h": {
-      tr: "Merhaba. Yaklaşık 48 saattir iletişimde olmadığımızı fark ettim. Dubai’de bütçenizi doğru konumlandırmak önemli bir avantaj sağlar. Hazırsanız, sizin için en uygun planı birlikte netleştirebiliriz.",
-      en: "Hello. It’s been about 48 hours since we last spoke. Positioning your budget correctly in Dubai provides a strong advantage. If you're ready, we can refine the ideal plan together.",
-      ar: "مرحبًا. مرّ حوالي 48 ساعة منذ آخر تواصل. تحديد ميزانيتكم بشكل صحيح في دبي يمنحكم أفضلية قوية. إذا كنتم جاهزين، يمكننا تطوير الخطة الأنسب معًا."
-    },
-    "7d": {
-      tr: "Merhaba. Yaklaşık bir haftadır iletişim sağlayamadık. Dubai’deki maliyet planınız hâlâ geçerliyse, sizin için en uygun modeli birlikte oluşturabiliriz.",
-      en: "Hello. It’s been nearly a week since we last connected. If your Dubai cost plan is still active, we can build the most suitable model together.",
-      ar: "مرحبًا. مرّ ما يقارب أسبوع دون تواصل. إذا كانت خطة التكاليف ما زالت قائمة، يمكننا بناء النموذج الأنسب معًا."
-    }
-  },
+      cost:
+        "Dubai’de bütçenizi doğru konumlandırmak, hem yaşam planınızı hem de iş hedeflerinizi çok daha güçlü bir zemine taşır. Paylaştığım maliyet bilgilerinin ötesinde, sizin için en uygun yapıyı birlikte netleştirebiliriz. İsterseniz bir sonraki adımı belirleyelim, devam edelim mi?",
 
-  AI: {
-    "10m": {
-      tr: "Dubai’de yaşamak, çalışmak veya kendi işinizi kurmak… hepsi doğru adımlarla düşündüğünüzden çok daha ulaşılabilir. AI projenizi de aynı şekilde net bir yapıya oturtabiliriz. Hazırsanız birlikte ilerleyebiliriz.",
-      en: "Living, working, or building a business in Dubai is more achievable than it seems. We can bring the same clarity to your AI project. If you're ready, we can move forward together.",
-      ar: "العيش أو العمل أو تأسيس عمل في دبي أقرب مما يبدو. ويمكننا تطبيق نفس الوضوح على مشروع الذكاء الاصطناعي الخاص بكم. إذا كنتم جاهزين، يمكننا المتابعة معًا."
+      AI:
+        "Doğru AI ve otomasyon yapısı, işinizi birkaç adım öne taşıyabilir. Projenizi daha verimli ve ölçeklenebilir bir modele dönüştürmek isterseniz, sizin için en uygun yapıyı birlikte planlayabiliriz. Çözüm paketlerimizi incelemek isterseniz bağlantıyı bırakıyorum:\nhttps://aichatbot.samchecompany.com/#pricing\nNe dersiniz, devam edelim mi?",
+      
     },
-    "3h": {
-      tr: "Merhaba. Bir süredir iletişimde olmadığımızı fark ettim. AI projeniz düşündüğünüzden çok daha hızlı ilerleyebilir. Hazırsanız birlikte netleştirebiliriz.",
-      en: "Hello. I noticed we haven’t been in touch. Your AI project can progress much faster than expected. If you're ready, we can refine it together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة. يمكن لمشروع الذكاء الاصطناعي أن يتقدم أسرع مما تتوقعون. إذا كنتم جاهزين، يمكننا تطويره معًا."
+
+    en: {
+      company:
+        "If you'd like to move forward with your company setup, I can help you structure the next steps clearly and efficiently.",
+      residency:
+        "If you’d like to proceed with the residency and visa options we discussed, I’m here to guide you through the next steps.",
+      AI:
+        "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing",
+      cost:
+        "If you'd like to continue based on the cost and process details I shared, we can finalize the most suitable plan together.",
+      general:
+        "Whenever you're ready, we can clarify the next steps based on the information I shared earlier."
     },
-    "24h": {
-      tr: "Merhaba. Dün paylaştığımız bilgilerle ilgili tekrar iletişimde olmadığımızı fark ettim. AI projeniz doğru planlandığında güçlü bir fırsata dönüşebilir. Hazırsanız birlikte ilerleyebiliriz.",
-      en: "Hello. I noticed we haven’t reconnected since yesterday’s discussion. With the right planning, your AI project can become a strong opportunity. If you're ready, we can move forward together.",
-      ar: "مرحبًا. لاحظت أننا لم نتواصل بعد مناقشة الأمس. يمكن لمشروع الذكاء الاصطناعي أن يتحول إلى فرصة قوية عند التخطيط الصحيح. إذا كنتم جاهزين، يمكننا المتابعة معًا."
-    },
-    "48h": {
-      tr: "Merhaba. Yaklaşık 48 saattir iletişimde olmadığımızı fark ettim. AI projeniz düşündüğünüzden çok daha hızlı ilerleyebilir. Hazırsanız, adımları birlikte netleştirebiliriz.",
-      en: "Hello. It’s been about 48 hours since our last contact. Your AI project can progress much faster than expected. If you're ready, we can clarify the next steps together.",
-      ar: "مرحبًا. مرّ حوالي 48 ساعة دون تواصل. يمكن لمشروع الذكاء الاصطناعي أن يتقدم أسرع مما تتوقعون. إذا كنتم جاهزين، يمكننا تحديد الخطوات التالية معًا."
-    },
-    "7d": {
-      tr: "Merhaba. Yaklaşık bir haftadır iletişim kuramadık. AI projeniz hâlâ gündemdeyse, sizin için en doğru çözüm modelini birlikte oluşturabiliriz.",
-      en: "Hello. It’s been nearly a week since we last connected. If your AI project is still active, we can build the ideal solution model together.",
-      ar: "مرحبًا. مرّ ما يقارب أسبوع دون تواصل. إذا كان مشروع الذكاء الاصطناعي ما زال قائمًا، يمكننا بناء النموذج الأنسب معًا."
+
+    ar: {
+      company:
+        "إذا كنتم ترغبون بالمتابعة في تأسيس الشركة، يمكنني مساعدتكم في تحديد الخطوات التالية بوضوح.",
+      residency:
+        "إذا رغبتم بالمتابعة في خيارات الإقامة والتأشيرات، يسعدني توجيهكم للخطوة التالية.",
+      AI:
+        "استنادًا إلى الاقتراحات والمعلومات التي شاركتها حول حلول الذكاء الاصطناعي والأتمتة، يمكننا التخطيط للخطوة التالية لجعل مشروعك أكثر كفاءة وقابلية للتوسع.\n\nإذا كنت ترغب في الاطلاع على خطط روبوت الدردشة بالذكاء الاصطناعي، يمكنك زيارة الرابط التالي:\nhttps://aichatbot.samchecompany.com/#pricing",
+      cost:
+        "إذا رغبتم بالمتابعة بناءً على تفاصيل التكاليف، يمكننا تحديد الخطة الأنسب لكم.",
+      general:
+        "عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية بناءً على المعلومات التي شاركتها."
     }
+  };
+
+  const langSet = messages[lang] || messages["en"];
+  return langSet[topic] || langSet["general"];
+}
+
+
+
+// -----------------------------------------------------
+// FOLLOW-UP MESAJLARI (3h – 24h – 72h – 7d)
+// -----------------------------------------------------
+function getFollowUpMessage(lang, topic, stage) {
+  const messages = {
+    // -------------------------
+    // 3 SAAT — SENİN İSTEDİĞİN METİN
+    // -------------------------
+    "3h":{
+      general: {
+        tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim ve sürecinizin yarım kalmasını istemedim. Dubai’de yaşamak, çalışmak veya iş kurmak düşündüğünüzden çok daha ulaşılabilir. Hazırsanız, Dubai’deki planlarınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Ne dersiniz, devam edelim mi?",
+        en: "Hello. I noticed we haven’t been in touch for a while and didn’t want your process to remain incomplete. Living, working or building a business in Dubai is far more achievable with the right steps. If you're ready, we can clarify the next actions that bring you closer to your plans in Dubai. Shall we continue?",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن تتوقف خطتكم في منتصف الطريق. العيش أو العمل أو تأسيس عمل في دبي يصبح أسهل بكثير عند اتخاذ الخطوات الصحيحة. إذا كنتم جاهزين، يمكننا تحديد الخطوات التي تقرّبكم من خططكم في دبي. ما رأيكم، هل نتابع؟"
+      },
+
+      company: {
+        tr: "Merhaba. Bir süredir iletişimde olmadığımızı fark ettim ve şirket kuruluşu planlarınızın askıda kalmasını istemedim. Dubai’de doğru şirket yapısını seçmek uzun vadede ciddi avantaj sağlar. Profilinize en uygun modeli birlikte şekillendirebiliriz. Hazırsanız süreci netleştirelim, devam edelim mi?",
+        en: "Hello. I noticed we haven’t been in touch and didn’t want your company formation plans to remain on hold. Choosing the right company structure in Dubai provides significant long-term advantages. We can shape the most suitable model for your profile. If you're ready, shall we continue?",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن تتوقف خطتكم لتأسيس الشركة. اختيار الهيكل الصحيح للشركة في دبي يمنحكم مزايا كبيرة على المدى الطويل. يمكننا تحديد النموذج الأنسب لملفكم. إذا كنتم جاهزين، هل نتابع؟"
+      },
+
+      residency: {
+        tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim ve oturum sürecinizin gecikmesini istemedim. Dubai’de oturum almak, burada kuracağınız yaşamın temel adımıdır. Sizin için en sorunsuz yolu belirlemeye devam edebiliriz. Hazır olduğunuzda ilerleyebiliriz, devam edelim mi?",
+        en: "Hello. I noticed we haven’t been in touch and didn’t want your residency process to be delayed. Obtaining residency in Dubai is the foundation of building your life here. We can continue identifying the smoothest path for you. If you're ready, shall we proceed?",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن يتأخر مسار الإقامة الخاص بكم. الحصول على الإقامة في دبي هو الخطوة الأساسية لبناء حياتكم هنا. يمكننا متابعة تحديد المسار الأنسب لكم. إذا كنتم جاهزين، هل نتابع؟"
+      },
+
+      cost: {
+        tr: "Merhaba. Bir süredir iletişim kuramadığımızı fark ettim ve bütçe planlamanızın havada kalmasını istemedim. Dubai’de maliyetleri doğru konumlandırmak, yaşam ve iş hedeflerinizi çok daha güçlü bir zemine taşır. Sizin için en uygun yapıyı netleştirebiliriz. Ne dersiniz, devam edelim mi?",
+        en: "Hello. I noticed we haven’t been in touch and didn’t want your budgeting process to remain unclear. Positioning your costs correctly in Dubai strengthens both your lifestyle and business goals. We can clarify the most suitable structure for you. Shall we continue?",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن تبقى خطتكم المالية غير واضحة. تحديد التكاليف بشكل صحيح في دبي يعزز أهدافكم المعيشية والعملية. يمكننا تحديد الهيكل الأنسب لكم. ما رأيكم، هل نتابع؟"
+      },
+
+      AI: {
+        tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim ve projenizin beklemede kalmasını istemedim. Doğru AI yapısı işinizi birkaç adım öne taşıyabilir. Projenizi daha verimli ve ölçeklenebilir bir modele dönüştürmek isterseniz birlikte planlayabiliriz. Hazırsanız devam edelim mi?",
+        en: "Hello. I noticed we haven’t been in touch and didn’t want your project to remain on hold. The right AI structure can move your business several steps ahead. If you'd like to transform your project into a more efficient and scalable model, we can plan it together. Shall we continue?",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة ولم أرغب أن يبقى مشروعكم متوقفًا. الهيكل الصحيح للذكاء الاصطناعي يمكن أن يدفع عملكم عدة خطوات إلى الأمام. إذا رغبتم في تحويل مشروعكم إلى نموذج أكثر كفاءة وقابلية للتوسع، يمكننا التخطيط له معًا. هل نتابع؟"
+      }
+    },
+
+    // -------------------------
+    // 24 SAAT — KURUMSAL & SATIŞ ODAKLI
+    // -------------------------
+    "24h": {
+      general: {
+        tr: "Merhaba. Dün paylaştığımız bilgilerle ilgili tekrar iletişimde olmadığımızı fark ettim. Dubai’de yaşam, çalışma ve iş fırsatları doğru planlandığında gerçekten güçlü bir kapı aralıyor. Hazırsanız, Dubai’deki hedeflerinize sizi yaklaştıracak adımları birlikte netleştirebiliriz.",
+        en: "Hello. I noticed we haven’t reconnected since yesterday. Living, working or building a business in Dubai opens strong opportunities when planned correctly. If you're ready, we can clarify the next steps that bring you closer to your goals in Dubai.",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ الأمس. العيش أو العمل أو تأسيس عمل في دبي يفتح فرصًا قوية عند التخطيط الصحيح. إذا كنتم جاهزين، يمكننا تحديد الخطوات التي تقرّبكم من أهدافكم في دبي."
+      },
+
+      company: {
+        tr: "Merhaba. Şirket kuruluşu sürecinizle ilgili dün konuştuğumuzdan beri iletişimde olmadığımızı fark ettim. Dubai’de doğru şirket yapısını seçmek uzun vadeli avantaj sağlar. Hazırsanız, sizin için en uygun modeli birlikte netleştirebiliriz.",
+        en: "Hello. I noticed we haven’t reconnected regarding your company setup. Choosing the right structure in Dubai creates long-term advantages. If you're ready, we can finalize the model that best fits your profile.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص تأسيس الشركة. اختيار الهيكل الصحيح في دبي يمنحكم مزايا طويلة المدى. إذا كنتم جاهزين، يمكننا تحديد النموذج الأنسب لملفكم."
+      },
+
+      residency: {
+        tr: "Merhaba. Oturum sürecinizle ilgili dün konuştuğumuzdan beri iletişimde olmadığımızı fark ettim. Dubai’de oturum almak düşündüğünüzden daha hızlı ilerleyebilir. Hazırsanız, sizin için en sorunsuz yolu birlikte belirleyebiliriz.",
+        en: "Hello. I noticed we haven’t followed up on your residency process. Obtaining residency in Dubai can move faster than expected. If you're ready, we can identify the smoothest path for you.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص الإقامة. الحصول على الإقامة في دبي قد يكون أسرع مما تتوقعون. إذا كنتم جاهزين، يمكننا تحديد المسار الأنسب لكم."
+      },
+
+      cost: {
+        tr: "Merhaba. Dün maliyetlerle ilgili konuşmamızdan sonra iletişimde olmadığımızı fark ettim. Dubai’de bütçenizi doğru konumlandırmak hem yaşam hem iş planınızı güçlendirir. Hazırsanız, sizin için en uygun yapıyı netleştirebiliriz.",
+        en: "Hello. I noticed we haven’t reconnected regarding the cost details. Positioning your budget correctly in Dubai strengthens both your lifestyle and business plans. If you're ready, we can clarify the best structure for you.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص التكاليف. تحديد ميزانيتكم بشكل صحيح في دبي يعزز خططكم المعيشية والعملية. إذا كنتم جاهزين، يمكننا تحديد الهيكل الأنسب لكم."
+      },
+
+      AI: {
+        tr: "Merhaba. Dün AI projenizle ilgili konuştuğumuzdan beri iletişimde olmadığımızı fark ettim. Doğru otomasyon yapısı işinizi birkaç adım öne taşıyabilir. Hazırsanız, projenizi ölçeklenebilir bir modele dönüştürecek adımları planlayabiliriz.",
+        en: "Hello. I noticed we haven’t followed up on your AI project. The right automation structure can move your business several steps ahead. If you're ready, we can plan the steps to make your project scalable.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص مشروع الذكاء الاصطناعي. الهيكل الصحيح للأتمتة يمكن أن يدفع عملكم عدة خطوات إلى الأمام. إذا كنتم جاهزين، يمكننا التخطيط للخطوات التي تجعل مشروعكم قابلًا للتوسع."
+      }
+    },
+    // -----------------------------------------------------
+    // 72 SAAT FOLLOW-UP
+    // -----------------------------------------------------
+    "72h": {
+      general: {
+        tr: "Merhaba. Birkaç gündür iletişimde olmadığımızı fark ettim. Dubai’deki planlarınızın askıda kalmasını istemem. Hazırsanız, sizin için en doğru yolu birlikte netleştirebiliriz.",
+        en: "Hello. I noticed we haven’t been in touch for a few days. I don’t want your Dubai plans to remain on hold. If you're ready, we can clarify the best path forward.",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ عدة أيام. لا أرغب أن تبقى خططكم في دبي معلّقة. إذا كنتم جاهزين، يمكننا تحديد المسار الأنسب لكم."
+      },
+
+      company: {
+        tr: "Merhaba. Şirket kuruluşu planlarınızın birkaç gündür ilerlemediğini fark ettim. Dubai’de doğru yapı büyük fark yaratır. Hazırsanız, süreci birlikte hızlandırabiliriz.",
+        en: "Hello. I noticed your company setup process hasn’t progressed in the last few days. The right structure in Dubai makes a major difference. If you're ready, we can move forward together.",
+        ar: "مرحبًا. لاحظت أن عملية تأسيس الشركة لم تتقدم منذ عدة أيام. الهيكل الصحيح في دبي يحدث فرقًا كبيرًا. إذا كنتم جاهزين، يمكننا المتابعة معًا."
+      },
+
+      residency: {
+        tr: "Merhaba. Oturum sürecinizin birkaç gündür ilerlemediğini fark ettim. Dubai’de oturum almak düşündüğünüzden daha hızlı tamamlanabilir. Hazırsanız, süreci netleştirebiliriz.",
+        en: "Hello. I noticed your residency process hasn’t progressed for a few days. Residency in Dubai can be completed faster than expected. If you're ready, we can clarify the next steps.",
+        ar: "مرحبًا. لاحظت أن عملية الإقامة لم تتقدم منذ عدة أيام. يمكن إنهاء الإقامة في دبي أسرع مما تتوقعون. إذا كنتم جاهزين، يمكننا تحديد الخطوات التالية."
+      },
+
+      cost: {
+        tr: "Merhaba. Bütçe planlamanızın birkaç gündür askıda kaldığını fark ettim. Dubai’de maliyetleri doğru yönetmek önemli avantaj sağlar. Hazırsanız, sizin için en uygun yapıyı belirleyebiliriz.",
+        en: "Hello. I noticed your budgeting process has been on hold for a few days. Managing costs correctly in Dubai provides major advantages. If you're ready, we can define the best structure for you.",
+        ar: "مرحبًا. لاحظت أن خطتكم المالية معلّقة منذ عدة أيام. إدارة التكاليف بشكل صحيح في دبي يمنحكم مزايا كبيرة. إذا كنتم جاهزين، يمكننا تحديد الهيكل الأنسب لكم."
+      },
+
+      AI: {
+        tr: "Merhaba. AI projenizin birkaç gündür ilerlemediğini fark ettim. Doğru otomasyon yapısı işinizi hızla ileri taşır. Hazırsanız, projenizi birlikte netleştirebiliriz.",
+        en: "Hello. I noticed your AI project hasn’t progressed for a few days. The right automation structure accelerates your business significantly. If you're ready, we can refine your project together.",
+        ar: "مرحبًا. لاحظت أن مشروع الذكاء الاصطناعي لم يتقدم منذ عدة أيام. الهيكل الصحيح للأتمتة يدفع عملكم بسرعة إلى الأمام. إذا كنتم جاهزين، يمكننا تطوير المشروع معًا."
+      }
+    },
+
+    // -----------------------------------------------------
+    // 7 GÜN FOLLOW-UP (SON NAZİK HATIRLATMA)
+    // -----------------------------------------------------
+    "7d": {
+      general: {
+        tr: "Merhaba. Bir haftadır iletişimde olmadığımızı fark ettim. Dubai ile ilgili planlarınız hâlâ geçerliyse, sizin için en doğru yolu birlikte belirleyebiliriz. Hazır olduğunuzda buradayım.",
+        en: "Hello. I noticed we haven’t been in touch for a week. If your Dubai plans are still active, we can define the best path together. I’m here whenever you're ready.",
+        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ أسبوع. إذا كانت خططكم في دبي ما زالت قائمة، يمكننا تحديد المسار الأنسب لكم. أنا هنا متى ما كنتم جاهزين."
+      },
+
+      company: {
+        tr: "Merhaba. Şirket kuruluşu planlarınızla ilgili bir haftadır iletişimde olmadığımızı fark ettim. Dubai’de doğru yapı uzun vadeli avantaj sağlar. Hazır olduğunuzda süreci birlikte ilerletebiliriz.",
+        en: "Hello. I noticed we haven’t followed up on your company setup for a week. The right structure in Dubai provides long-term advantages. Whenever you're ready, we can move forward.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص تأسيس الشركة منذ أسبوع. الهيكل الصحيح في دبي يمنحكم مزايا طويلة المدى. أنا هنا متى ما كنتم جاهزين."
+      },
+
+      residency: {
+        tr: "Merhaba. Oturum sürecinizle ilgili bir haftadır iletişimde olmadığımızı fark ettim. Dubai’de oturum almak düşündüğünüzden daha hızlı ilerleyebilir. Hazır olduğunuzda devam edebiliriz.",
+        en: "Hello. I noticed we haven’t followed up on your residency process for a week. Residency in Dubai can progress faster than expected. We can continue whenever you're ready.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص الإقامة منذ أسبوع. يمكن أن تتقدم الإقامة في دبي أسرع مما تتوقعون. أنا هنا متى ما كنتم جاهزين."
+      },
+
+      cost: {
+        tr: "Merhaba. Bütçe planlamanızla ilgili bir haftadır iletişimde olmadığımızı fark ettim. Dubai’de maliyetleri doğru yönetmek önemli avantaj sağlar. Hazır olduğunuzda sizin için en uygun yapıyı belirleyebiliriz.",
+        en: "Hello. I noticed we haven’t discussed your budgeting for a week. Managing costs correctly in Dubai provides major advantages. We can define the best structure whenever you're ready.",
+        ar: "مرحبًا. لاحظت أننا لم نناقش خطتكم المالية منذ أسبوع. إدارة التكاليف بشكل صحيح في دبي يمنحكم مزايا كبيرة. أنا هنا متى ما كنتم جاهزين."
+      },
+
+      AI: {
+        tr: "Merhaba. AI projenizle ilgili bir haftadır iletişimde olmadığımızı fark ettim. Doğru otomasyon yapısı işinizi hızla ileri taşır. Hazır olduğunuzda projenizi birlikte netleştirebiliriz.",
+        en: "Hello. I noticed we haven’t followed up on your AI project for a week. The right automation structure can rapidly move your business forward. Whenever you're ready, we can refine your project.",
+        ar: "مرحبًا. لاحظت أننا لم نتابع بخصوص مشروع الذكاء الاصطناعي منذ أسبوع. الهيكل الصحيح للأتمتة يمكن أن يدفع عملكم بسرعة إلى الأمام. أنا هنا متى ما كنتم جاهزين."
+      }
+    }
+  };
+
+  return (
+    messages[stage]?.[topic]?.[lang] ||
+    messages[stage]?.["general"]?.[lang] ||
+    messages[stage]?.["general"]?.["tr"]
+  );
+}
+
+
+// ------------------------------------------------------
+// CRON — HER 10 DAKİKADA BİR
+// ------------------------------------------------------
+cron.schedule("*/10 * * * *", async () => {
+  console.log("[CRON] Hatırlatma kontrolü tetiklendi:", new Date().toLocaleString());
+
+  try {
+    const now = Date.now();
+
+    const users = Object.keys(sessions);
+    if (!users.length) return;
+
+    for (const user of users) {
+      try {
+        const s = sessions[user];
+        if (!s) continue;
+
+        // -----------------------------
+        // firstMessageTime YOKSA OLUŞTUR
+        // -----------------------------
+        if (!s.firstMessageTime) {
+          s.firstMessageTime = s.lastMessageTime || now;
+        }
+
+        // -----------------------------
+        // 10 dakika için lastMessageTime
+        // -----------------------------
+        if (!s.lastMessageTime) continue;
+
+        const diffMinutesLast = (now - s.lastMessageTime) / 60000;
+        const diffHours = (now - s.firstMessageTime) / 3600000;
+
+        const lang = s.lang || "en";
+        const topic = s.topics?.length ? s.topics[s.topics.length - 1] : "general";
+
+        if (typeof s.followUpStage !== "number") s.followUpStage = 0;
+
+        // -----------------------------------------------------
+        // 10 DAKİKA PING
+        // -----------------------------------------------------
+        if (diffMinutesLast >= 10 && !s.pingSentOnce) {
+          const ping = getPingMessage(lang, topic);
+          await sendMessage(user, ping);
+          s.pingSentOnce = true;
+          continue;
+        }
+
+        if (diffMinutesLast < 10) s.pingSentOnce = false;
+
+        // -----------------------------------------------------
+        // 3 SAAT
+        // -----------------------------------------------------
+        if (s.followUpStage === 0 && diffHours >= 3) {
+          await sendMessage(user, getFollowUpMessage(lang, topic, "3h"));
+          s.followUpStage = 1;
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // 24 SAAT
+        // -----------------------------------------------------
+        if (s.followUpStage === 1 && diffHours >= 24) {
+          await sendMessage(user, getFollowUpMessage(lang, topic, "24h"));
+          s.followUpStage = 2;
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // 48 SAAT
+        // -----------------------------------------------------
+        if (s.followUpStage === 2 && diffHours >= 48) {
+          await sendMessage(user, getFollowUpMessage(lang, topic, "48h"));
+          s.followUpStage = 3;
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // 72 SAAT
+        // -----------------------------------------------------
+        if (s.followUpStage === 3 && diffHours >= 72) {
+          await sendMessage(user, getFollowUpMessage(lang, topic, "72h"));
+          s.followUpStage = 4;
+          continue;
+        }
+
+        // -----------------------------------------------------
+        // 7 GÜN
+        // -----------------------------------------------------
+        if (s.followUpStage === 4 && diffHours >= 168) {
+          await sendMessage(user, getFollowUpMessage(lang, topic, "7d"));
+          s.followUpStage = 5;
+          continue;
+        }
+
+      } catch (err) {
+        console.error("[CRON] User loop error:", err);
+      }
+    }
+  } catch (err) {
+    console.error("[CRON] Genel hata:", err);
   }
-};
-
-
-// --------------------------------------
-//  CRON SCHEDULES
-// --------------------------------------
-
-// 10 dakika
-cron.schedule("*/10 * * * *", () => {
-  console.log("10m cron running...");
-  // sendWhatsAppMessage("PHONE", FOLLOW_UP_MESSAGES.general["10m"].tr);
-});
-
-// 3 saat
-cron.schedule("0 */3 * * *", () => {
-  console.log("3h cron running...");
-});
-
-// 24 saat
-cron.schedule("0 0 * * *", () => {
-  console.log("24h cron running...");
-});
-
-// 48 saat
-cron.schedule("0 0 */2 * *", () => {
-  console.log("48h cron running...");
-});
-
-// 7 gün
-cron.schedule("0 0 */7 * *", () => {
-  console.log("7d cron running...");
 });
 
 console.log("Worker is running...");
