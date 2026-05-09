@@ -5,14 +5,12 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // ------------------------------------------------------
-// GLOBAL SESSIONS STORE (app.js ile aynı yapı)
+// SESSIONS STORE (TEK DOSYADA)
 // ------------------------------------------------------
-const sessions = {}; 
-// Eğer app.js’de sessions tutuluyorsa → Redis veya JSON’a taşıyabiliriz.
-// Şimdilik worker bağımsız çalışsın diye burada tanımlıyoruz.
+const sessions = {};
 
 // ------------------------------------------------------
-// WHATSAPP SEND MESSAGE (ESKİ SİSTEMLE UYUMLU)
+// WHATSAPP MESAJ GÖNDERME
 // ------------------------------------------------------
 async function sendMessage(to, text) {
   try {
@@ -32,18 +30,18 @@ async function sendMessage(to, text) {
 
     const res = await axios.post(url, payload, { headers });
 
-    console.log("[SEND] WhatsApp SENT:", res.data);
+    console.log("[SEND] SENT:", to, res.data?.messages?.[0]?.id || "");
   } catch (err) {
-    console.error("[SEND] WhatsApp ERROR:", err.response?.data || err.message);
+    console.error("[SEND] ERROR:", to, err.response?.data || err.message);
   }
 }
 
 // -----------------------------------------------------
-// 10 DAKİKA PING MESAJLARI (KURUMSAL – PROFESYONEL – SATIŞ ODAKLI)
+// 10 DAKİKA PING MESAJLARI
 // -----------------------------------------------------
 function getPingMessage(lang, topic) {
   const messages = {
-   tr: {
+    tr: {
       general:
         "Dubai’de yaşamak, çalışmak veya kendi işinizi kurmak… hepsi doğru adımlarla düşündüğünüzden çok daha ulaşılabilir. Dilerseniz paylaştığım bilgilerin ötesine geçip, Dubai’deki yaşamınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Ne dersiniz, devam edelim mi?",
 
@@ -58,7 +56,6 @@ function getPingMessage(lang, topic) {
 
       AI:
         "Doğru AI ve otomasyon yapısı, işinizi birkaç adım öne taşıyabilir. Projenizi daha verimli ve ölçeklenebilir bir modele dönüştürmek isterseniz, sizin için en uygun yapıyı birlikte planlayabiliriz. Çözüm paketlerimizi incelemek isterseniz bağlantıyı bırakıyorum:\nhttps://aichatbot.samchecompany.com/#pricing\nNe dersiniz, devam edelim mi?",
-      
     },
 
     en: {
@@ -92,17 +89,16 @@ function getPingMessage(lang, topic) {
   return langSet[topic] || langSet["general"];
 }
 
-
-
 // -----------------------------------------------------
 // FOLLOW-UP MESAJLARI (3h – 24h – 72h – 7d)
 // -----------------------------------------------------
 function getFollowUpMessage(lang, topic, stage) {
   const messages = {
+
     // -------------------------
-    // 3 SAAT — SENİN İSTEDİĞİN METİN
+    // 3 SAAT
     // -------------------------
-    "3h":{
+    "3h": {
       general: {
         tr: "Merhaba. Bir süre iletişim sağlayamadığımızı fark ettim ve sürecinizin yarım kalmasını istemedim. Dubai’de yaşamak, çalışmak veya iş kurmak düşündüğünüzden çok daha ulaşılabilir. Hazırsanız, Dubai’deki planlarınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Ne dersiniz, devam edelim mi?",
         en: "Hello. I noticed we haven’t been in touch for a while and didn’t want your process to remain incomplete. Living, working or building a business in Dubai is far more achievable with the right steps. If you're ready, we can clarify the next actions that bring you closer to your plans in Dubai. Shall we continue?",
@@ -135,7 +131,7 @@ function getFollowUpMessage(lang, topic, stage) {
     },
 
     // -------------------------
-    // 24 SAAT — KURUMSAL & SATIŞ ODAKLI
+    // 24 SAAT
     // -------------------------
     "24h": {
       general: {
@@ -169,7 +165,7 @@ function getFollowUpMessage(lang, topic, stage) {
       }
     },
     // -----------------------------------------------------
-    // 72 SAAT FOLLOW-UP
+    // 72 SAAT
     // -----------------------------------------------------
     "72h": {
       general: {
@@ -204,7 +200,7 @@ function getFollowUpMessage(lang, topic, stage) {
     },
 
     // -----------------------------------------------------
-    // 7 GÜN FOLLOW-UP (SON NAZİK HATIRLATMA)
+    // 7 GÜN
     // -----------------------------------------------------
     "7d": {
       general: {
@@ -246,7 +242,6 @@ function getFollowUpMessage(lang, topic, stage) {
   );
 }
 
-
 // ------------------------------------------------------
 // CRON — HER 10 DAKİKADA BİR
 // ------------------------------------------------------
@@ -256,93 +251,146 @@ cron.schedule("*/10 * * * *", async () => {
   try {
     const now = Date.now();
 
+    if (!sessions || typeof sessions !== "object") return;
     const users = Object.keys(sessions);
     if (!users.length) return;
 
     for (const user of users) {
       try {
         const s = sessions[user];
-        if (!s) continue;
+        if (!s || typeof s !== "object") continue;
 
-        // -----------------------------
-        // firstMessageTime YOKSA OLUŞTUR
-        // -----------------------------
-        if (!s.firstMessageTime) {
+        // firstMessageTime yoksa oluştur
+        if (!s.firstMessageTime || isNaN(Number(s.firstMessageTime))) {
           s.firstMessageTime = s.lastMessageTime || now;
         }
 
-        // -----------------------------
-        // 10 dakika için lastMessageTime
-        // -----------------------------
-        if (!s.lastMessageTime) continue;
+        // 10 dakika için lastMessageTime zorunlu
+        if (!s.lastMessageTime || isNaN(Number(s.lastMessageTime))) continue;
 
-        const diffMinutesLast = (now - s.lastMessageTime) / 60000;
-        const diffHours = (now - s.firstMessageTime) / 3600000;
+        const diffMinutesLast = (now - s.lastMessageTime) / (1000 * 60);
+        if (!isFinite(diffMinutesLast) || diffMinutesLast < 0) continue;
 
-        const lang = s.lang || "en";
-        const topic = s.topics?.length ? s.topics[s.topics.length - 1] : "general";
+        const diffMinutes = (now - s.firstMessageTime) / (1000 * 60);
+        const diffHours = diffMinutes / 60;
 
-        if (typeof s.followUpStage !== "number") s.followUpStage = 0;
+        const topics = Array.isArray(s.topics) ? s.topics : [];
+        const lastTopic = topics.length ? topics[topics.length - 1] : "general";
+        const lang = typeof s.lang === "string" ? s.lang : "en";
 
-        // -----------------------------------------------------
-        // 10 DAKİKA PING
-        // -----------------------------------------------------
+        if (typeof s.followUpStage !== "number") {
+          s.followUpStage = 0;
+        }
+
+        // 10 DAKİKA PING — SADECE 1 KERE
         if (diffMinutesLast >= 10 && !s.pingSentOnce) {
-          const ping = getPingMessage(lang, topic);
-          await sendMessage(user, ping);
-          s.pingSentOnce = true;
+          const pingMessage = getPingMessage(lang, lastTopic);
+
+          if (pingMessage) {
+            try {
+              await sendMessage(user, pingMessage);
+              console.log("[CRON] 10m ping sent to:", user);
+            } catch (e) {
+              console.error("[CRON] sendMessage 10min error:", e);
+            }
+            s.pingSentOnce = true;
+          }
+
           continue;
         }
 
-        if (diffMinutesLast < 10) s.pingSentOnce = false;
+        if (diffMinutesLast < 10 && s.pingSentOnce) {
+          s.pingSentOnce = false;
+        }
 
-        // -----------------------------------------------------
-        // 3 SAAT
-        // -----------------------------------------------------
+        // 3 SAAT FOLLOW-UP
         if (s.followUpStage === 0 && diffHours >= 3) {
-          await sendMessage(user, getFollowUpMessage(lang, topic, "3h"));
-          s.followUpStage = 1;
+          const msg = getFollowUpMessage(lang, lastTopic, "3h");
+
+          if (msg) {
+            try {
+              await sendMessage(user, msg);
+              console.log("[CRON] 3h follow-up sent to:", user);
+            } catch (e) {
+              console.error("[CRON] sendMessage 3h error:", e);
+            }
+            s.followUpStage = 1;
+          }
+
           continue;
         }
 
-        // -----------------------------------------------------
-        // 24 SAAT
-        // -----------------------------------------------------
+        // 24 SAAT FOLLOW-UP
         if (s.followUpStage === 1 && diffHours >= 24) {
-          await sendMessage(user, getFollowUpMessage(lang, topic, "24h"));
-          s.followUpStage = 2;
+          const msg = getFollowUpMessage(lang, lastTopic, "24h");
+
+          if (msg) {
+            try {
+              await sendMessage(user, msg);
+              console.log("[CRON] 24h follow-up sent to:", user);
+            } catch (e) {
+              console.error("[CRON] sendMessage 24h error:", e);
+            }
+            s.followUpStage = 2;
+          }
+
           continue;
         }
 
-        // -----------------------------------------------------
-        // 48 SAAT
-        // -----------------------------------------------------
+        // 48 SAAT FOLLOW-UP
         if (s.followUpStage === 2 && diffHours >= 48) {
-          await sendMessage(user, getFollowUpMessage(lang, topic, "48h"));
-          s.followUpStage = 3;
+          const msg = getFollowUpMessage(lang, lastTopic, "48h");
+
+          if (msg) {
+            try {
+              await sendMessage(user, msg);
+              console.log("[CRON] 48h follow-up sent to:", user);
+            } catch (e) {
+              console.error("[CRON] sendMessage 48h error:", e);
+            }
+            s.followUpStage = 3;
+          }
+
           continue;
         }
 
-        // -----------------------------------------------------
-        // 72 SAAT
-        // -----------------------------------------------------
+        // 72 SAAT FOLLOW-UP
         if (s.followUpStage === 3 && diffHours >= 72) {
-          await sendMessage(user, getFollowUpMessage(lang, topic, "72h"));
-          s.followUpStage = 4;
+          const msg = getFollowUpMessage(lang, lastTopic, "72h");
+
+          if (msg) {
+            try {
+              await sendMessage(user, msg);
+              console.log("[CRON] 72h follow-up sent to:", user);
+            } catch (e) {
+              console.error("[CRON] sendMessage 72h error:", e);
+            }
+            s.followUpStage = 4;
+          }
+
           continue;
         }
 
-        // -----------------------------------------------------
-        // 7 GÜN
-        // -----------------------------------------------------
+        // 7 GÜN FOLLOW-UP
         if (s.followUpStage === 4 && diffHours >= 168) {
-          await sendMessage(user, getFollowUpMessage(lang, topic, "7d"));
-          s.followUpStage = 5;
+          const msg = getFollowUpMessage(lang, lastTopic, "7d");
+
+          if (msg) {
+            try {
+              await sendMessage(user, msg);
+              console.log("[CRON] 7d follow-up sent to:", user);
+            } catch (e) {
+              console.error("[CRON] sendMessage 7d error:", e);
+            }
+            s.followUpStage = 5;
+          }
+
           continue;
         }
 
       } catch (err) {
         console.error("[CRON] User loop error:", err);
+        continue;
       }
     }
   } catch (err) {
