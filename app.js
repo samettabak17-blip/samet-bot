@@ -442,10 +442,10 @@ app.post("/webhook", async (req, res) => {
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
     // -------------------------------
-    let prompt = "";
+   let systemPrompt = "";
         
     if (lang === "tr") {
-      prompt = `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
+      systemPrompt= `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
 Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
 Gemini’nin hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını ASLA kullanma. 
 KENDİ KALIPLARINI ÜRETME. 
@@ -932,8 +932,9 @@ Instagram / WhatsApp otomasyonu
 CRM entegrasyonu
 Satış otomasyon sistemleri
 18. Kullanıcı daha önce sektör bilgisini verdiyse, bir daha ASLA sektör sorma.
+`;
 
-
+  systemPrompt += `
 Sohbet geçmişi:
 ${historyText}
 
@@ -945,6 +946,7 @@ ${text}
 if (lang === "en") {
   systemPrompt = `You are SamChe Company LLC’s corporate AI consultant.
 Follow the rules defined in the main system prompt.
+Apply only the rules that are valid for English-language sessions.
 Respond only in English.`;
 
   systemPrompt += `
@@ -955,9 +957,11 @@ User message:
 ${text}
 `;
 }
+    
 if (lang === "ar") {
   systemPrompt = `أنت المستشار الذكي لشركة SamChe Company LLC.
 اتبع القواعد المحددة في النظام الرئيسي.
+طبق فقط القواعد المسموح بها للجلسات باللغة العربية.
 أجب فقط باللغة العربية.`;
 
   systemPrompt += `
