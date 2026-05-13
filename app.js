@@ -977,9 +977,9 @@ ${text}
   // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
-    const reply = await callGemini(prompt);
+ const reply = await callGemini(systemPrompt);
 
-    if (!reply) {
+  if (!reply) {
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
     }
