@@ -442,10 +442,10 @@ app.post("/webhook", async (req, res) => {
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
     // -------------------------------
-   let systemPrompt = "";
+   let prompt = "";
         
     if (lang === "tr") {
-      systemPrompt= `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
+      prompt= `SamChe Company LLC’nin kurumsal yapay zekâ danışmanısın. 
 Profesyonel, stratejik, analitik ve yol gösterici cevaplar ver. 
 Gemini’nin hazır kalıplarını, prosedür metinlerini, devlet süreçlerini, klasik açıklamalarını ASLA kullanma. 
 KENDİ KALIPLARINI ÜRETME. 
@@ -921,19 +921,22 @@ Instagram / WhatsApp otomasyonu
 CRM entegrasyonu
 Satış otomasyon sistemleri
 18. Kullanıcı daha önce sektör bilgisini verdiyse, bir daha ASLA sektör sorma.
-`;
 
-  systemPrompt += `
 Sohbet geçmişi:
 ${historyText}
 
 Kullanıcı mesajı:
 ${text}
 `;
-}
+    }
 
-if (lang === "en") {
-  systemPrompt = `You are the corporate artificial intelligence consultant of SamChe Company LLC.
+
+
+
+  
+
+else if (lang === "en") {
+  prompt = `You are the corporate artificial intelligence consultant of SamChe Company LLC.
 Provide professional, strategic, analytical, and guiding responses.
 NEVER use Gemini’s ready-made templates, procedural texts, government process explanations, or standard institutional descriptions.
 DO NOT CREATE YOUR OWN TEMPLATES.
@@ -1411,19 +1414,18 @@ CRM integration
 Sales automation systems
 
 18. If the user has already provided sector information before, NEVER ask for the sector again.
-`;
 
-  systemPrompt += `
-Chat history:
+Conversation history:
 ${historyText}
 
 User message:
 ${text}
 `;
-}
+    }
+
     
-if (lang === "ar") {
-  systemPrompt = `أنت المستشار الرسمي للذكاء الاصطناعي لشركة SamChe Company LLC.
+else if (lang === "ar") {
+  prompt = `أنت المستشار الرسمي للذكاء الاصطناعي لشركة SamChe Company LLC.
 قدّم إجابات احترافية، استراتيجية، تحليلية وتوجيهية.
 يُمنع تمامًا استخدام القوالب الجاهزة الخاصة بـ Gemini أو النصوص الإجرائية أو إجراءات الجهات الحكومية أو الشروحات التقليدية.
 لا تقم بإنشاء قوالب خاصة بك.
@@ -1953,23 +1955,21 @@ phone: +971 50 179 38 80 - +971 52 728 8586
 أنظمة أتمتة المبيعات
 
 18. إذا كان المستخدم قد ذكر القطاع مسبقًا، فلا تسأله عن القطاع مرة أخرى أبدًا.
-`;
 
-  systemPrompt += `
-سجل المحادثة:
+سياق المحادثة:
 ${historyText}
 
 رسالة المستخدم:
 ${text}
 `;
-}
+    }
 
 
   // -------------------------------
     //  GEMINI CEVABI
     // -------------------------------
- const reply = await callGemini(systemPrompt);
-
+ const reply = await callGemini(prompt);
+  
   if (!reply) {
       await sendMessage(from, corporateFallback(lang));
       return res.sendStatus(200);
