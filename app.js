@@ -1850,7 +1850,8 @@ app.post("/telegram-webhook", async (req, res) => {
     const text = msg.text.trim();
 
     // ------------------------------------------------------
-    // 1) NORMAL TELEGRAM MESAJI (/w veya /end değilse)
+    // 1) NORMAL TELEGRAM MESAJI
+    // (Botun davranışını ETKİLEMEZ, sadece Telegram cevabı)
     // ------------------------------------------------------
     if (!text.startsWith("/w ") && !text.startsWith("/end ")) {
       await axios.post(
@@ -1864,7 +1865,7 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
     // ------------------------------------------------------
-    // Güvenlik: sadece senin Telegram ID'in işlem yapabilir
+    // Güvenlik: sadece sen işlem yapabilirsin
     // ------------------------------------------------------
     if (chatId !== process.env.TELEGRAM_CHAT_ID) {
       return res.sendStatus(200);
@@ -1885,7 +1886,6 @@ app.post("/telegram-webhook", async (req, res) => {
 
       if (!sessions[to]) sessions[to] = {};
 
-      // 🔥 CANLI DESTEK MODU AÇILIYOR
       sessions[to].humanOverride = true;
       sessions[to].lastMessageTime = Date.now();
 
@@ -1895,7 +1895,6 @@ app.post("/telegram-webhook", async (req, res) => {
         "⚠️ 10 dakika boyunca cevap vermezseniz canlı destek oturumu kapanacaktır."
       );
 
-      // Senin ilk mesajın
       await sendMessage(to, message);
 
       await sendMessageToTelegram(`Gönderildi → WhatsApp ${to}: ${message}`);
@@ -1904,7 +1903,7 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
     // ------------------------------------------------------
-    // 3) /end KOMUTU → CANLI DESTEK OTURUMUNU KAPAT
+    // 3) /end KOMUTU → CANLI DESTEK KAPAT
     // ------------------------------------------------------
     if (text.startsWith("/end ")) {
       const parts = text.split(" ");
@@ -1917,17 +1916,14 @@ app.post("/telegram-webhook", async (req, res) => {
 
       if (!sessions[to]) sessions[to] = {};
 
-      // 🔥 CANLI DESTEK MODU KAPANIYOR
       sessions[to].humanOverride = false;
 
-      // 🔥 KULLANICIYA GİDECEK KAPANIŞ MESAJI
       await sendMessage(
         to,
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
         "Başka sorularınız varsa veya ek yardıma ihtiyacınız olursa, lütfen istediğiniz zaman tekrar bizimle iletişime geçmekten çekinmeyin. Ekibimiz size yardımcı olmaktan mutluluk duyacaktır."
       );
 
-      // Telegram’a bilgi mesajı
       await sendMessageToTelegram(`Canlı destek kapatıldı → ${to}`);
 
       return res.sendStatus(200);
@@ -1938,6 +1934,7 @@ app.post("/telegram-webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 // -------------------------------
 //  SERVER
