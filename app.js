@@ -1849,8 +1849,10 @@ app.post("/telegram-webhook", async (req, res) => {
     const chatId = msg.chat.id.toString();
     const text = msg.text.trim();
 
-    // 1) /w ile başlamıyorsa → normal Telegram cevabı
-    if (!text.startsWith("/w ")) {
+    // ------------------------------------------------------
+    // 1) NORMAL TELEGRAM MESAJI (/w veya /end değilse)
+    // ------------------------------------------------------
+    if (!text.startsWith("/w ") && !text.startsWith("/end ")) {
       await axios.post(
         `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
         {
@@ -1861,104 +1863,81 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 2) /w KOMUTU → CANLI DESTEK
-    // Güvenlik: sadece senin Telegram ID'in cevap verebilir
+    // ------------------------------------------------------
+    // Güvenlik: sadece senin Telegram ID'in işlem yapabilir
+    // ------------------------------------------------------
     if (chatId !== process.env.TELEGRAM_CHAT_ID) {
       return res.sendStatus(200);
     }
 
-    // /w <numara> <mesaj>
-    const parts = text.split(" ");
-    const to = parts[1];
-    const message = parts.slice(2).join(" ");
+    // ------------------------------------------------------
+    // 2) /w KOMUTU → CANLI DESTEK BAŞLAT
+    // ------------------------------------------------------
+    if (text.startsWith("/w ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
+      const message = parts.slice(2).join(" ");
 
-    if (!to || !message) {
-      await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+      if (!to || !message) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+        return res.sendStatus(200);
+      }
+
+      if (!sessions[to]) sessions[to] = {};
+
+      // 🔥 CANLI DESTEK MODU AÇILIYOR
+      sessions[to].humanOverride = true;
+      sessions[to].lastMessageTime = Date.now();
+
+      await sendMessage(to, "⌛ Lütfen sizi temsilcimize bağlarken bekleyin.");
+      await sendMessage(
+        to,
+        "⚠️ 10 dakika boyunca cevap vermezseniz canlı destek oturumu kapanacaktır."
+      );
+
+      // Senin ilk mesajın
+      await sendMessage(to, message);
+
+      await sendMessageToTelegram(`Gönderildi → WhatsApp ${to}: ${message}`);
+
       return res.sendStatus(200);
     }
 
-    if (!sessions[to]) sessions[to] = {};
+    // ------------------------------------------------------
+    // 3) /end KOMUTU → CANLI DESTEK OTURUMUNU KAPAT
+    // ------------------------------------------------------
+    if (text.startsWith("/end ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
 
-    // 🔥 CANLI DESTEK MODU AÇILDI
-    sessions[to].humanOverride = true;
-    sessions[to].lastMessageTime = Date.now();
+      if (!to) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/end +905551112233");
+        return res.sendStatus(200);
+      }
 
-    await sendMessage(to, "⌛ Lütfen sizi temsilcimize bağlarken bekleyin.");
-    await sendMessage(
-      to,
-      "⚠️ 10 dakika boyunca cevap vermezseniz canlı destek oturumu kapanacaktır."
-    );
+      if (!sessions[to]) sessions[to] = {};
 
-    // Senin ilk mesajın
-    await sendMessage(to, message);
+      // 🔥 CANLI DESTEK MODU KAPANIYOR
+      sessions[to].humanOverride = false;
 
-    await sendMessageToTelegram(`Gönderildi → WhatsApp ${to}: ${message}`);
+      // 🔥 KULLANICIYA GİDECEK KAPANIŞ MESAJI
+      await sendMessage(
+        to,
+        "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
+        "Başka sorularınız varsa veya ek yardıma ihtiyacınız olursa, lütfen istediğiniz zaman tekrar bizimle iletişime geçmekten çekinmeyin. Ekibimiz size yardımcı olmaktan mutluluk duyacaktır."
+      );
 
-    return res.sendStatus(200);
+      // Telegram’a bilgi mesajı
+      await sendMessageToTelegram(`Canlı destek kapatıldı → ${to}`);
+
+      return res.sendStatus(200);
+    }
 
   } catch (err) {
     console.error("Telegram webhook error:", err);
     return res.sendStatus(500);
   }
 });
-// ------------------------------------------------------
-//  🔥 WHATSAPP WEBHOOK
-// ------------------------------------------------------
-app.post("/webhook", async (req, res) => {
-  try {
-    const body = req.body;
-
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    const value = changes?.value;
-    const messages = value?.messages;
-
-    if (!messages || !messages[0]) {
-      return res.sendStatus(200);
-    }
-
-    const msg = messages[0];
-    const from = msg.from;          // Kullanıcının numarası (örn: 9715...)
-    const text = msg.text?.body?.trim();
-
-    if (!text) return res.sendStatus(200);
-
-    // -----------------------------
-    // 1) CANLI DESTEK MODU KONTROLÜ
-    // -----------------------------
-    if (sessions[from]?.humanOverride) {
-      // Kullanıcı canlı destekte → bot SUSAR, sadece Telegram’a düşer
-      sessions[from].lastMessageTime = Date.now();
-
-      // Kullanıcı mesajını Telegram’a ilet
-      await sendMessageToTelegram(
-        `WhatsApp → ${from}: ${text}`
-      );
-
-      return res.sendStatus(200);
-    }
-
-    // -----------------------------
-    // 2) NORMAL BOT MODU
-    // -----------------------------
-    // Buradan sonrası sadece humanOverride = false iken çalışır
-
-    // Örnek: basit AI cevabı veya hazır cevap
-    // Kendi mevcut bot mantığını buraya koyuyorsun
-    const aiResponse = await generateAIResponse(text); // senin fonksiyonun
-    await sendMessage(from, aiResponse);
-
-    // İstersen debug için Telegram’a da log at:
-    // await sendMessageToTelegram(`BOT → ${from}: ${aiResponse}`);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("WhatsApp webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
 
 // -------------------------------
 //  SERVER
