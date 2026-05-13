@@ -946,8 +946,8 @@ if (lang === "en") {
   systemPrompt = `You are SamChe Company LLC’s corporate AI consultant.
 Follow the rules defined in the main system prompt.
 Respond only in English.`;
-}
 
+  systemPrompt += `
 Chat history:
 ${historyText}
 
@@ -955,13 +955,12 @@ User message:
 ${text}
 `;
 }
-
 if (lang === "ar") {
   systemPrompt = `أنت المستشار الذكي لشركة SamChe Company LLC.
 اتبع القواعد المحددة في النظام الرئيسي.
 أجب فقط باللغة العربية.`;
-}
 
+  systemPrompt += `
 سجل المحادثة:
 ${historyText}
 
@@ -969,6 +968,7 @@ ${historyText}
 ${text}
 `;
 }
+
 
   // -------------------------------
     //  GEMINI CEVABI
