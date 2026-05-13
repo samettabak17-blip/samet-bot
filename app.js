@@ -1838,36 +1838,6 @@ function getFollowUpMessage(lang, topic, stage) {
 }
 
 // ------------------------------------------------------
-//  🔥 TELEGRAM NORMAL WEBHOOK — /start ve mesaj yakalama
-// ------------------------------------------------------
-app.post("/telegram-webhook", async (req, res) => {
-  try {
-    const msg = req.body.message;
-
-    if (!msg || !msg.text) return res.sendStatus(200);
-
-    const chatId = msg.chat.id.toString();
-    const text = msg.text.trim();
-
-    // Basit test cevabı
-    await axios.post(
-      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-      {
-        chat_id: chatId,
-        text: `Telegram mesajın alındı: ${text}`
-      }
-    );
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("Telegram webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
-
-// ------------------------------------------------------
 //  🔥 TELEGRAM WEBHOOK — NORMAL MESAJ + CANLI DESTEK
 // ------------------------------------------------------
 app.post("/telegram-webhook", async (req, res) => {
@@ -1924,8 +1894,7 @@ app.post("/telegram-webhook", async (req, res) => {
     await sendMessage(to, "⌛ Lütfen sizi temsilcimize bağlarken bekleyin.");
     await sendMessage(
       to,
-      "⚠️ Lütfen dikkat, bu sohbet oturumuna 10 dakika boyunca cevap vermezseniz canlı destek oturumunuz sona erecektir.\n" +
-      "Ekibimizden yanıt beklerken oturumu aktif tutmak için lütfen 10 dakikalık bekleme süresini aşmayınız."
+      "⚠️ 10 dakika boyunca cevap vermezseniz canlı destek oturumu kapanacaktır."
     );
 
     // 🔥 Senin mesajını WhatsApp'a gönder
