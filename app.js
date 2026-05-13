@@ -1866,38 +1866,45 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // ------------------------------------------------------
-    // 2) /w KOMUTU → CANLI DESTEK BAŞLAT
-    // ------------------------------------------------------
-    if (text.startsWith("/w ")) {
-      const parts = text.split(" ");
-      const to = parts[1];
-      const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
+// ------------------------------------------------------
+// 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
+// ------------------------------------------------------
+if (text.startsWith("/w ")) {
+  const parts = text.split(" ");
+  const to = parts[1];
+  const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
 
-      const message = parts.slice(2).join(" ");
+  const message = parts.slice(2).join(" ");
 
-      if (!cleanTo || !message) {
-        await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
-        return res.sendStatus(200);
-      }
+  if (!cleanTo || !message) {
+    await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+    return res.sendStatus(200);
+  }
 
-      if (!sessions[cleanTo]) sessions[cleanTo] = {};
+  // Oturum objesini oluştur
+  if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
-      sessions[cleanTo].humanOverride = true;
-      sessions[cleanTo].lastMessageTime = Date.now();
+  // Bu numara için canlı destek daha önce açılmış mı?
+  const isNewSession = sessions[cleanTo].humanOverride !== true;
 
-      await sendMessage(cleanTo, "⌛ Lütfen sizi temsilcimize bağlarken bekleyin.");
-      await sendMessage(
-        cleanTo,
-        "⚠️ 10 dakika boyunca cevap vermezseniz canlı destek oturumu kapanacaktır."
-      );
+  // 🔥 CANLI DESTEK MODUNU AÇ
+  sessions[cleanTo].humanOverride = true;
+  sessions[cleanTo].lastMessageTime = Date.now();
 
-      await sendMessage(cleanTo, message);
+  // 🟢 SADECE İLK KEZ /w ÇAĞRILDIĞINDA BEKLEME MESAJI GÖNDER
+  if (isNewSession) {
+    await sendMessage(cleanTo, "⌛ Lütfen sizi temsilcimize bağlarken bekleyin.");
+  }
 
-      await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
+  // 🟢 HER ZAMAN SENİN MESAJIN GİDER
+  await sendMessage(cleanTo, message);
 
-      return res.sendStatus(200);
-    }
+  await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
+
+  return res.sendStatus(200);
+}
+
+
 
     // ------------------------------------------------------
     // 3) /end KOMUTU → CANLI DESTEK KAPAT
