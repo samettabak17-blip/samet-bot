@@ -292,7 +292,20 @@ app.post("/webhook", async (req, res) => {
     text = (text || "").trim();
 
     // -----------------------------
-    //  GEÇERSİZ / DESTEKLENMEYEN MESAJ FİLTRESİ
+    //  WHATSAPP → TELEGRAM FORWARD
+    // -----------------------------
+    await sendMessageToTelegram(`WhatsApp → ${from}: ${text}`);
+
+    // -----------------------------
+    //  CANLI DESTEK MODU → BOT SUSAR
+    // -----------------------------
+    if (sessions[from]?.humanOverride) {
+      sessions[from].lastMessageTime = Date.now();
+      return res.sendStatus(200);
+    }
+
+    // -----------------------------
+    //  GEÇERSİZ MESAJ FİLTRESİ
     // -----------------------------
     const isInvalid =
       !text ||
@@ -310,7 +323,9 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 2) İLK MESAJ (SESSION OLUŞTURMA)
+    // -----------------------------
+    //  İLK MESAJ → SESSION OLUŞTUR
+    // -----------------------------
     if (!sessions[from]) {
       sessions[from] = {
         lang: null,
@@ -327,6 +342,7 @@ app.post("/webhook", async (req, res) => {
         },
         firstMessageTime: Date.now(),
         pingSentOnce: false,
+        humanOverride: false
       };
 
       await sendMessage(
@@ -349,7 +365,9 @@ app.post("/webhook", async (req, res) => {
 
     const session = sessions[from];
 
-    // LANGUAGE SELECTION
+    // -----------------------------
+    //  LANGUAGE SELECTION
+    // -----------------------------
     if (!session.lang) {
       if (text === "1") session.lang = "en";
       else if (text === "2") session.lang = "tr";
@@ -366,7 +384,9 @@ app.post("/webhook", async (req, res) => {
     const lang = session.lang;
     const lower = text.toLowerCase();
 
-    // CONTACT
+    // -----------------------------
+    //  CONTACT
+    // -----------------------------
     if (
       lower.includes("contact") ||
       lower.includes("iletişim") ||
@@ -378,7 +398,9 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // SESSION UPDATE
+    // -----------------------------
+    //  SESSION UPDATE
+    // -----------------------------
     session.history.push({ role: "user", text });
     if (session.history.length > 10) session.history.shift();
     session.lastMessageTime = Date.now();
@@ -1470,6 +1492,13 @@ cron.schedule("*/10 * * * *", async () => {
           s.followUpStage = 0;
         }
 
+          // -----------------------------------------------------
+        // 🔥 CANLI DESTEK OTOMATİK KAPANMA (10 dakika sessizlik)
+        // -----------------------------------------------------
+        if (s.humanOverride && diffMinutesLast >= 10) {
+          s.humanOverride = false;
+        }
+
         // -----------------------------------------------------
         // 10 DAKİKA PING — SADECE 1 KERE
         // -----------------------------------------------------
@@ -1810,7 +1839,65 @@ function getFollowUpMessage(lang, topic, stage) {
   const langSet = stageSet[lang] || stageSet["en"];
   return langSet[topic] || langSet["general"] || "";
 }
+// -------------------------------
+//  TELEGRAM → WHATSAPP LIVE HUMAN REPLY
+// -------------------------------
+app.post("/telegram-webhook", async (req, res) => {
+  try {
+    const msg = req.body.message;
 
+    if (!msg || !msg.text) return res.sendStatus(200);
+
+    const chatId = msg.chat.id.toString();
+    const text = msg.text.trim();
+
+    // Güvenlik: sadece senin Telegram ID'in cevap verebilir
+    if (chatId !== process.env.TELEGRAM_CHAT_ID) {
+      return res.sendStatus(200);
+    }
+
+    // /w <numara> <mesaj>
+    if (text.startsWith("/w ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
+      const message = parts.slice(2).join(" ");
+
+      if (!to || !message) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+        return res.sendStatus(200);
+      }
+
+      // Session yoksa oluştur
+      if (!sessions[to]) sessions[to] = {};
+
+      // 🔥 CANLI DESTEK MODU AÇILDI
+      sessions[to].humanOverride = true;
+      sessions[to].lastMessageTime = Date.now();
+
+      // 🔥 Kullanıcıya canlı destek mesajları gönder
+      await sendMessage(to, "⌛ Lütfen sizi temsilcimize bağlarken bekleyin.");
+      await sendMessage(
+        to,
+        "⚠️ Lütfen dikkat, bu sohbet oturumuna 10 dakika boyunca cevap vermezseniz canlı destek oturumunuz sona erecektir.\n" +
+        "Ekibimizden yanıt beklerken oturumu aktif tutmak için lütfen 10 dakikalık bekleme süresini aşmayınız. Aksi takdirde oturum kapanacak ve canlı destek sonlanacaktır."
+      );
+
+      // 🔥 Senin mesajını WhatsApp'a gönder
+      await sendMessage(to, message);
+
+      // Telegram'a bilgi ver
+      await sendMessageToTelegram(`Gönderildi → WhatsApp ${to}: ${message}`);
+
+      return res.sendStatus(200);
+    }
+
+    return res.sendStatus(200);
+
+  } catch (err) {
+    console.error("Telegram webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
 // -------------------------------
 //  SERVER
 // -------------------------------
