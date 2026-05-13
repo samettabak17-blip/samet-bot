@@ -48,6 +48,23 @@ export async function sendMessage(to, body) {
 }
 
 // -------------------------------
+//  TELEGRAM FORWARD FUNCTION  
+// -------------------------------
+async function sendMessageToTelegram(text) {
+  try {
+    const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+    await axios.post(url, {
+      chat_id: process.env.TELEGRAM_CHAT_ID,
+      text: text
+    });
+
+    console.log("[TELEGRAM] Message forwarded");
+  } catch (err) {
+    console.error("[TELEGRAM] Error:", err.response?.data || err.message);
+  }
+}
+// -------------------------------
 //  PREMIUM CORPORATE FALLBACK
 // -------------------------------
 function corporateFallback(lang) {
