@@ -2175,7 +2175,6 @@ function startTransferTimers(cleanFrom) {
 
 
 
-
 // ------------------------------------------------------
 //  TELEGRAM WEBHOOK (TAM TANIMLI)
 // ------------------------------------------------------
@@ -2297,21 +2296,29 @@ app.post("/webhook", async (req, res) => {
       text.toLowerCase().includes("live support") ||
       text.toLowerCase().includes("representative");
 
-    if (userWantsHuman) {
+    // 🔥 AI veya backend aktarım mesajı gönderdi mi?
+    const botTransferTrigger =
+      text.toLowerCase().includes("aktarıyorum");
 
-      const aktarimMesaji =
-        `Talebinizi aldım. ` +
-        `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
-        `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
-        `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
+    // 🔥 EĞER CANLI DESTEK GEREKİYORSA
+    if (userWantsHuman || botTransferTrigger) {
 
-      await sendMessage(cleanFrom, aktarimMesaji);
+      // Eğer AI zaten aktarım mesajı gönderdiyse tekrar göndermeyelim
+      if (!botTransferTrigger) {
+        const aktarimMesaji =
+          `Talebinizi aldım. ` +
+          `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
+          `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
+          `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
 
-      // 🔥 CANLI DESTEK MODUNU AÇ
+        await sendMessage(cleanFrom, aktarimMesaji);
+      }
+
+      // CANLI DESTEK MODUNU AÇ
       sessions[cleanFrom].humanOverride = true;
       sessions[cleanFrom].lastMessageTime = Date.now();
 
-      // 🔥 ZAMANLAYICIYI BAŞLAT
+      // ZAMANLAYICI BAŞLAT
       startTransferTimers(cleanFrom);
 
       return res.sendStatus(200);
@@ -2327,7 +2334,6 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
-
 
 
 // ------------------------------------------------------
