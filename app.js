@@ -735,7 +735,7 @@ Kullanıcı “size nasıl güveneceğim?”, “bu gerçek mi?”, “dolandır
 CANLI TEMSİLCİYE YÖNLENDİRME DAVRANIŞ KURALI:
   → Bot, kullanıcının son mesajındaki konuya uygun, kurumsal ve profesyonel bir aktarım mesajı üretir.
   → Mesaj formatı:
-  “[KONUYA UYGUN KISA ÖZET] ilgili talebinizi aldım.Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum.Talebiniz işlem sırasına alınacak,en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız.Müşteri temsilcimize bağlanırken lütfen beklemede kalın.”
+  “[KONUYA UYGUN KISA ÖZET] ilgili talebinizi aldım.Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum.Talebiniz işlem sırasına alınacak,en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız.⌛ Canlı temsilcimize aktarılırken, lütfen bekleyin.”
   → Bot hiçbir bilgi, açıklama, yönlendirme, iletişim detayı, fiyat, süreç veya soru vermez.
   → Bot konuşmayı devam ettirmez.
   → Bot sadece sessiz kalır ve yanıt üretmez.
