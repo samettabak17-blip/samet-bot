@@ -2211,17 +2211,16 @@ app.post("/telegram-webhook", async (req, res) => {
       // 🔥 DİL BAZLI KAPANIŞ MESAJI
       let closeMessage =
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
-        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir. Ekibimiz size yardımcı olmaktan memnuniyet duyar.";
+        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.";
 
       if (sessions[cleanTo]?.lang === "en") {
         closeMessage =
           "🔒 The live support session has ended.\n\n" +
-          "You may continue chatting with our AI assistant, or if you want to reconnect with a live representative, simply type 'live support'. Our team will be happy to assist you anytime.";
-      } 
-      else if (sessions[cleanTo]?.lang === "ar") {
+          "You may continue chatting with our AI assistant, or type 'live support' anytime to reconnect.";
+      } else if (sessions[cleanTo]?.lang === "ar") {
         closeMessage =
           "🔒 تم إنهاء جلسة الدعم المباشر.\n\n" +
-          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي، أو إذا كنت ترغب في التواصل مع ممثل مباشر مرة أخرى، فقط اكتب 'دعم مباشر'. يسعد فريقنا بمساعدتك في أي وقت.";
+          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي أو كتابة 'دعم مباشر' للاتصال بممثل.";
       }
 
       await sendMessage(cleanTo, closeMessage);
@@ -2287,15 +2286,15 @@ app.post("/webhook", async (req, res) => {
     const lower = aiResponse.toLowerCase();
 
     const isTransfer =
-      lower.includes("canlı müşteri temsilcimize") ||   // Türkçe
-      lower.includes("canli musteri temsilcimize") ||   // Türkçe varyasyon
-      lower.includes("size en doğru desteği sağlayabilmek için") || // Türkçe sabit cümle
-      lower.includes("live representative") ||          // İngilizce
-      lower.includes("transferring you") ||             // İngilizce varyasyon
-      lower.includes("direct support") ||               // İngilizce alternatif
-      lower.includes("مباشر") ||                        // Arapça "canlı"
-      lower.includes("ممثل") ||                         // Arapça "temsilci"
-      lower.includes("دعم");                            // Arapça "destek"
+      lower.includes("canlı müşteri temsilcimize") ||
+      lower.includes("size en doğru desteği sağlayabilmek için") ||
+      lower.includes("talebiniz işlem sırasına alınacak") ||
+      lower.includes("live representative") ||
+      lower.includes("transferring you") ||
+      lower.includes("direct support") ||
+      lower.includes("مباشر") ||
+      lower.includes("ممثل") ||
+      lower.includes("دعم");
 
     // ------------------------------------------------------
     //  🔥 SADECE BOT AKTARIM MESAJI GÖNDERDİĞİNDE TETİKLE
