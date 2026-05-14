@@ -2162,7 +2162,7 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-   // ------------------------------------------------------
+ // ------------------------------------------------------
 // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
 // ------------------------------------------------------
 if (text.startsWith("/w ")) {
@@ -2179,14 +2179,12 @@ if (text.startsWith("/w ")) {
 
   if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
-  // 🔥 BU KİŞİ İÇİN DAHA ÖNCE CANLI DESTEK AÇILMIŞ MI?
-  const wasInHumanMode = sessions[cleanTo].humanOverride === true;
-
   // 🔥 CANLI DESTEK MODUNU AÇ
+  const isFirstTransfer = sessions[cleanTo].humanOverride !== true;
   sessions[cleanTo].humanOverride = true;
   sessions[cleanTo].lastMessageTime = Date.now();
 
-  // 🟢 1) BOTUN KONUYA UYGUN CANLI DESTEK MESAJI (HEMEN GİDER)
+  // 🟢 1) BOTUN OTOMATİK MESAJINI HEMEN GÖNDER
   await sendMessage(cleanTo, message);
 
   // 🟢 2) DİL BAZLI BEKLEME MESAJI
@@ -2199,10 +2197,10 @@ if (text.startsWith("/w ")) {
     waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
   }
 
-  // 🟢 3) SADECE İLK KEZ CANLI DESTEK AÇILDIĞINDA 5 SANİYE SONRA GÖNDER
-  if (!wasInHumanMode) {
+  // 🟢 3) SADECE İLK CANLI DESTEK BAŞLATILDIĞINDA
+  // BOTUN OTOMATİK MESAJINDAN 5 SANİYE SONRA BEKLEME MESAJI GÖNDER
+  if (isFirstTransfer) {
     setTimeout(() => {
-      // Hata yutsa bile webhook’u bozmasın diye await kullanmıyoruz
       sendMessage(cleanTo, waitMessage).catch(err => {
         console.error("Bekleme mesajı gönderilemedi:", err);
       });
@@ -2213,6 +2211,7 @@ if (text.startsWith("/w ")) {
 
   return res.sendStatus(200);
 }
+
 
     // ------------------------------------------------------
     // 3) /end KOMUTU → CANLI DESTEK KAPAT
