@@ -2306,7 +2306,7 @@ app.post("/webhook", async (req, res) => {
       // 🔥 AI MESAJINI GÖNDER
       await sendMessage(cleanFrom, aktarimMesaji);
 
-      // 🔥 TAM BU ANDA ZAMANLAYICIYI BAŞLAT
+      // 🔥 ZAMANLAYICIYI TAM BURADA BAŞLAT (KESİN ÇALIŞIR)
       sessions[cleanFrom].humanOverride = true;
       sessions[cleanFrom].lastMessageTime = Date.now();
       startTransferTimers(cleanFrom);
@@ -2324,6 +2324,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 // ------------------------------------------------------
