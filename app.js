@@ -2162,6 +2162,81 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // ------------------------------------------------------
+    // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
+    // ------------------------------------------------------
+    if (text.startsWith("/w ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
+      const cleanTo = to.replace("+", "");
+
+      const message = parts.slice(2).join(" ");
+
+      if (!cleanTo || !message) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+        return res.sendStatus(200);
+      }
+
+      if (!sessions[cleanTo]) sessions[cleanTo] = {};
+
+      // CANLI DESTEK MODUNU AÇ
+      sessions[cleanTo].humanOverride = true;
+      sessions[cleanTo].lastMessageTime = Date.now();
+
+      // SADECE TEMSİLCİ MESAJINI GÖNDER
+      await sendMessage(cleanTo, message);
+
+      await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
+
+      return res.sendStatus(200);
+    }
+
+    // ------------------------------------------------------
+    // 3) /end KOMUTU → CANLI DESTEK KAPAT
+    // ------------------------------------------------------
+    if (text.startsWith("/end ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
+      const cleanTo = to.replace("+", "");
+
+      if (!cleanTo) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/end +905551112233");
+        return res.sendStatus(200);
+      }
+
+      if (!sessions[cleanTo]) sessions[cleanTo] = {};
+
+      sessions[cleanTo].humanOverride = false;
+
+      // 🔥 DİL BAZLI KAPANIŞ MESAJI
+      let closeMessage =
+        "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
+        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.";
+
+      if (sessions[cleanTo]?.lang === "en") {
+        closeMessage =
+          "🔒 The live support session has ended.\n\n" +
+          "You may continue chatting with our AI assistant, or type 'live support' anytime to reconnect with a representative.";
+      } else if (sessions[cleanTo]?.lang === "ar") {
+        closeMessage =
+          "🔒 تم إنهاء جلسة الدعم المباشر.\n\n" +
+          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي، أو كتابة 'دعم مباشر' للاتصال بممثل.";
+      }
+
+      await sendMessage(cleanTo, closeMessage);
+
+      await sendMessageToTelegram(`Canlı destek kapatıldı → ${cleanTo}`);
+
+      return res.sendStatus(200);
+    }
+
+  } catch (err) {
+    console.error("Telegram webhook error:", err);
+    return res.sendStatus(500);
+  }
+});
+
+
 // ------------------------------------------------------
 // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
 // ------------------------------------------------------
@@ -2179,60 +2254,18 @@ if (text.startsWith("/w ")) {
 
   if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
-  const isFirstTime = sessions[cleanTo].humanOverride !== true;
-
   // 🔥 CANLI DESTEK MODUNU AÇ
   sessions[cleanTo].humanOverride = true;
   sessions[cleanTo].lastMessageTime = Date.now();
 
-  // 🟢 1) BOTUN OTOMATİK MESAJINI HEMEN GÖNDER
+  // 🟢 SADECE TEMSİLCİNİN MESAJINI GÖNDER
   await sendMessage(cleanTo, message);
 
-  // 🟢 2) DİL BAZLI BEKLEME MESAJI
-  let waitMessage = "⌛ Canlı temsilcimize aktarılıyorsunuz, lütfen bekleyin.";
-  let slowMessage = "⚠️ Temsilcilerimiz şu anda başka bir görüşmede.İşlem sırasındasınız. Lütfen beklemede kalmaya devam edin.";
-  let typingSim = "💬 Temsilcimiz yazıyor…";
-
-  if (sessions[cleanTo]?.lang === "en") {
-    waitMessage = "⌛ You are being transferred to our live representative, please wait.";
-    slowMessage = "⚠️ Our representative may be busy at the moment. Please stay connected.";
-    typingSim = "💬 Our representative is typing…";
-  } 
-  else if (sessions[cleanTo]?.lang === "ar") {
-    waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
-    slowMessage = "⚠️ قد يكون ممثلنا مشغولًا حاليًا. يرجى البقاء على الخط.";
-    typingSim = "💬 ممثلنا يكتب الآن…";
-  }
-
-  // 🟢 3) SADECE İLK CANLI DESTEK BAŞLATILDIĞINDA
-  if (isFirstTime) {
-
-    // ⏳ 5 SANİYE SONRA → AKTARILIYORSUNUZ MESAJI
-    setTimeout(() => {
-      sendMessage(cleanTo, waitMessage).catch(() => {});
-    }, 5000);
-
-    // ⏳ 12 SANİYE SONRA → TEMSİLCİ GEÇ BAĞLANIRSA BİLGİLENDİRME
-    setTimeout(() => {
-      // Temsilci hâlâ bağlanmadıysa
-      if (sessions[cleanTo]?.humanOverride === true) {
-        sendMessage(cleanTo, slowMessage).catch(() => {});
-      }
-    }, 12000);
-
-    // ⏳ 15 SANİYE SONRA → “TEMSiLCi YAZIYOR…” SİMÜLASYONU
-    setTimeout(() => {
-      if (sessions[cleanTo]?.humanOverride === true) {
-        sendMessage(cleanTo, typingSim).catch(() => {});
-      }
-    }, 15000);
-  }
-
+  // 🟢 TELEGRAMA LOG
   await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
 
   return res.sendStatus(200);
 }
-
 
 
 
@@ -2303,7 +2336,6 @@ app.post("/webhook", async (req, res) => {
 
     if (!text) return res.sendStatus(200);
 
-    // 🔥 NUMARA NORMALIZE
     const cleanFrom = from.replace("+", "");
 
     // 🔥 DİL TESPİTİ
@@ -2318,12 +2350,69 @@ app.post("/webhook", async (req, res) => {
 
       await sendMessageToTelegram(`WhatsApp → ${cleanFrom}: ${text}`);
 
-      return res.sendStatus(200); // BOT CEVAP VERMEZ
+      return res.sendStatus(200);
     }
 
-    // 🔥 NORMAL BOT MODU
+    // ------------------------------------------------------
+    //  🔥 NORMAL BOT MODU
+    // ------------------------------------------------------
     const aiResponse = await generateAIResponse(text);
     await sendMessage(cleanFrom, aiResponse);
+
+    // ------------------------------------------------------
+    //  🔥 BOTUN AKTARIM MESAJINI ALGILA
+    // ------------------------------------------------------
+    const trTrigger = "sizi canlı müşteri temsilcimize aktarıyorum";
+    const enTrigger = "transferring you to our live representative";
+    const arTrigger = "سأقوم بتحويلك إلى ممثل خدمة العملاء";
+
+    const isTransfer =
+      aiResponse.toLowerCase().includes(trTrigger) ||
+      aiResponse.toLowerCase().includes(enTrigger) ||
+      aiResponse.includes(arTrigger);
+
+    // ------------------------------------------------------
+    //  🔥 SADECE BOT AKTARIM MESAJI GÖNDERDİĞİNDE TETİKLE
+    // ------------------------------------------------------
+    if (isTransfer) {
+
+      sessions[cleanFrom].humanOverride = true;
+
+      let waitMessage = "⌛ Canlı temsilcimize aktarılıyorsunuz, lütfen bekleyin.";
+      let slowMessage = "⚠️ Temsilcilerimiz şu anda başka bir görüşmede. İşlem sırasındasınız. Lütfen beklemede kalmaya devam edin.";
+      let typingSim = "💬 Temsilcimiz yazıyor...";
+
+      if (lang === "en") {
+        waitMessage = "⌛ You are being transferred to our live representative, please wait.";
+        slowMessage = "⚠️ Our representatives may be busy at the moment. You are in the queue. Please stay connected.";
+        typingSim = "💬 Our representative is typing...";
+      } else if (lang === "ar") {
+        waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
+        slowMessage = "⚠️ قد يكون ممثلونا مشغولين حاليًا. أنت في قائمة الانتظار. يرجى البقاء على الخط.";
+        typingSim = "💬 ممثلنا يكتب الآن…";
+      }
+
+      // ⏳ 5 SANİYE SONRA → AKTARILIYORSUNUZ
+      setTimeout(() => {
+        if (sessions[cleanFrom]?.humanOverride === true) {
+          sendMessage(cleanFrom, waitMessage).catch(() => {});
+        }
+      }, 5000);
+
+      // ⏳ 12 SANİYE SONRA → TEMSİLCİ GEÇ BAĞLANIRSA
+      setTimeout(() => {
+        if (sessions[cleanFrom]?.humanOverride === true) {
+          sendMessage(cleanFrom, slowMessage).catch(() => {});
+        }
+      }, 12000);
+
+      // ⏳ 15 SANİYE SONRA → TEMSİLCİ YAZIYOR SİMÜLASYONU
+      setTimeout(() => {
+        if (sessions[cleanFrom]?.humanOverride === true) {
+          sendMessage(cleanFrom, typingSim).catch(() => {});
+        }
+      }, 15000);
+    }
 
     return res.sendStatus(200);
 
@@ -2332,6 +2421,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 
