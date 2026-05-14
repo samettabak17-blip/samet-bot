@@ -2208,12 +2208,12 @@ app.post("/telegram-webhook", async (req, res) => {
       // DİL BAZLI KAPANIŞ MESAJI (tek seferlik)
       let closeMessage =
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
-        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.Ekibimiz size her zaman yardımcı olmaktan mutluluk duyacaktır.";
+        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına canlı destek yazmanız yeterlidir.Ekibimiz size her zaman yardımcı olmaktan mutluluk duyacaktır.";
 
       if (sessions[cleanTo]?.lang === "en") {
         closeMessage =
           "🔒 The live support session has ended.\n\n" +
-          "You may continue chatting with our AI assistant, or type 'live support' anytime to reconnect. Our team will be happy to assist you anytime.";
+          "You may continue chatting with our AI assistant, or type live support anytime to reconnect. Our team will be happy to assist you anytime.";
       } else if (sessions[cleanTo]?.lang === "ar") {
         closeMessage =
           "🔒 تم إنهاء جلسة الدعم المباشر.\n\n" +
