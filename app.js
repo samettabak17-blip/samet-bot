@@ -2255,7 +2255,7 @@ app.post("/telegram-webhook", async (req, res) => {
       // 🔥 DİL BAZLI KAPANIŞ MESAJI
       let closeMessage =
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
-        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.";
+        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.Ekibimiz size yardımcı olmaktan memnuniyet duyacaktır.";
 
       if (sessions[cleanTo]?.lang === "en") {
         closeMessage =
