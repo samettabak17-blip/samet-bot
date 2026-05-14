@@ -2211,84 +2211,6 @@ app.post("/telegram-webhook", async (req, res) => {
       // 🔥 DİL BAZLI KAPANIŞ MESAJI
       let closeMessage =
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
-        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.";
-
-      if (sessions[cleanTo]?.lang === "en") {
-        closeMessage =
-          "🔒 The live support session has ended.\n\n" +
-          "You may continue chatting with our AI assistant, or type 'live support' anytime to reconnect with a representative.";
-      } else if (sessions[cleanTo]?.lang === "ar") {
-        closeMessage =
-          "🔒 تم إنهاء جلسة الدعم المباشر.\n\n" +
-          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي، أو كتابة 'دعم مباشر' للاتصال بممثل.";
-      }
-
-      await sendMessage(cleanTo, closeMessage);
-
-      await sendMessageToTelegram(`Canlı destek kapatıldı → ${cleanTo}`);
-
-      return res.sendStatus(200);
-    }
-
-  } catch (err) {
-    console.error("Telegram webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
-
-
-// ------------------------------------------------------
-// 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
-// ------------------------------------------------------
-if (text.startsWith("/w ")) {
-  const parts = text.split(" ");
-  const to = parts[1];
-  const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
-
-  const message = parts.slice(2).join(" ");
-
-  if (!cleanTo || !message) {
-    await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
-    return res.sendStatus(200);
-  }
-
-  if (!sessions[cleanTo]) sessions[cleanTo] = {};
-
-  // 🔥 CANLI DESTEK MODUNU AÇ
-  sessions[cleanTo].humanOverride = true;
-  sessions[cleanTo].lastMessageTime = Date.now();
-
-  // 🟢 SADECE TEMSİLCİNİN MESAJINI GÖNDER
-  await sendMessage(cleanTo, message);
-
-  // 🟢 TELEGRAMA LOG
-  await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
-
-  return res.sendStatus(200);
-}
-
-
-
-    // ------------------------------------------------------
-    // 3) /end KOMUTU → CANLI DESTEK KAPAT
-    // ------------------------------------------------------
-    if (text.startsWith("/end ")) {
-      const parts = text.split(" ");
-      const to = parts[1];
-      const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
-
-      if (!cleanTo) {
-        await sendMessageToTelegram("Format yanlış. Örnek:\n/end +905551112233");
-        return res.sendStatus(200);
-      }
-
-      if (!sessions[cleanTo]) sessions[cleanTo] = {};
-
-      sessions[cleanTo].humanOverride = false;
-
-      // 🔥 DİL BAZLI KAPANIŞ MESAJI
-      let closeMessage = 
-        "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
         "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir. Ekibimiz size yardımcı olmaktan memnuniyet duyar.";
 
       if (sessions[cleanTo]?.lang === "en") {
@@ -2423,10 +2345,6 @@ app.post("/webhook", async (req, res) => {
 });
 
 
-
-
-
-
 // -------------------------------
 //  SERVER
 // -------------------------------
@@ -2434,3 +2352,4 @@ const port = process.env.PORT || 3000;
 app.listen(port, () =>
   console.log("SamChe Bot running on port " + port)
 );
+
