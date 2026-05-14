@@ -2263,89 +2263,68 @@ app.post("/telegram-webhook", async (req, res) => {
 app.post("/webhook", async (req, res) => {
   try {
     const body = req.body;
-    
-    // Meta Webhook Güvenlik ve Yapı Kontrolü
     const entry = body.entry?.[0];
     const changes = entry?.changes?.[0];
     const value = changes?.value;
     const messages = value?.messages;
 
-    if (!messages || !messages[0]) {
-      return res.sendStatus(200); 
-    }
+    if (!messages || !messages[0]) return res.sendStatus(200);
 
     const msg = messages[0];
-    const from = msg.from; // Örn: 905331234567
+    const from = msg.from;
     const text = msg.text?.body?.trim();
-
-    // Mesaj içeriği boşsa (Görsel, konum vb. gelmişse) işlem yapma
     if (!text) return res.sendStatus(200);
 
-    // Telefon numarasını temizle (Sadece rakam bırakır)
-    const cleanFrom = from.replace(/\D/g, "");
+    const cleanFrom = from.replace("+", "");
 
-    // Oturum başlatılmamışsa oluştur
-    if (!sessions[cleanFrom]) {
-      sessions[cleanFrom] = {
-        lang: 'tr',
-        humanOverride: false,
-        lastMessageTime: Date.now()
-      };
-    }
+    // DİL TESPİTİ
+    const lang = detectLanguage(text);
+    if (!sessions[cleanFrom]) sessions[cleanFrom] = {};
+    sessions[cleanFrom].lang = lang;
 
     // CANLI DESTEK MODU → BOT SUSAR
-    if (sessions[cleanFrom].humanOverride === true) {
+    if (sessions[cleanFrom]?.humanOverride === true) {
       sessions[cleanFrom].lastMessageTime = Date.now();
-      
-      // Telegram'a veya panele bildirirken wa.me linkini de eklemek kolaylık sağlar
-      const logMsg = `WhatsApp → ${cleanFrom}: ${text}\nLink: https://wa.me/${cleanFrom}`;
-      await sendMessageToTelegram(logMsg);
-      
+      await sendMessageToTelegram(`WhatsApp → ${cleanFrom}: ${text}`);
       return res.sendStatus(200);
     }
 
     // KULLANICI CANLI DESTEK İSTERSE
-    const lowerText = text.toLowerCase();
-    const userWantsHuman = ["canlı destek", "canli destek", "live support", "müşteri temsilcisi"].some(key => lowerText.includes(key));
+    const userWantsHuman =
+      text.toLowerCase().includes("canlı destek") ||
+      text.toLowerCase().includes("canli destek") ||
+      text.toLowerCase().includes("live support");
 
     if (userWantsHuman) {
-      const aktarimMesaji = 
-        `Talebinizi aldım. Sizi en doğru desteği sağlayabilmek için canlı müşteri temsilcimize aktarıyorum. ` +
-        `Lütfen temsilcimiz bağlanana kadar beklemede kalın.`;
 
-      // Mesaj gönderimi
+      const aktarimMesaji =
+        `Talebinizi aldım. ` +
+        `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
+        `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
+        `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
+
+      // 🔥 AI MESAJINI GÖNDER
       await sendMessage(cleanFrom, aktarimMesaji);
 
-      // Durum Güncelleme
+      // 🔥 ZAMANLAYICIYI TAM BURADA BAŞLAT (KESİN ÇALIŞIR)
       sessions[cleanFrom].humanOverride = true;
       sessions[cleanFrom].lastMessageTime = Date.now();
-      
-      // Zamanlayıcıyı başlat (İçinde clearTimeout olduğundan emin olun)
-      if (typeof startTransferTimers === "function") {
-        startTransferTimers(cleanFrom);
-      }
+      startTransferTimers(cleanFrom);
 
       return res.sendStatus(200);
     }
 
-    // NORMAL BOT AKIŞI
-    // detectLanguage fonksiyonunun hata vermediğinden emin olun
-    try {
-      sessions[cleanFrom].lang = detectLanguage(text);
-    } catch (e) {
-      sessions[cleanFrom].lang = 'tr';
-    }
+    // NORMAL BOT CEVABI
+    await sendMessage(cleanFrom, "Sorunuzu aldım, yardımcı oluyorum.");
 
-    await sendMessage(cleanFrom, "Sorunuzu aldım, hemen yardımcı oluyorum.");
     return res.sendStatus(200);
 
   } catch (err) {
-    // Hata yönetimi: Webhook 500 dönerse Meta tekrar tekrar gönderir. 
-    // Kritik değilse 200 dönüp hatayı loglamak daha güvenlidir.
-    console.error("Critical Webhook Error:", err.message);
-    return res.sendStatus(200); 
+    console.error("WhatsApp webhook error:", err);
+    return res.sendStatus(500);
   }
 });
+
 
 
 
