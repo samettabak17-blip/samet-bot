@@ -2137,6 +2137,53 @@ function getFollowUpMessage(lang, topic, stage) {
 // ------------------------------------------------------
 //  🔥 TELEGRAM WEBHOOK — NORMAL MESAJ + CANLI DESTEK
 // ------------------------------------------------------
+// -------------------------------
+//  HELPERS
+// -------------------------------
+const sessions = {}; // varsa zaten tanımlıdır, yoksa ekle
+
+function startTransferTimers(cleanFrom) {
+  const lang = sessions[cleanFrom]?.lang || "tr";
+
+  let waitMessage = "⌛ Canlı temsilcimize aktarılıyorsunuz, lütfen bekleyin.";
+  let slowMessage = "⚠️ Temsilcilerimiz şu anda başka bir görüşmede. İşlem sırasındasınız. Lütfen beklemede kalmaya devam edin.";
+  let typingSim = "💬 Temsilcimiz yazıyor...";
+
+  if (lang === "en") {
+    waitMessage = "⌛ You are being transferred to our live representative, please wait.";
+    slowMessage = "⚠️ Our representatives may be busy at the moment. You are in the queue. Please stay connected.";
+    typingSim = "💬 Our representative is typing...";
+  } else if (lang === "ar") {
+    waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
+    slowMessage = "⚠️ قد يكون ممثلونا مشغولين حاليًا. أنت في قائمة الانتظار. يرجى البقاء على الخط.";
+    typingSim = "💬 ممثلنا يكتب الآن…";
+  }
+
+  // 5 saniye
+  setTimeout(() => {
+    if (sessions[cleanFrom]?.humanOverride === true) {
+      sendMessage(cleanFrom, waitMessage).catch(() => {});
+    }
+  }, 5000);
+
+  // 12 saniye
+  setTimeout(() => {
+    if (sessions[cleanFrom]?.humanOverride === true) {
+      sendMessage(cleanFrom, slowMessage).catch(() => {});
+    }
+  }, 12000);
+
+  // 15 saniye
+  setTimeout(() => {
+    if (sessions[cleanFrom]?.humanOverride === true) {
+      sendMessage(cleanFrom, typingSim).catch(() => {});
+    }
+  }, 15000);
+}
+
+// ------------------------------------------------------
+//  🔥 TELEGRAM WEBHOOK — NORMAL MESAJ + CANLI DESTEK
+// ------------------------------------------------------
 app.post("/telegram-webhook", async (req, res) => {
   try {
     const msg = req.body.message;
@@ -2163,7 +2210,7 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-  // ------------------------------------------------------
+    // ------------------------------------------------------
     // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
     // ------------------------------------------------------
     if (text.startsWith("/w ")) {
@@ -2192,29 +2239,13 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-  // 🟢 3) SADECE İLK CANLI DESTEK BAŞLATILDIĞINDA
-  // BOTUN OTOMATİK MESAJINDAN 5 SANİYE SONRA BEKLEME MESAJI GÖNDER
-  if (isFirstTime) {
-    setTimeout(() => {
-      sendMessage(cleanTo, waitMessage).catch(err => {
-        console.error("Bekleme mesajı gönderilemedi:", err);
-      });
-    }, 5000); // 5 saniye
-  }
-
-  await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
-
-  return res.sendStatus(200);
-}
-
-
     // ------------------------------------------------------
     // 3) /end KOMUTU → CANLI DESTEK KAPAT
     // ------------------------------------------------------
     if (text.startsWith("/end ")) {
       const parts = text.split(" ");
       const to = parts[1];
-      const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
+      const cleanTo = to.replace("+", "");
 
       if (!cleanTo) {
         await sendMessageToTelegram("Format yanlış. Örnek:\n/end +905551112233");
@@ -2226,19 +2257,18 @@ app.post("/telegram-webhook", async (req, res) => {
       sessions[cleanTo].humanOverride = false;
 
       // 🔥 DİL BAZLI KAPANIŞ MESAJI
-      let closeMessage = 
+      let closeMessage =
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
-        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir. Ekibimiz size yardımcı olmaktan memnuniyet duyar.";
+        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir.";
 
       if (sessions[cleanTo]?.lang === "en") {
         closeMessage =
           "🔒 The live support session has ended.\n\n" +
-          "You may continue chatting with our AI assistant, or if you want to reconnect with a live representative, simply type 'live support'. Our team will be happy to assist you anytime.";
-      } 
-      else if (sessions[cleanTo]?.lang === "ar") {
+          "You may continue chatting with our AI assistant, or type 'live support' anytime to reconnect.";
+      } else if (sessions[cleanTo]?.lang === "ar") {
         closeMessage =
           "🔒 تم إنهاء جلسة الدعم المباشر.\n\n" +
-          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي، أو إذا كنت ترغب في التواصل مع ممثل مباشر مرة أخرى، فقط اكتب 'دعم مباشر'. يسعد فريقنا بمساعدتك في أي وقت.";
+          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي أو كتابة 'دعم مباشر' للاتصال بممثل.";
       }
 
       await sendMessage(cleanTo, closeMessage);
@@ -2275,7 +2305,6 @@ app.post("/webhook", async (req, res) => {
 
     if (!text) return res.sendStatus(200);
 
-    // 🔥 NUMARA NORMALIZE
     const cleanFrom = from.replace("+", "");
 
     // 🔥 DİL TESPİTİ
@@ -2290,12 +2319,47 @@ app.post("/webhook", async (req, res) => {
 
       await sendMessageToTelegram(`WhatsApp → ${cleanFrom}: ${text}`);
 
-      return res.sendStatus(200); // BOT CEVAP VERMEZ
+      return res.sendStatus(200);
     }
 
-    // 🔥 NORMAL BOT MODU
-    const aiResponse = await generateAIResponse(text);
-    await sendMessage(cleanFrom, aiResponse);
+    // ------------------------------------------------------
+    //  🔥 NORMAL BOT MODU (TOPIC ÜRET + GEREKİRSE AKTARIM MESAJI)
+    // ------------------------------------------------------
+    const aiResponse = await generateAIResponse(text); // burada sadece TOPIC veya karar dönüyor varsayıyoruz
+
+    // ÖRNEK: aiResponse içinde "TRANSFER_TO_HUMAN" gibi bir işaret varsa canlı desteğe aktar
+    const lower = aiResponse.toLowerCase();
+    const needsHuman =
+      lower.includes("canlı destek") ||
+      lower.includes("canli destek") ||
+      lower.includes("live support") ||
+      lower.includes("human_agent") ||
+      lower.includes("transfer_to_human");
+
+    if (!needsHuman) {
+      // Normal bot cevabı
+      await sendMessage(cleanFrom, aiResponse);
+      return res.sendStatus(200);
+    }
+
+    // 🔥 BURADAN SONRASI: CANLI TEMSİLCİYE AKTARIM SENARYOSU
+    // AI sadece topic belirledi, biz standart aktarım mesajını gönderiyoruz
+
+    const topic = aiResponse; // sen burada aiResponse içinden topic'i nasıl alıyorsan ona göre düzenleyebilirsin
+
+    const aktarimMesaji =
+      `${topic} talebinizi aldım. ` +
+      `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
+      `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
+      `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
+
+    // Standart aktarım mesajını gönder
+    await sendMessage(cleanFrom, aktarimMesaji);
+
+    // Canlı destek modunu aç + zamanlayıcıları başlat
+    sessions[cleanFrom].humanOverride = true;
+    sessions[cleanFrom].lastMessageTime = Date.now();
+    startTransferTimers(cleanFrom);
 
     return res.sendStatus(200);
 
@@ -2306,13 +2370,11 @@ app.post("/webhook", async (req, res) => {
 });
 
 
-
-
-
-// ------------------------------------------------------
+// -------------------------------
 //  SERVER
-// ------------------------------------------------------
+// -------------------------------
 const port = process.env.PORT || 3000;
 app.listen(port, () =>
   console.log("SamChe Bot running on port " + port)
 );
+
