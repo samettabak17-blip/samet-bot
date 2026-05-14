@@ -2259,7 +2259,7 @@ app.post("/telegram-webhook", async (req, res) => {
 });
 
 
-
+ // /WHATSAPP WEBHOOK
 app.post("/webhook", async (req, res) => {
   try {
     const body = req.body;
@@ -2289,37 +2289,42 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // AI sadece TOPIC üretir
-    const topic = await generateAIResponse(text);
-    const lower = topic.toLowerCase();
+    // 🔥 KULLANICI CANLI DESTEK İSTERSE
+    const userWantsHuman =
+      text.toLowerCase().includes("canlı destek") ||
+      text.toLowerCase().includes("canli destek") ||
+      text.toLowerCase().includes("live support") ||
+      text.toLowerCase().includes("representative");
 
-    // 🔥 CANLI DESTEK GEREKTİREN TOPIC’LER
-    const needsHuman =
-      lower.includes("company") ||
-      lower.includes("residency") ||
-      lower.includes("cost") ||
-      lower.includes("ai") ||
-      lower.includes("general");
+    // 🔥 BOTUN KENDİ TETİKLEYİCİSİ (ör: “aktarıyorum”)
+    const botTrigger =
+      text.toLowerCase().includes("aktarıyorum") ||
+      text.toLowerCase().includes("transfer") ||
+      text.toLowerCase().includes("temsilci");
 
-    // Eğer canlı destek gerekmiyorsa → normal cevap
-    if (!needsHuman) {
-      await sendMessage(cleanFrom, topic);
+    // 🔥 EĞER CANLI DESTEK GEREKİYORSA
+    if (userWantsHuman || botTrigger) {
+
+      const aktarimMesaji =
+        `Talebinizi aldım. ` +
+        `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
+        `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
+        `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
+
+      await sendMessage(cleanFrom, aktarimMesaji);
+
+      // CANLI DESTEK MODUNU AÇ
+      sessions[cleanFrom].humanOverride = true;
+      sessions[cleanFrom].lastMessageTime = Date.now();
+
+      // ZAMANLAYICI BAŞLAT
+      startTransferTimers(cleanFrom);
+
       return res.sendStatus(200);
     }
 
-    // 🔥 AKTARIM MESAJI (SABİT)
-    const aktarimMesaji =
-      `${topic} talebinizi aldım. ` +
-      `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
-      `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
-      `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
-
-    await sendMessage(cleanFrom, aktarimMesaji);
-
-    // 🔥 CANLI DESTEK MODUNU AÇ + ZAMANLAYICI BAŞLAT
-    sessions[cleanFrom].humanOverride = true;
-    sessions[cleanFrom].lastMessageTime = Date.now();
-    startTransferTimers(cleanFrom);
+    // 🔥 NORMAL BOT CEVABI
+    await sendMessage(cleanFrom, "Sorunuzu aldım, yardımcı oluyorum.");
 
     return res.sendStatus(200);
 
@@ -2328,6 +2333,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 
