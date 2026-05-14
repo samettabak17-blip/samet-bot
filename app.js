@@ -2281,20 +2281,10 @@ app.post("/webhook", async (req, res) => {
     await sendMessage(cleanFrom, aiResponse);
 
     // ------------------------------------------------------
-    //  🔥 BOTUN AKTARIM MESAJINI ALGILA — %100 ÇALIŞAN TETİKLEYİCİ
+    //  🔥 BOTUN AKTARIM MESAJINI ALGILA — %100 GARANTİ
     // ------------------------------------------------------
     const lower = aiResponse.toLowerCase();
-
-    const isTransfer =
-      lower.includes("canlı müşteri temsilcimize") ||
-      lower.includes("size en doğru desteği sağlayabilmek için") ||
-      lower.includes("talebiniz işlem sırasına alınacak") ||
-      lower.includes("live representative") ||
-      lower.includes("transferring you") ||
-      lower.includes("direct support") ||
-      lower.includes("مباشر") ||
-      lower.includes("ممثل") ||
-      lower.includes("دعم");
+    const isTransfer = lower.includes("aktarıyorum");
 
     // ------------------------------------------------------
     //  🔥 SADECE BOT AKTARIM MESAJI GÖNDERDİĞİNDE TETİKLE
@@ -2346,6 +2336,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 
