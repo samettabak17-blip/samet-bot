@@ -2175,6 +2175,7 @@ function startTransferTimers(cleanFrom) {
 
 
 
+
 // ------------------------------------------------------
 //  TELEGRAM WEBHOOK (TAM TANIMLI)
 // ------------------------------------------------------
@@ -2296,14 +2297,7 @@ app.post("/webhook", async (req, res) => {
       text.toLowerCase().includes("live support") ||
       text.toLowerCase().includes("representative");
 
-    // 🔥 BOTUN KENDİ TETİKLEYİCİSİ (ör: “aktarıyorum”)
-    const botTrigger =
-      text.toLowerCase().includes("aktarıyorum") ||
-      text.toLowerCase().includes("transfer") ||
-      text.toLowerCase().includes("temsilci");
-
-    // 🔥 EĞER CANLI DESTEK GEREKİYORSA
-    if (userWantsHuman || botTrigger) {
+    if (userWantsHuman) {
 
       const aktarimMesaji =
         `Talebinizi aldım. ` +
@@ -2313,17 +2307,17 @@ app.post("/webhook", async (req, res) => {
 
       await sendMessage(cleanFrom, aktarimMesaji);
 
-      // CANLI DESTEK MODUNU AÇ
+      // 🔥 CANLI DESTEK MODUNU AÇ
       sessions[cleanFrom].humanOverride = true;
       sessions[cleanFrom].lastMessageTime = Date.now();
 
-      // ZAMANLAYICI BAŞLAT
+      // 🔥 ZAMANLAYICIYI BAŞLAT
       startTransferTimers(cleanFrom);
 
       return res.sendStatus(200);
     }
 
-    // 🔥 NORMAL BOT CEVABI
+    // NORMAL BOT CEVABI
     await sendMessage(cleanFrom, "Sorunuzu aldım, yardımcı oluyorum.");
 
     return res.sendStatus(200);
@@ -2333,8 +2327,6 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
-
-
 
 
 
