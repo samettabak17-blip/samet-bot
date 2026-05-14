@@ -2180,7 +2180,7 @@ if (text.startsWith("/w ")) {
   if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
   // 🔥 CANLI DESTEK MODUNU AÇ
-  const isFirstTransfer = sessions[cleanTo].humanOverride !== true;
+  const isFirstTime = sessions[cleanTo].humanOverride !== true;
   sessions[cleanTo].humanOverride = true;
   sessions[cleanTo].lastMessageTime = Date.now();
 
@@ -2199,7 +2199,7 @@ if (text.startsWith("/w ")) {
 
   // 🟢 3) SADECE İLK CANLI DESTEK BAŞLATILDIĞINDA
   // BOTUN OTOMATİK MESAJINDAN 5 SANİYE SONRA BEKLEME MESAJI GÖNDER
-  if (isFirstTransfer) {
+  if (isFirstTime) {
     setTimeout(() => {
       sendMessage(cleanTo, waitMessage).catch(err => {
         console.error("Bekleme mesajı gönderilemedi:", err);
@@ -2211,6 +2211,7 @@ if (text.startsWith("/w ")) {
 
   return res.sendStatus(200);
 }
+
 
 
     // ------------------------------------------------------
