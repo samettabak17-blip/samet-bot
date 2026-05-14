@@ -2164,39 +2164,33 @@ app.post("/telegram-webhook", async (req, res) => {
     }
 
   // ------------------------------------------------------
-// 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
-// ------------------------------------------------------
-if (text.startsWith("/w ")) {
-  const parts = text.split(" ");
-  const to = parts[1];
-  const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
+    // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
+    // ------------------------------------------------------
+    if (text.startsWith("/w ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
+      const cleanTo = to.replace("+", "");
 
-  const message = parts.slice(2).join(" ");
+      const message = parts.slice(2).join(" ");
 
-  if (!cleanTo || !message) {
-    await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
-    return res.sendStatus(200);
-  }
+      if (!cleanTo || !message) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+        return res.sendStatus(200);
+      }
 
-  if (!sessions[cleanTo]) sessions[cleanTo] = {};
+      if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
-  // 🔥 CANLI DESTEK MODUNU AÇ
-  const isFirstTime = sessions[cleanTo].humanOverride !== true;
-  sessions[cleanTo].humanOverride = true;
-  sessions[cleanTo].lastMessageTime = Date.now();
+      // CANLI DESTEK MODUNU AÇ
+      sessions[cleanTo].humanOverride = true;
+      sessions[cleanTo].lastMessageTime = Date.now();
 
-  // 🟢 1) BOTUN OTOMATİK MESAJINI HEMEN GÖNDER
-  await sendMessage(cleanTo, message);
+      // SADECE TEMSİLCİ MESAJINI GÖNDER
+      await sendMessage(cleanTo, message);
 
-  // 🟢 2) DİL BAZLI BEKLEME MESAJI
-  let waitMessage = "⌛ Canlı temsilcimize aktarılıyorsunuz, lütfen bekleyin.";
+      await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
 
-  if (sessions[cleanTo]?.lang === "en") {
-    waitMessage = "⌛ You are being transferred to our live representative, please wait.";
-  } 
-  else if (sessions[cleanTo]?.lang === "ar") {
-    waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
-  }
+      return res.sendStatus(200);
+    }
 
   // 🟢 3) SADECE İLK CANLI DESTEK BAŞLATILDIĞINDA
   // BOTUN OTOMATİK MESAJINDAN 5 SANİYE SONRA BEKLEME MESAJI GÖNDER
