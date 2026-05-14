@@ -2282,16 +2282,20 @@ app.post("/webhook", async (req, res) => {
     await sendMessage(cleanFrom, aiResponse);
 
     // ------------------------------------------------------
-    //  🔥 BOTUN AKTARIM MESAJINI ALGILA
+    //  🔥 BOTUN AKTARIM MESAJINI ALGILA — %100 ÇALIŞAN TETİKLEYİCİ
     // ------------------------------------------------------
-    const trTrigger = "sizi canlı müşteri temsilcimize aktarıyorum";
-    const enTrigger = "transferring you to our live representative";
-    const arTrigger = "سأقوم بتحويلك إلى ممثل خدمة العملاء";
+    const lower = aiResponse.toLowerCase();
 
     const isTransfer =
-      aiResponse.toLowerCase().includes(trTrigger) ||
-      aiResponse.toLowerCase().includes(enTrigger) ||
-      aiResponse.includes(arTrigger);
+      lower.includes("canlı müşteri temsilcimize") ||   // Türkçe
+      lower.includes("canli musteri temsilcimize") ||   // Türkçe varyasyon
+      lower.includes("size en doğru desteği sağlayabilmek için") || // Türkçe sabit cümle
+      lower.includes("live representative") ||          // İngilizce
+      lower.includes("transferring you") ||             // İngilizce varyasyon
+      lower.includes("direct support") ||               // İngilizce alternatif
+      lower.includes("مباشر") ||                        // Arapça "canlı"
+      lower.includes("ممثل") ||                         // Arapça "temsilci"
+      lower.includes("دعم");                            // Arapça "destek"
 
     // ------------------------------------------------------
     //  🔥 SADECE BOT AKTARIM MESAJI GÖNDERDİĞİNDE TETİKLE
@@ -2343,6 +2347,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 // -------------------------------
