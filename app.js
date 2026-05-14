@@ -2306,7 +2306,10 @@ app.post("/webhook", async (req, res) => {
       // 🔥 AI MESAJINI GÖNDER
       await sendMessage(cleanFrom, aktarimMesaji);
 
-      // 🔥 ZAMANLAYICIYI TAM BURADA BAŞLAT (KESİN ÇALIŞIR)
+      console.log("🔥 TIMER CALL:", cleanFrom, sessions[cleanFrom]);
+
+
+    // 🔥 ZAMANLAYICIYI TAM BURADA BAŞLAT (KESİN ÇALIŞIR)
       sessions[cleanFrom].humanOverride = true;
       sessions[cleanFrom].lastMessageTime = Date.now();
       startTransferTimers(cleanFrom);
