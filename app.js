@@ -2137,10 +2137,6 @@ function getFollowUpMessage(lang, topic, stage) {
 // ------------------------------------------------------
 //  🔥 TELEGRAM WEBHOOK — NORMAL MESAJ + CANLI DESTEK
 // ------------------------------------------------------
-// -------------------------------
-//  HELPERS
-// -------------------------------
-const sessions = {}; // varsa zaten tanımlıdır, yoksa ekle
 
 function startTransferTimers(cleanFrom) {
   const lang = sessions[cleanFrom]?.lang || "tr";
