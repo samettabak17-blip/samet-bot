@@ -2154,24 +2154,21 @@ function startTransferTimers(cleanFrom) {
     typingSim = "💬 ممثلنا يكتب الآن…";
   }
 
-  // 5 saniye
   setTimeout(() => {
     if (sessions[cleanFrom]?.humanOverride === true) {
-      sendMessage(cleanFrom, waitMessage).catch(() => {});
+      sendMessage(cleanFrom, waitMessage);
     }
   }, 5000);
 
-  // 12 saniye
   setTimeout(() => {
     if (sessions[cleanFrom]?.humanOverride === true) {
-      sendMessage(cleanFrom, slowMessage).catch(() => {});
+      sendMessage(cleanFrom, slowMessage);
     }
   }, 12000);
 
-  // 15 saniye
   setTimeout(() => {
     if (sessions[cleanFrom]?.humanOverride === true) {
-      sendMessage(cleanFrom, typingSim).catch(() => {});
+      sendMessage(cleanFrom, typingSim);
     }
   }, 15000);
 }
@@ -2263,9 +2260,6 @@ app.post("/telegram-webhook", async (req, res) => {
 
 
 
-// ------------------------------------------------------
-//  WHATSAPP WEBHOOK (TAM TANIMLI – %100 ÇALIŞAN)
-// ------------------------------------------------------
 app.post("/webhook", async (req, res) => {
   try {
     const body = req.body;
@@ -2283,7 +2277,7 @@ app.post("/webhook", async (req, res) => {
 
     const cleanFrom = from.replace("+", "");
 
-    // Dil tespiti
+    // DİL TESPİTİ
     const lang = detectLanguage(text);
     if (!sessions[cleanFrom]) sessions[cleanFrom] = {};
     sessions[cleanFrom].lang = lang;
@@ -2295,25 +2289,25 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // NORMAL BOT MODU (AI sadece TOPIC belirliyor)
-    const aiResponse = await generateAIResponse(text);
-    const lower = aiResponse.toLowerCase();
+    // AI sadece TOPIC üretir
+    const topic = await generateAIResponse(text);
+    const lower = topic.toLowerCase();
 
-    // AI "canlı destek" gerektiğini söylüyorsa
+    // 🔥 CANLI DESTEK GEREKTİREN TOPIC’LER
     const needsHuman =
-      lower.includes("canlı destek") ||
-      lower.includes("canli destek") ||
-      lower.includes("live support") ||
-      lower.includes("transfer") ||
-      lower.includes("human");
+      lower.includes("company") ||
+      lower.includes("residency") ||
+      lower.includes("cost") ||
+      lower.includes("ai") ||
+      lower.includes("general");
 
+    // Eğer canlı destek gerekmiyorsa → normal cevap
     if (!needsHuman) {
-      await sendMessage(cleanFrom, aiResponse);
+      await sendMessage(cleanFrom, topic);
       return res.sendStatus(200);
     }
 
     // 🔥 AKTARIM MESAJI (SABİT)
-    const topic = aiResponse;
     const aktarimMesaji =
       `${topic} talebinizi aldım. ` +
       `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
@@ -2334,6 +2328,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 
