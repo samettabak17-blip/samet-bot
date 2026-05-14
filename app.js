@@ -2133,11 +2133,6 @@ function getFollowUpMessage(lang, topic, stage) {
   return langSet[topic] || langSet["general"] || "";
 }
 
-// ------------------------------------------------------
-//  GLOBAL SESSIONS
-// ------------------------------------------------------
-const sessions = {};
-
 
 // ------------------------------------------------------
 //  ZAMANLAYICI FONKSİYONU (TAM TANIMLI)
