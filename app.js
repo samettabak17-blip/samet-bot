@@ -2162,7 +2162,7 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
- // ------------------------------------------------------
+// ------------------------------------------------------
 // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
 // ------------------------------------------------------
 if (text.startsWith("/w ")) {
@@ -2179,8 +2179,9 @@ if (text.startsWith("/w ")) {
 
   if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
-  // 🔥 CANLI DESTEK MODUNU AÇ
   const isFirstTime = sessions[cleanTo].humanOverride !== true;
+
+  // 🔥 CANLI DESTEK MODUNU AÇ
   sessions[cleanTo].humanOverride = true;
   sessions[cleanTo].lastMessageTime = Date.now();
 
@@ -2189,28 +2190,49 @@ if (text.startsWith("/w ")) {
 
   // 🟢 2) DİL BAZLI BEKLEME MESAJI
   let waitMessage = "⌛ Canlı temsilcimize aktarılıyorsunuz, lütfen bekleyin.";
+  let slowMessage = "⚠️ Temsilcilerimiz şu anda başka bir görüşmede.İşlem sırasındasınız. Lütfen beklemede kalmaya devam edin.";
+  let typingSim = "💬 Temsilcimiz yazıyor…";
 
   if (sessions[cleanTo]?.lang === "en") {
     waitMessage = "⌛ You are being transferred to our live representative, please wait.";
+    slowMessage = "⚠️ Our representative may be busy at the moment. Please stay connected.";
+    typingSim = "💬 Our representative is typing…";
   } 
   else if (sessions[cleanTo]?.lang === "ar") {
     waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
+    slowMessage = "⚠️ قد يكون ممثلنا مشغولًا حاليًا. يرجى البقاء على الخط.";
+    typingSim = "💬 ممثلنا يكتب الآن…";
   }
 
   // 🟢 3) SADECE İLK CANLI DESTEK BAŞLATILDIĞINDA
-  // BOTUN OTOMATİK MESAJINDAN 5 SANİYE SONRA BEKLEME MESAJI GÖNDER
   if (isFirstTime) {
+
+    // ⏳ 5 SANİYE SONRA → AKTARILIYORSUNUZ MESAJI
     setTimeout(() => {
-      sendMessage(cleanTo, waitMessage).catch(err => {
-        console.error("Bekleme mesajı gönderilemedi:", err);
-      });
-    }, 5000); // 5 saniye
+      sendMessage(cleanTo, waitMessage).catch(() => {});
+    }, 5000);
+
+    // ⏳ 12 SANİYE SONRA → TEMSİLCİ GEÇ BAĞLANIRSA BİLGİLENDİRME
+    setTimeout(() => {
+      // Temsilci hâlâ bağlanmadıysa
+      if (sessions[cleanTo]?.humanOverride === true) {
+        sendMessage(cleanTo, slowMessage).catch(() => {});
+      }
+    }, 12000);
+
+    // ⏳ 15 SANİYE SONRA → “TEMSiLCi YAZIYOR…” SİMÜLASYONU
+    setTimeout(() => {
+      if (sessions[cleanTo]?.humanOverride === true) {
+        sendMessage(cleanTo, typingSim).catch(() => {});
+      }
+    }, 15000);
   }
 
   await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
 
   return res.sendStatus(200);
 }
+
 
 
 
