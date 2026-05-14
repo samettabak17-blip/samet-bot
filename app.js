@@ -2411,45 +2411,53 @@ app.post("/telegram-webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-// ------------------------------------------------------
-// 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
-// ------------------------------------------------------
-if (text.startsWith("/w ")) {
-  const parts = text.split(" ");
-  const to = parts[1];
-  const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
+    // ------------------------------------------------------
+    // 2) /w KOMUTU → CANLI DESTEK BAŞLAT / MESAJ GÖNDER
+    // ------------------------------------------------------
+    if (text.startsWith("/w ")) {
+      const parts = text.split(" ");
+      const to = parts[1];
+      const cleanTo = to.replace("+", "");  // 🔥 NUMARA NORMALIZE
 
-  const message = parts.slice(2).join(" ");
+      const message = parts.slice(2).join(" ");
 
-  if (!cleanTo || !message) {
-    await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
-    return res.sendStatus(200);
-  }
+      if (!cleanTo || !message) {
+        await sendMessageToTelegram("Format yanlış. Örnek:\n/w +905551112233 Merhaba");
+        return res.sendStatus(200);
+      }
 
-  if (!sessions[cleanTo]) sessions[cleanTo] = {};
+      if (!sessions[cleanTo]) sessions[cleanTo] = {};
 
-  const isNewSession = sessions[cleanTo].humanOverride !== true;
+      const isNewSession = sessions[cleanTo].humanOverride !== true;
 
-  // 🔥 CANLI DESTEK MODUNU AÇ
-  sessions[cleanTo].humanOverride = true;
-  sessions[cleanTo].lastMessageTime = Date.now();
+      // 🔥 CANLI DESTEK MODUNU AÇ
+      sessions[cleanTo].humanOverride = true;
+      sessions[cleanTo].lastMessageTime = Date.now();
 
-  // 🟢 1) BOTUN KONUYA UYGUN CANLI DESTEK MESAJI
-  await sendMessage(cleanTo, message);
+      // 🟢 1) BOTUN KONUYA UYGUN CANLI DESTEK MESAJI
+      await sendMessage(cleanTo, message);
 
-  // 🟢 2) SADECE İLK OTURUMDA 3–5 SANİYE SONRA BEKLEME MESAJI GÖNDER
-  if (isNewSession) {
-    setTimeout(async () => {
-      await sendMessage(cleanTo, "⌛ Canlı temsilcimize aktarılıyorsunuz,lütfen bekleyin.");
-    }, 4000); // 4 saniye gecikme
-  }
+      // 🟢 2) DİL BAZLI BEKLEME MESAJI
+      let waitMessage = "⌛ Canlı temsilcimize aktarılıyorsunuz, lütfen bekleyin.";
 
-  await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
+      if (sessions[cleanTo]?.lang === "en") {
+        waitMessage = "⌛ You are being transferred to our live representative, please wait.";
+      } 
+      else if (sessions[cleanTo]?.lang === "ar") {
+        waitMessage = "⌛ يتم تحويلك إلى ممثلنا المباشر، يرجى الانتظار.";
+      }
 
-  return res.sendStatus(200);
-}
+      // 🟢 3) SADECE İLK OTURUMDA 5 SANİYE SONRA GÖNDER
+      if (isNewSession) {
+        setTimeout(async () => {
+          await sendMessage(cleanTo, waitMessage);
+        }, 5000);
+      }
 
+      await sendMessageToTelegram(`Gönderildi → WhatsApp ${cleanTo}: ${message}`);
 
+      return res.sendStatus(200);
+    }
 
     // ------------------------------------------------------
     // 3) /end KOMUTU → CANLI DESTEK KAPAT
@@ -2468,11 +2476,23 @@ if (text.startsWith("/w ")) {
 
       sessions[cleanTo].humanOverride = false;
 
-      await sendMessage(
-        cleanTo,
+      // 🔥 DİL BAZLI KAPANIŞ MESAJI
+      let closeMessage = 
         "🔒 Canlı destek oturumu sona ermiştir.\n\n" +
-        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına canlı destek yazmanız yeterli olacaktır. lütfen istediğiniz zaman tekrar bizimle iletişime geçmekten çekinmeyin. Ekibimiz size yardımcı olmaktan mutluluk duyacaktır."
-      );
+        "Yapay zeka asistanımızla sohbete devam edebilir ya da canlı temsilciye tekrar bağlanmak isterseniz sohbet alanına 'canlı destek' yazmanız yeterlidir. Ekibimiz size yardımcı olmaktan memnuniyet duyar.";
+
+      if (sessions[cleanTo]?.lang === "en") {
+        closeMessage =
+          "🔒 The live support session has ended.\n\n" +
+          "You may continue chatting with our AI assistant, or if you want to reconnect with a live representative, simply type 'live support'. Our team will be happy to assist you anytime.";
+      } 
+      else if (sessions[cleanTo]?.lang === "ar") {
+        closeMessage =
+          "🔒 تم إنهاء جلسة الدعم المباشر.\n\n" +
+          "يمكنك متابعة الدردشة مع مساعد الذكاء الاصطناعي، أو إذا كنت ترغب في التواصل مع ممثل مباشر مرة أخرى، فقط اكتب 'دعم مباشر'. يسعد فريقنا بمساعدتك في أي وقت.";
+      }
+
+      await sendMessage(cleanTo, closeMessage);
 
       await sendMessageToTelegram(`Canlı destek kapatıldı → ${cleanTo}`);
 
@@ -2484,6 +2504,7 @@ if (text.startsWith("/w ")) {
     return res.sendStatus(500);
   }
 });
+
 
 // ------------------------------------------------------
 // 2) WHATSAPP WEBHOOK (CANLI DESTEK → BOT SUSAR)
@@ -2508,6 +2529,11 @@ app.post("/webhook", async (req, res) => {
     // 🔥 NUMARA NORMALIZE
     const cleanFrom = from.replace("+", "");
 
+    // 🔥 DİL TESPİTİ
+    const lang = detectLanguage(text);
+    if (!sessions[cleanFrom]) sessions[cleanFrom] = {};
+    sessions[cleanFrom].lang = lang;
+
     // 🔥 CANLI DESTEK MODU → BOT SUSAR
     if (sessions[cleanFrom]?.humanOverride === true) {
 
@@ -2529,6 +2555,7 @@ app.post("/webhook", async (req, res) => {
     return res.sendStatus(500);
   }
 });
+
 
 
 
