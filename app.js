@@ -2289,36 +2289,26 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    // 🔥 KULLANICI CANLI DESTEK İSTERSE
+    // KULLANICI CANLI DESTEK İSTERSE
     const userWantsHuman =
       text.toLowerCase().includes("canlı destek") ||
       text.toLowerCase().includes("canli destek") ||
-      text.toLowerCase().includes("live support") ||
-      text.toLowerCase().includes("representative");
+      text.toLowerCase().includes("live support");
 
-    // 🔥 AI veya backend aktarım mesajı gönderdi mi?
-    const botTransferTrigger =
-      text.toLowerCase().includes("aktarıyorum");
+    if (userWantsHuman) {
 
-    // 🔥 EĞER CANLI DESTEK GEREKİYORSA
-    if (userWantsHuman || botTransferTrigger) {
+      const aktarimMesaji =
+        `Talebinizi aldım. ` +
+        `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
+        `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
+        `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
 
-      // Eğer AI zaten aktarım mesajı gönderdiyse tekrar göndermeyelim
-      if (!botTransferTrigger) {
-        const aktarimMesaji =
-          `Talebinizi aldım. ` +
-          `Size en doğru desteği sağlayabilmek için sizi canlı müşteri temsilcimize aktarıyorum. ` +
-          `Talebiniz işlem sırasına alınacak, en kısa süre içinde canlı müşteri temsilcimize bağlanacaksınız. ` +
-          `Müşteri temsilcimize bağlanırken lütfen beklemede kalın.`;
+      // 🔥 AI MESAJINI GÖNDER
+      await sendMessage(cleanFrom, aktarimMesaji);
 
-        await sendMessage(cleanFrom, aktarimMesaji);
-      }
-
-      // CANLI DESTEK MODUNU AÇ
+      // 🔥 TAM BU ANDA ZAMANLAYICIYI BAŞLAT
       sessions[cleanFrom].humanOverride = true;
       sessions[cleanFrom].lastMessageTime = Date.now();
-
-      // ZAMANLAYICI BAŞLAT
       startTransferTimers(cleanFrom);
 
       return res.sendStatus(200);
