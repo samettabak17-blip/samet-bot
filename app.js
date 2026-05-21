@@ -153,7 +153,8 @@ const servicesList = {
 
 const introAfterLang = {
   tr:
-    "Merhaba, Ben SamChe AI. SamChe Company LLC'nin yapay zeka destekli danışmanıyım ve size yardımcı olmak için buradayım.\n" +
+    "Merhaba, ben SamChe AI.\n\n" +
+    "SamChe Company LLC'nin yapay zeka destekli danışmanıyım ve size yardımcı olmak için buradayım.\n" +
     "Dubai’de şirket kuruluşu, iş planları, iş geliştirme, dijital büyüme, yapay zeka çözümleri, oturum seçenekleri, yaşam maliyetleri ve şirket kuruluşu sonrasında sunduğumuz hizmetler ile ilgili tüm sorularınızı yanıtlayabilirim. Size nasıl yardımcı olabilirim?\n\n",
   en:
     "Hello, I am the AI consultant of SamChe Company LLC.\n" +
