@@ -1921,64 +1921,55 @@ cron.schedule("*/10 * * * *", async () => {
 // -----------------------------------------------------
 function getPingMessage(lang, topic) {
   const messages = {
-   tr: {
-     general: {
-        tr: "Merhaba. SamChe AI olarak, kısa süre önce Dubai hakkında sorularınızı cevaplamıştım ve size bilgi vermiştim. Kafanıza takılan başka herhangi bir soru varsa lütfen bana sormaktan çekinmeyin. Dubai’deki planlarınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Dilediğiniz zaman ben buradayım ve Dubai hakkında danışmak istediğiniz her konuda size her zaman yardımcı olmaya hazırım.",
-        en: "Hello. I noticed we haven’t been in touch for a short while. Living, working or starting a business in Dubai is more achievable than it may seem. I’m here whenever you’d like to clarify your plans and move closer to your goals.",
-        ar: "مرحبًا. لاحظت أننا لم نتواصل منذ فترة قصيرة. العيش أو العمل أو تأسيس عمل في دبي أسهل مما يبدو. أنا هنا دائمًا لمساعدتك في توضيح خطواتك والاقتراب من أهدافك."
-      },
-      company: {
-        tr: "Merhaba. Kısa süre önce Dubai’de şirket kuruluşu hakkında konuşmuştuk. Dubai'de şirket kurma planınınız için, doğru şirket yapınızı planlamak ve sizin için en uygun maliyet yapısını belirlemek adına size her zaman destek olmak için buradayım.Paylaştığım bilgiler dışında kafanıza takılan herhangi bir soru olursa her zaman bana sorabilirsiniz.",
-        en: "Hello. We recently discussed company formation in Dubai. If you're ready, I can help you determine the right structure.",
-        ar: "مرحبًا. تحدثنا مؤخرًا عن تأسيس شركة في دبي. إذا كنت جاهزًا، يمكنني مساعدتك في اختيار الهيكل المناسب."
-      },
-      residency: {
-        tr: "Merhaba. Kısa süre önce Dubai’de oturum süreci hakkında konuşmuştuk. Sizin için en uygun oturum planlamasını daha net bir çerçevede yapmak adına size her zaman yardımcı olmaya hazırım. Paylaştığım bilgiler dışında kafanıza takılan herhangi bir soru olursa bana sorabilirsiniz. ",
-        en: "Hello. We recently discussed the residency process in Dubai. If you're ready, I can help you choose the right path.",
-        ar: "مرحبًا. تحدثنا مؤخرًا عن إجراءات الإقامة في دبي. إذا كنت جاهزًا، يمكنني مساعدتك في اختيار الطريق الأنسب."
-      },
-      cost: {
-        tr: "Merhaba. Kısa süre önce Dubai’deki maliyetler hakkında konuşmuştuk. Maliyet planlamanızı daha net bir çerçevede yapmanız için size her zaman yardımcı olmaya hazırım. Paylaştığım bilgiler dışında kafanıza takılan herhangi bir soru olursa bana sorabilirsiniz.",
-        en: "Hello. We recently discussed Dubai’s cost structure. I’m here to help you plan with clarity whenever you’re ready.",
-        ar: "مرحبًا. تحدثنا مؤخرًا عن تكاليف دبي. أنا هنا لمساعدتك في التخطيط بوضوح متى ما كنت جاهزًا."
-      },
-      AI: {
-        tr: "Merhaba. Kısa süre önce AI ve otomasyon çözümleri hakkında konuşmuştuk. Projenizi daha verimli ve ölçeklenebilir bir yapıya dönüştürmek isterseniz yardımcı olmaya hazırım.",
-        en: "Hello. We recently discussed your AI project. If you're ready, I can help you build a more efficient and scalable structure.",
-        ar: "مرحبًا. تحدثنا مؤخرًا عن مشروع الذكاء الاصطناعي الخاص بك. إذا كنت جاهزًا، يمكنني مساعدتك في بناء هيكل أكثر كفاءة وقابلية للتطوير."
-      }
+    tr: {
+      general:
+        "Merhaba. SamChe AI olarak, kısa süre önce Dubai hakkında sorularınızı cevaplamıştım ve size bilgi vermiştim. Kafanıza takılan başka herhangi bir soru varsa lütfen bana sormaktan çekinmeyin. Dubai’deki planlarınıza sizi gerçekten yaklaştıracak adımları birlikte netleştirebiliriz. Dilediğiniz zaman ben buradayım ve Dubai hakkında danışmak istediğiniz her konuda size her zaman yardımcı olmaya hazırım.",
+
+      company:
+        "Merhaba. Kısa süre önce Dubai’de şirket kuruluşu hakkında konuşmuştuk. Dubai'de şirket kurma planınız için doğru şirket yapısını planlamak ve sizin için en uygun maliyet yapısını belirlemek adına size her zaman destek olmak için buradayım. Paylaştığım bilgiler dışında kafanıza takılan herhangi bir soru olursa her zaman bana sorabilirsiniz.",
+
+      residency:
+        "Merhaba. Kısa süre önce Dubai’de oturum süreci hakkında konuşmuştuk. Sizin için en uygun oturum planlamasını daha net bir çerçevede yapmak adına size her zaman yardımcı olmaya hazırım. Paylaştığım bilgiler dışında kafanıza takılan herhangi bir soru olursa bana sorabilirsiniz.",
+
+      cost:
+        "Merhaba. Kısa süre önce Dubai’deki maliyetler hakkında konuşmuştuk. Maliyet planlamanızı daha net bir çerçevede yapmanız için size her zaman yardımcı olmaya hazırım. Paylaştığım bilgiler dışında kafanıza takılan herhangi bir soru olursa bana sorabilirsiniz.",
+
+      AI:
+        "Merhaba. Kısa süre önce AI ve otomasyon çözümleri hakkında konuşmuştuk. Projenizi daha verimli ve ölçeklenebilir bir yapıya dönüştürmek isterseniz yardımcı olmaya hazırım."
     },
 
     en: {
-      company:
-        "If you'd like to move forward with your company setup, I can help you structure the next steps clearly and efficiently.",
-      residency:
-        "If you’d like to proceed with the residency and visa options we discussed, I’m here to guide you through the next steps.",
-      AI:
-        "Based on the AI and automation insights I’ve shared, we can plan the next step to make your project more efficient and scalable.\n\nIf you’d like to explore our AI Chatbot plans, you can visit the link below:\nhttps://aichatbot.samchecompany.com/#pricing",
-      cost:
-        "If you'd like to continue based on the cost and process details I shared, we can finalize the most suitable plan together.",
       general:
-        "Whenever you're ready, we can clarify the next steps based on the information I shared earlier."
+        "Hello. I noticed we haven’t been in touch for a short while. If you have any additional questions about Dubai, feel free to ask. I’m here to help you move closer to your plans.",
+      company:
+        "Hello. We recently discussed company formation in Dubai. If you're ready, I can help you determine the right structure.",
+      residency:
+        "Hello. We recently discussed the residency process in Dubai. If you're ready, I can help you choose the right path.",
+      cost:
+        "Hello. We recently discussed Dubai’s cost structure. I’m here to help you plan with clarity whenever you’re ready.",
+      AI:
+        "Hello. We recently discussed your AI project. If you're ready, I can help you build a more efficient and scalable structure."
     },
 
     ar: {
-      company:
-        "إذا كنتم ترغبون بالمتابعة في تأسيس الشركة، يمكنني مساعدتكم في تحديد الخطوات التالية بوضوح.",
-      residency:
-        "إذا رغبتم بالمتابعة في خيارات الإقامة والتأشيرات، يسعدني توجيهكم للخطوة التالية.",
-      AI:
-        "استنادًا إلى الاقتراحات والمعلومات التي شاركتها حول حلول الذكاء الاصطناعي والأتمتة، يمكننا التخطيط للخطوة التالية لجعل مشروعك أكثر كفاءة وقابلية للتوسع.\n\nإذا كنت ترغب في الاطلاع على خطط روبوت الدردشة بالذكاء الاصطناعي، يمكنك زيارة الرابط التالي:\nhttps://aichatbot.samchecompany.com/#pricing",
-      cost:
-        "إذا رغبتم بالمتابعة بناءً على تفاصيل التكاليف، يمكننا تحديد الخطة الأنسب لكم.",
       general:
-        "عندما تكونون جاهزين، يمكننا تحديد الخطوات التالية بناءً على المعلومات التي شاركتها."
+        "مرحبًا. تحدثنا مؤخرًا عن دبي. إذا كان لديك أي أسئلة إضافية، فلا تتردد في طرحها. أنا هنا دائمًا لمساعدتك.",
+      company:
+        "مرحبًا. تحدثنا مؤخرًا عن تأسيس شركة في دبي. إذا كنت جاهزًا، يمكنني مساعدتك في اختيار الهيكل المناسب.",
+      residency:
+        "مرحبًا. تحدثنا مؤخرًا عن إجراءات الإقامة في دبي. إذا كنت جاهزًا، يمكنني مساعدتك في اختيار الطريق الأنسب.",
+      cost:
+        "مرحبًا. تحدثنا مؤخرًا عن تكاليف دبي. أنا هنا لمساعدتك في التخطيط بوضوح.",
+      AI:
+        "مرحبًا. تحدثنا مؤخرًا عن مشروع الذكاء الاصطناعي. إذا كنت جاهزًا، يمكنني مساعدتك في تطويره."
     }
   };
 
   const langSet = messages[lang] || messages["en"];
   return langSet[topic] || langSet["general"];
 }
+
+
 // -----------------------------------------------------
 // FOLLOW-UP MESAJLARI (3h – 24h – 72h – 7d)
 // -----------------------------------------------------
@@ -2117,24 +2108,11 @@ function getFollowUpMessage(lang, topic, stage) {
     }
   };
 
- return (
-  messages[stage]?.[topic]?.[lang] ||
-  messages[stage]?.["general"]?.[lang] ||
-  messages[stage]?.["general"]?.["tr"]
-);
-
-
-  const stageSet = messages[stage];
-  if (!stageSet) return "";
-
-  if (stage === "3h") {
-    const langSet = stageSet[lang] || stageSet["en"];
-    return langSet || "";
-  }
-
-  const langSet = stageSet[lang] || stageSet["en"];
-  return langSet[topic] || langSet["general"] || "";
+const stageSet = messages[stage] || messages["3h"];
+const topicSet = stageSet[topic] || stageSet["general"];
+return topicSet[lang] || topicSet["en"];
 }
+
 
 
 // ------------------------------------------------------
