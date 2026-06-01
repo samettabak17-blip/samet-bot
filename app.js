@@ -1783,27 +1783,32 @@ ${text}
   // -------------------------------
 //  GEMINI CEVABI
 // -------------------------------
-const reply = await callGemini(prompt);
+try {
+  const reply = await callGemini(prompt);
 
-if (!reply) {
-  await sendMessage(from, corporateFallback(lang));
+  if (!reply) {
+    await sendMessage(from, corporateFallback(lang));
+    return res.sendStatus(200);
+  }
+
+  // History yoksa oluştur
+  if (!s.history) s.history = [];
+
+  s.history.push({ role: "assistant", text: reply });
+
+  await sendMessage(from, reply);
+
   return res.sendStatus(200);
+
+} catch (err) {
+  console.error("Gemini error:", err);
+  return res.sendStatus(500);
 }
-
-// History yoksa oluştur
-if (!s.history) s.history = [];
-
-s.history.push({ role: "assistant", text: reply });
-
-await sendMessage(from, reply);
-
-return res.sendStatus(200);
 
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
 // -----------------------------------------------------
-
 cron.schedule("*/10 * * * *", async () => {
   console.log("[CRON] Follow-up kontrolü:", new Date().toLocaleString());
 
@@ -1972,6 +1977,7 @@ cron.schedule("*/10 * * * *", async () => {
     console.error("[CRON] Genel hata:", err);
   }
 });
+
 
 
 // -----------------------------------------------------
