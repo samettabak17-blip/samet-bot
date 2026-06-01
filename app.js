@@ -1729,7 +1729,7 @@ ${text}
 }  
 
 
-  // -------------------------------
+ // -------------------------------
 //  GEMINI CEVABI
 // -------------------------------
 try {
@@ -1740,9 +1740,7 @@ try {
     return res.sendStatus(200);
   }
 
-  // History yoksa oluştur
   if (!s.history) s.history = [];
-
   s.history.push({ role: "assistant", text: reply });
 
   await sendMessage(from, reply);
@@ -1753,7 +1751,16 @@ try {
   console.error("Gemini error:", err);
   return res.sendStatus(500);
 }
-});
+
+// -------------------------------
+//  WEBHOOK TRY KAPANIŞI
+// -------------------------------
+} catch (err) {
+  console.error("[WEBHOOK ERROR]:", err);
+  return res.sendStatus(200);
+}
+
+});   // ← WEBHOOK BURADA DOĞRU KAPANIYOR
 
 
 // -----------------------------------------------------
