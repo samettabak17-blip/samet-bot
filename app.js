@@ -259,6 +259,25 @@ function calculateIntentScore(text, currentScore = 0) {
   return score;
 }
 
+// ------------------------------
+// DİL ALGILAMA FONKSİYONU
+// ------------------------------
+function detectLanguage(text) {
+  if (!text) return "en";
+
+  // Arapça karakter kontrolü
+  const ar = /[\u0600-\u06FF]/;
+
+  // Türkçe karakter kontrolü
+  const tr = /[ığüşöçİĞÜŞÖÇ]/i;
+
+  if (ar.test(text)) return "ar";
+  if (tr.test(text)) return "tr";
+
+  return "en"; // Varsayılan İngilizce
+}
+
+
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -1744,7 +1763,7 @@ if (!Array.isArray(session.topics)) session.topics = [];
 session.topics.push(detectTopic(text));
 
 // -----------------------------
-//  DİL ALGILAMA
+//  DİL ALGILAMA (DİL SEÇİMLİ BOT İÇİN DOĞRU)
 // -----------------------------
 session.lang = detectLanguage(text);
 
@@ -1755,6 +1774,7 @@ const reply = await generateAIResponse(text, session.lang, session.topics);
 await sendMessage(from, reply);
 
 return res.sendStatus(200);
+
 
 
 // -------------------------------
