@@ -1781,25 +1781,24 @@ ${text}
 
 
   // -------------------------------
-    //  GEMINI CEVABI
-    // -------------------------------
- const reply = await callGemini(prompt);
-  
-  if (!reply) {
-      await sendMessage(from, corporateFallback(lang));
-      return res.sendStatus(200);
-    }
+//  GEMINI CEVABI
+// -------------------------------
+const reply = await callGemini(prompt);
 
-    session.history.push({ role: "assistant", text: reply });
-    await sendMessage(from, reply);
+if (!reply) {
+  await sendMessage(from, corporateFallback(lang));
+  return res.sendStatus(200);
+}
 
-    return res.sendStatus(200);
+// History yoksa oluştur
+if (!s.history) s.history = [];
 
-  } catch (err) {
-    console.error("Webhook error:", err);
-    return res.sendStatus(500);
-  }
-});
+s.history.push({ role: "assistant", text: reply });
+
+await sendMessage(from, reply);
+
+return res.sendStatus(200);
+
 
 // -----------------------------------------------------
 //  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
