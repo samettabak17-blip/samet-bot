@@ -1728,8 +1728,35 @@ ${text}
 `;
 }  
 
+// -----------------------------
+//  KULLANICI MESAJ YAZDI → FOLLOW-UP RESETLERİ
+// -----------------------------
+s.lastMessageTime = Date.now();      // Sessizlik süresi reset
+// s.firstMessageTime = Date.now();  // ❌ ASLA RESET EDİLMEZ
+s.followUpStage = 0;                 // 3h → 24h → 48h → 72h → 7d sıfırlanır
+s.pingSentOnce = false;              // Ping yeniden aktif olur
+s.humanOverride = false;             // Canlı destek modu kapanır
 
- // -------------------------------
+// -----------------------------
+//  TOPIC GÜNCELLE
+// -----------------------------
+if (!Array.isArray(s.topics)) s.topics = [];
+s.topics.push(detectTopic(text));
+
+// -----------------------------
+//  DİL ALGILAMA
+// -----------------------------
+s.lang = detectLanguage(text);
+
+// -----------------------------
+//  CEVAP ÜRET VE GÖNDER
+// -----------------------------
+const reply = await generateAIResponse(text, s.lang, s.topics);
+await sendMessage(from, reply);
+
+return res.sendStatus(200);
+
+// -------------------------------
 //  GEMINI CEVABI
 // -------------------------------
 try {
