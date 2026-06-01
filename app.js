@@ -1753,6 +1753,7 @@ try {
   console.error("Gemini error:", err);
   return res.sendStatus(500);
 }
+});
 
 
 // -----------------------------------------------------
