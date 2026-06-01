@@ -1747,30 +1747,14 @@ ${text}
 `;
 }  
 
+
 // -----------------------------
 //  KULLANICI MESAJ YAZDI → FOLLOW-UP RESETLERİ
 // -----------------------------
 session.lastMessageTime = Date.now();      // Sessizlik süresi reset
-// session.firstMessageTime = Date.now();  // ❌ ASLA RESET EDİLMEZ
 session.followUpStage = 0;                 // 3h → 24h → 48h → 72h → 7d sıfırlanır
 session.pingSentOnce = false;              // Ping yeniden aktif olur
 session.humanOverride = false;             // Canlı destek modu kapanır
-
-// -----------------------------
-//  TOPIC GÜNCELLE
-// -----------------------------
-if (!Array.isArray(session.topics)) session.topics = [];
-session.topics.push(detectTopic(text));
-
-// -----------------------------
-//  DİL ALGILAMA
-// -----------------------------
-session.lang = detectLanguage(text);
-
-// 🔥 DİKKAT: BURADA ARTIK CEVAP ÜRETİLMİYOR, SADECE STATE GÜNCELLENİYOR
-// Akış aşağıdaki GEMINI TRY bloğuna devam ediyor
-
-
 
 
 // -------------------------------
@@ -1784,8 +1768,8 @@ try {
     return res.sendStatus(200);
   }
 
-  if (!s.history) s.history = [];
-  s.history.push({ role: "assistant", text: reply });
+  if (!session.history) session.history = [];
+  session.history.push({ role: "assistant", text: reply });
 
   await sendMessage(from, reply);
 
@@ -1804,7 +1788,7 @@ try {
   return res.sendStatus(200);
 }
 
-});   // ← WEBHOOK BURADA DOĞRU KAPANIYOR
+}); // ← WEBHOOK BURADA KAPANIYOR
 
 
 // -----------------------------------------------------
