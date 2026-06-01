@@ -361,11 +361,11 @@ app.post("/webhook", async (req, res) => {
     // -----------------------------
     // 🔥 KULLANICI MESAJ YAZDI → TÜM FOLLOW-UP RESETLERİ
     // -----------------------------
-    s.lastMessageTime = Date.now();      // Sessizlik süresi reset
-    s.firstMessageTime = Date.now();     // Follow-up zinciri reset
-    s.followUpStage = 0;                 // 3h → 24h → 48h → 72h → 7d sıfırlanır
-    s.pingSentOnce = false;              // Ping yeniden aktif olur
-    s.humanOverride = false;             // Canlı destek modu kapanır
+    s.lastMessageTime = Date.now();
+    s.firstMessageTime = Date.now();
+    s.followUpStage = 0;
+    s.pingSentOnce = false;
+    s.humanOverride = false;
 
     // -----------------------------
     //  TOPIC GÜNCELLE
@@ -384,13 +384,14 @@ app.post("/webhook", async (req, res) => {
     const reply = await generateAIResponse(text, s.lang, s.topics);
     await sendMessage(from, reply);
 
-    res.sendStatus(200);
+    return res.sendStatus(200);
 
   } catch (err) {
     console.error("[WEBHOOK ERROR]:", err);
-    res.sendStatus(200);
-   }
-  });
+    return res.sendStatus(200);
+  }
+});   // ← WEBHOOK BURADA DOĞRU ŞEKİLDE KAPANIYOR
+
 
      // -----------------------------
     //  İLK MESAJ → SESSION OLUŞTUR
