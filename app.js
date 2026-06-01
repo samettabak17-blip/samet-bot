@@ -1763,17 +1763,13 @@ if (!Array.isArray(session.topics)) session.topics = [];
 session.topics.push(detectTopic(text));
 
 // -----------------------------
-//  DİL ALGILAMA (DİL SEÇİMLİ BOT İÇİN DOĞRU)
+//  DİL ALGILAMA
 // -----------------------------
 session.lang = detectLanguage(text);
 
-// -----------------------------
-//  CEVAP ÜRET VE GÖNDER
-// -----------------------------
-const reply = await generateAIResponse(text, session.lang, session.topics);
-await sendMessage(from, reply);
+// 🔥 DİKKAT: BURADA ARTIK CEVAP ÜRETİLMİYOR, SADECE STATE GÜNCELLENİYOR
+// Akış aşağıdaki GEMINI TRY bloğuna devam ediyor
 
-return res.sendStatus(200);
 
 
 
