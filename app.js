@@ -390,7 +390,7 @@ app.post("/webhook", async (req, res) => {
     console.error("[WEBHOOK ERROR]:", err);
     res.sendStatus(200);
    }
-});
+
      // -----------------------------
     //  İLK MESAJ → SESSION OLUŞTUR
     // -----------------------------
