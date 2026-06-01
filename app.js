@@ -275,7 +275,7 @@ app.get("/webhook", (req, res) => {
 });
 
 // -------------------------------
-//  WEBHOOK MESSAGE HANDLER
+//  WEBHOOK MESSAGE HANDLER (FINAL)
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
@@ -342,6 +342,56 @@ app.post("/webhook", async (req, res) => {
     }
 
     // -----------------------------
+    //  SESSION BAŞLAT / GÜNCELLE
+    // -----------------------------
+    if (!sessions[from]) {
+      sessions[from] = {
+        firstMessageTime: Date.now(),
+        lastMessageTime: Date.now(),
+        followUpStage: 0,
+        pingSentOnce: false,
+        topics: [],
+        lang: null,
+        humanOverride: false
+      };
+    }
+
+    const s = sessions[from];
+
+    // -----------------------------
+    // 🔥 KULLANICI MESAJ YAZDI → TÜM FOLLOW-UP RESETLERİ
+    // -----------------------------
+    s.lastMessageTime = Date.now();      // Sessizlik süresi reset
+    s.firstMessageTime = Date.now();     // Follow-up zinciri reset
+    s.followUpStage = 0;                 // 3h → 24h → 48h → 72h → 7d sıfırlanır
+    s.pingSentOnce = false;              // Ping yeniden aktif olur
+    s.humanOverride = false;             // Canlı destek modu kapanır
+
+    // -----------------------------
+    //  TOPIC GÜNCELLE
+    // -----------------------------
+    if (!Array.isArray(s.topics)) s.topics = [];
+    s.topics.push(detectTopic(text));
+
+    // -----------------------------
+    //  DİL ALGILAMA
+    // -----------------------------
+    s.lang = detectLanguage(text);
+
+    // -----------------------------
+    //  CEVAP ÜRET VE GÖNDER
+    // -----------------------------
+    const reply = await generateAIResponse(text, s.lang, s.topics);
+    await sendMessage(from, reply);
+
+    res.sendStatus(200);
+
+  } catch (err) {
+    console.error("[WEBHOOK ERROR]:", err);
+    res.sendStatus(200);
+  }
+
+     // -----------------------------
     //  İLK MESAJ → SESSION OLUŞTUR
     // -----------------------------
     if (!sessions[from]) {
@@ -1756,12 +1806,12 @@ ${text}
 // -----------------------------------------------------
 
 cron.schedule("*/10 * * * *", async () => {
-  console.log("[CRON] Hatırlatma kontrolü tetiklendi:", new Date().toLocaleString());
+  console.log("[CRON] Follow-up kontrolü:", new Date().toLocaleString());
 
   try {
     const now = Date.now();
-
     if (!sessions || typeof sessions !== "object") return;
+
     const users = Object.keys(sessions);
     if (!users.length) return;
 
@@ -1771,25 +1821,21 @@ cron.schedule("*/10 * * * *", async () => {
         if (!s || typeof s !== "object") continue;
 
         // -----------------------------
-        // 🔥 firstMessageTime YOKSA OLUŞTUR
+        // 🔥 ZAMANLARI DOĞRU ŞEKİLDE BAŞLAT
         // -----------------------------
         if (!s.firstMessageTime || isNaN(s.firstMessageTime)) {
-          s.firstMessageTime = s.lastMessageTime || Date.now();
+          s.firstMessageTime = Date.now();
+        }
+
+        if (!s.lastMessageTime || isNaN(s.lastMessageTime)) {
+          s.lastMessageTime = Date.now();
         }
 
         // -----------------------------
-        // 🔥 10 dakika için eski sistem (lastMessageTime)
+        // 🔥 ZAMAN FARKLARI
         // -----------------------------
-        if (!s.lastMessageTime || isNaN(s.lastMessageTime)) continue;
-
         const diffMinutesLast = (now - s.lastMessageTime) / (1000 * 60);
-        if (!isFinite(diffMinutesLast) || diffMinutesLast < 0) continue;
-
-        // -----------------------------
-        // 🔥 24–48–72–7 gün için yeni sistem (firstMessageTime)
-        // -----------------------------
-        const diffMinutes = (now - s.firstMessageTime) / (1000 * 60);
-        const diffHours = diffMinutes / 60;
+        const diffHours = (now - s.firstMessageTime) / (1000 * 60 * 60);
 
         const topics = Array.isArray(s.topics) ? s.topics : [];
         const lastTopic = topics.length ? topics[topics.length - 1] : "general";
@@ -1799,16 +1845,16 @@ cron.schedule("*/10 * * * *", async () => {
           s.followUpStage = 0;
         }
 
-          // -----------------------------------------------------
-        // 🔥 CANLI DESTEK OTOMATİK KAPANMA (10 dakika sessizlik)
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 CANLI DESTEK OTOMATİK KAPANMA (10 dakika)
+        // -----------------------------
         if (s.humanOverride && diffMinutesLast >= 10) {
           s.humanOverride = false;
         }
 
-        // -----------------------------------------------------
-        // 10 DAKİKA PING — SADECE 1 KERE
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 10 DAKİKA PING — SADECE 1 KERE
+        // -----------------------------
         if (diffMinutesLast >= 10 && !s.pingSentOnce) {
           const pingMessage = getPingMessage(lang, lastTopic);
 
@@ -1828,9 +1874,9 @@ cron.schedule("*/10 * * * *", async () => {
           s.pingSentOnce = false;
         }
 
-        // -----------------------------------------------------
-        // 3 SAAT FOLLOW-UP (>= 3 saat)
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 3 SAAT FOLLOW-UP
+        // -----------------------------
         if (s.followUpStage === 0 && diffHours >= 3) {
           const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
@@ -1846,9 +1892,9 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        // -----------------------------------------------------
-        // 24 SAAT FOLLOW-UP (>= 24 saat)
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 24 SAAT FOLLOW-UP
+        // -----------------------------
         if (s.followUpStage === 1 && diffHours >= 24) {
           const msg = getFollowUpMessage(lang, lastTopic, "24h");
 
@@ -1864,9 +1910,9 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        // -----------------------------------------------------
-        // 48 SAAT FOLLOW-UP (>= 48 saat)
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 48 SAAT FOLLOW-UP
+        // -----------------------------
         if (s.followUpStage === 2 && diffHours >= 48) {
           const msg = getFollowUpMessage(lang, lastTopic, "48h");
 
@@ -1882,9 +1928,9 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        // -----------------------------------------------------
-        // 72 SAAT FOLLOW-UP (>= 72 saat)
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 72 SAAT FOLLOW-UP
+        // -----------------------------
         if (s.followUpStage === 3 && diffHours >= 72) {
           const msg = getFollowUpMessage(lang, lastTopic, "72h");
 
@@ -1900,9 +1946,9 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
-        // -----------------------------------------------------
-        // 7 GÜN FOLLOW-UP (>= 168 saat)
-        // -----------------------------------------------------
+        // -----------------------------
+        // 🔥 7 GÜN FOLLOW-UP
+        // -----------------------------
         if (s.followUpStage === 4 && diffHours >= 168) {
           const msg = getFollowUpMessage(lang, lastTopic, "7d");
 
