@@ -342,58 +342,6 @@ app.post("/webhook", async (req, res) => {
     }
 
     // -----------------------------
-    //  SESSION BAŞLAT / GÜNCELLE
-    // -----------------------------
-    if (!sessions[from]) {
-      sessions[from] = {
-        firstMessageTime: Date.now(),
-        lastMessageTime: Date.now(),
-        followUpStage: 0,
-        pingSentOnce: false,
-        topics: [],
-        lang: null,
-        humanOverride: false
-      };
-    }
-
-    const s = sessions[from];
-
-    // -----------------------------
-    // 🔥 KULLANICI MESAJ YAZDI → TÜM FOLLOW-UP RESETLERİ
-    // -----------------------------
-    s.lastMessageTime = Date.now();
-    s.firstMessageTime = Date.now();
-    s.followUpStage = 0;
-    s.pingSentOnce = false;
-    s.humanOverride = false;
-
-    // -----------------------------
-    //  TOPIC GÜNCELLE
-    // -----------------------------
-    if (!Array.isArray(s.topics)) s.topics = [];
-    s.topics.push(detectTopic(text));
-
-    // -----------------------------
-    //  DİL ALGILAMA
-    // -----------------------------
-    s.lang = detectLanguage(text);
-
-    // -----------------------------
-    //  CEVAP ÜRET VE GÖNDER
-    // -----------------------------
-    const reply = await generateAIResponse(text, s.lang, s.topics);
-    await sendMessage(from, reply);
-
-    return res.sendStatus(200);
-
-  } catch (err) {
-    console.error("[WEBHOOK ERROR]:", err);
-    return res.sendStatus(200);
-  }
-});   // ← WEBHOOK BURADA DOĞRU ŞEKİLDE KAPANIYOR
-
-
-     // -----------------------------
     //  İLK MESAJ → SESSION OLUŞTUR
     // -----------------------------
     if (!sessions[from]) {
@@ -490,7 +438,6 @@ app.post("/webhook", async (req, res) => {
     const historyText = session.history
       .map((m) => `${m.role === "user" ? "User" : "Model"}: ${m.text}`)
       .join("\n");
-
 
     // -------------------------------
     //  PROMPT OLUŞTURMA BAŞLANGICI
