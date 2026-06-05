@@ -2368,18 +2368,11 @@ app.post("/telegram-webhook", async (req, res) => {
     const chatId = msg.chat.id.toString();
     const text = msg.text.trim();
 
-    // 1) NORMAL TELEGRAM MESAJI (komut değilse)
+    // 1) NORMAL TELEGRAM MESAJLARI TAMAMEN BLOKLANIR
+    // (Komut değilse bot ASLA cevap vermez)
     if (!text.startsWith("/w ") && !text.startsWith("/end ")) {
-      await axios.post(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          chat_id: chatId,
-          text: `Telegram mesajın alındı: ${text}`
-        }
-      );
       return res.sendStatus(200);
     }
-
     // 2) SADECE SEN KULLANABİLİRSİN
     if (chatId !== process.env.TELEGRAM_CHAT_ID) {
       return res.sendStatus(200);
