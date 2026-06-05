@@ -551,26 +551,59 @@ app.post("/webhook", async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const session = sessions[from];
+  const session = sessions[from];
 
-    // -----------------------------
-    //  LANGUAGE SELECTION
-    // -----------------------------
-    if (!session.lang) {
-      if (text === "1") session.lang = "en";
-      else if (text === "2") session.lang = "tr";
-      else if (text === "3") session.lang = "ar";
-      else {
-        await sendMessage(from, "Please choose 1, 2 or 3.");
-        return res.sendStatus(200);
-      }
+// -----------------------------
+//  AKILLI DİL ALGILAMA (YENİ EKLENDİ)
+// -----------------------------
+const smartLangMap = {
+  "türkçe": "tr",
+  "turkce": "tr",
+  "tr": "tr",
+  "turkish": "tr",
 
-      await sendMessage(from, introAfterLang[session.lang]);
-      return res.sendStatus(200);
-    }
+  "english": "en",
+  "ingilizce": "en",
+  "en": "en",
 
-    const lang = session.lang;
-    const lower = text.toLowerCase();
+  "arabic": "ar",
+  "arapça": "ar",
+  "arapca": "ar",
+  "ar": "ar",
+  "arabian": "ar"
+};
+
+if (!session.lang) {
+  const lower = text.toLowerCase();
+  const detectedLang = smartLangMap[lower];
+
+  // Kullanıcı "Türkçe", "English", "Arabic" gibi yazarsa otomatik algıla
+  if (detectedLang) {
+    session.lang = detectedLang;
+    await sendMessage(from, introAfterLang[session.lang]);
+    return res.sendStatus(200);
+  }
+}
+
+// -----------------------------
+//  LANGUAGE SELECTION (ORİJİNAL BLOK)
+// -----------------------------
+if (!session.lang) {
+  if (text === "1") session.lang = "en";
+  else if (text === "2") session.lang = "tr";
+  else if (text === "3") session.lang = "ar";
+  else {
+    await sendMessage(from, "Please choose 1, 2 or 3.");
+    return res.sendStatus(200);
+  }
+
+  await sendMessage(from, introAfterLang[session.lang]);
+  return res.sendStatus(200);
+}
+
+const lang = session.lang;
+const lower = text.toLowerCase();
+
 
     // -----------------------------
 //  KISA MESAJLAR → KURUMSAL CEVAP
