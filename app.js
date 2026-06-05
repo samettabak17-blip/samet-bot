@@ -16,6 +16,157 @@ app.use(bodyParser.json());
 // -------------------------------
 const sessions = {};
 
+
+// -------------------------------
+//  KISA MESAJ → KURUMSAL CEVAP HARİTASI (YENİ EKLENEN BLOK)
+// -------------------------------
+const corporateShortReplyMap = {
+  // 1 - 2 - 3 (Özel davranış)
+  "1": {
+    tr: "Size nasıl yardımcı olabilirim?",
+    en: "How may I assist you?",
+    ar: "كيف يمكنني مساعدتك؟"
+  },
+  "2": {
+    tr: "Size nasıl yardımcı olabilirim?",
+    en: "How may I assist you?",
+    ar: "كيف يمكنني مساعدتك؟"
+  },
+  "3": {
+    tr: "Size nasıl yardımcı olabilirim?",
+    en: "How may I assist you?",
+    ar: "كيف يمكنني مساعدتك؟"
+  },
+
+  // Selamlama
+  merhaba: {
+    tr: "Merhaba, size nasıl yardımcı olabilirim?",
+    en: "Hello, how may I assist you today?",
+    ar: "مرحبًا، كيف يمكنني مساعدتك اليوم؟"
+  },
+  selam: {
+    tr: "Merhaba, size nasıl yardımcı olabilirim?",
+    en: "Hello, how may I assist you today?",
+    ar: "مرحبًا، كيف يمكنني مساعدتك اليوم؟"
+  },
+  hi: {
+    tr: "Merhaba, size nasıl yardımcı olabilirim?",
+    en: "Hello, how may I assist you today?",
+    ar: "مرحبًا، كيف يمكنني مساعدتك اليوم؟"
+  },
+  hello: {
+    tr: "Merhaba, size nasıl yardımcı olabilirim?",
+    en: "Hello, how may I assist you today?",
+    ar: "مرحبًا، كيف يمكنني مساعدتك اليوم؟"
+  },
+
+  // Teşekkür & Kapanış
+  teşekkürler: {
+    tr: "Ben teşekkür ederim. Dilediğiniz zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "My pleasure. I’m here whenever you need support.",
+    ar: "على الرحب والسعة. أنا هنا كلما احتجت إلى المساعدة."
+  },
+  tesekkurler: {
+    tr: "Ben teşekkür ederim. Dilediğiniz zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "My pleasure. I’m here whenever you need support.",
+    ar: "على الرحب والسعة. أنا هنا كلما احتجت إلى المساعدة."
+  },
+  "thank you": {
+    tr: "Ben teşekkür ederim. Dilediğiniz zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "My pleasure. I’m here whenever you need support.",
+    ar: "على الرحب والسعة. أنا هنا كلما احتجت إلى المساعدة."
+  },
+  thanks: {
+    tr: "Ben teşekkür ederim. Dilediğiniz zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "My pleasure. I’m here whenever you need support.",
+    ar: "على الرحب والسعة. أنا هنا كلما احتجت إلى المساعدة."
+  },
+  "ben teşekkür ederim": {
+    tr: "Rica ederim. Her zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "You're welcome. Always happy to assist.",
+    ar: "على الرحب والسعة. يسعدني دائمًا مساعدتك."
+  },
+  "çok teşekkürler": {
+    tr: "Ben teşekkür ederim. Dilediğiniz zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "My pleasure. I’m here whenever you need support.",
+    ar: "على الرحب والسعة. أنا هنا كلما احتجت إلى المساعدة."
+  },
+  "teşekkür ederim": {
+    tr: "Ben teşekkür ederim. Dilediğiniz zaman yardımcı olmaktan memnuniyet duyarım.",
+    en: "My pleasure. I’m here whenever you need support.",
+    ar: "على الرحب والسعة. أنا هنا كلما احتجت إلى المساعدة."
+  },
+
+  // Sağol / Eyvallah
+  sağol: {
+    tr: "Rica ederim. Dilediğiniz zaman yardımcı olabilirim.",
+    en: "You're welcome. I’m here if you need anything.",
+    ar: "على الرحب والسعة. أنا هنا إذا احتجت أي شيء."
+  },
+  sagol: {
+    tr: "Rica ederim. Dilediğiniz zaman yardımcı olabilirim.",
+    en: "You're welcome. I’m here if you need anything.",
+    ar: "على الرحب والسعة. أنا هنا إذا احتجت أي شيء."
+  },
+  eyvallah: {
+    tr: "Rica ederim. Dilediğiniz zaman yardımcı olabilirim.",
+    en: "You're welcome. I’m here if you need anything.",
+    ar: "على الرحب والسعة. أنا هنا إذا احتجت أي شيء."
+  },
+
+  // Anlama / Onay
+  anladım: {
+    tr: "Harika. Nasıl devam etmek istersiniz?",
+    en: "Great. How would you like to proceed?",
+    ar: "جميل. كيف تود المتابعة؟"
+  },
+  anladim: {
+    tr: "Harika. Nasıl devam etmek istersiniz?",
+    en: "Great. How would you like to proceed?",
+    ar: "جميل. كيف تود المتابعة؟"
+  },
+  "got it": {
+    tr: "Anladım. Nasıl devam etmek istersiniz?",
+    en: "Understood. How would you like to proceed?",
+    ar: "فهمت. كيف تود المتابعة؟"
+  },
+  understood: {
+    tr: "Anladım. Nasıl devam etmek istersiniz?",
+    en: "Understood. How would you like to proceed?",
+    ar: "فهمت. كيف تود المتابعة؟"
+  },
+  noted: {
+    tr: "Not aldım. Nasıl devam etmek istersiniz?",
+    en: "Noted. How would you like to proceed?",
+    ar: "تم تدوينه. كيف تود المتابعة؟"
+  },
+
+  // Kapanış
+  "görüşmek üzere": {
+    tr: "Görüşmek üzere. Dilediğiniz zaman buradayım.",
+    en: "See you soon. I’m here whenever you need assistance.",
+    ar: "أراك قريبًا. أنا هنا كلما احتجت إلى المساعدة."
+  },
+  "gorusmek uzere": {
+    tr: "Görüşmek üzere. Dilediğiniz zaman buradayım.",
+    en: "See you soon. I’m here whenever you need assistance.",
+    ar: "أراك قريبًا. أنا هنا كلما احتجت إلى المساعدة."
+  },
+
+  // Emoji
+  "👍": {
+    tr: "Rica ederim. Dilediğiniz zaman yardımcı olabilirim.",
+    en: "You're welcome. I’m here if you need anything.",
+    ar: "على الرحب والسعة. أنا هنا إذا احتجت أي شيء."
+  },
+  "🙏": {
+    tr: "Rica ederim. Dilediğiniz zaman yardımcı olabilirim.",
+    en: "You're welcome. I’m here if you need anything.",
+    ar: "على الرحب والسعة. أنا هنا إذا احتجت أي شيء."
+  }
+};
+
+
 // -------------------------------
 //  WHATSAPP SEND (4096 LIMIT SAFE)
 // -------------------------------
@@ -420,6 +571,15 @@ app.post("/webhook", async (req, res) => {
 
     const lang = session.lang;
     const lower = text.toLowerCase();
+
+    // -----------------------------
+//  KISA MESAJLAR → KURUMSAL CEVAP
+// -----------------------------
+if (corporateShortReplyMap[lower]) {
+  await sendMessage(from, corporateShortReplyMap[lower][lang]);
+  return res.sendStatus(200);
+}
+
 
     // -----------------------------
     //  CONTACT
@@ -852,12 +1012,12 @@ Account Type: USD $
 Account number: 9726414926
 IBAN: AE210860000009726414926
 BIC: WIOBAEADXXX
-Bank address:
-Etihad Airways Centre 5th Floor, Abu Dhabi, UAE
+
 
 İletişim bilgileri:
 mail: info@samchecompany.com
 telefon: +971 50 179 38 80 - +971 52 728 8586
+Şirket Adresi: Shams Business Center G Floor
 
 Kullanıcı Dubai’ye seyahat, oturum, çalışma izni, şirket kurma, yatırım, maliyet, süreç, prosedür gibi konular sorarsa:
 • 	SamChe Company’nin bu hizmetleri sağladığını belirt.
