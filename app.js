@@ -479,13 +479,14 @@ app.post("/webhook", async (req, res) => {
 
     text = (text || "").trim();
 
-    // -----------------------------
-    //  WHATSAPP → TELEGRAM FORWARD
-    // -----------------------------
-    await sendMessageToTelegram(`WhatsApp → ${from}: ${text}`);
+   // WHATSAPP → TELEGRAM FORWARD
+await sendMessageToTelegram(`WhatsApp → ${from}: ${text}`);
 
-    // Kullanıcı her mesaj attığında zamanlayıcı sıfırlansın
-sessions[from].lastMessageTime = Date.now();
+// Kullanıcı her mesaj attığında zamanlayıcı sıfırlansın
+if (sessions[from]) {
+  sessions[from].lastMessageTime = Date.now();
+}
+
 
 
     // -----------------------------
