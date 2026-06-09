@@ -484,6 +484,10 @@ app.post("/webhook", async (req, res) => {
     // -----------------------------
     await sendMessageToTelegram(`WhatsApp → ${from}: ${text}`);
 
+    // Kullanıcı her mesaj attığında zamanlayıcı sıfırlansın
+sessions[from].lastMessageTime = Date.now();
+
+
     // -----------------------------
     //  CANLI DESTEK MODU → BOT SUSAR
     // -----------------------------
@@ -1985,7 +1989,7 @@ try {
 
 
 // -----------------------------------------------------
-//  CRON TABANLI 10 DK PING + 3H + 24H + 72H + 7 GÜN
+//  CRON TABANLI 10 DK PING + 3H + 24H + 48H + 72H + 7 GÜN
 // -----------------------------------------------------
 cron.schedule("*/10 * * * *", async () => {
   console.log("[CRON] Follow-up kontrolü:", new Date().toLocaleString());
@@ -2005,34 +2009,35 @@ cron.schedule("*/10 * * * *", async () => {
         // -----------------------------
         // 🔥 ZAMANLARI DOĞRU ŞEKİLDE BAŞLAT
         // -----------------------------
-        if (!s.firstMessageTime || isNaN(s.firstMessageTime)) {
-          s.firstMessageTime = Date.now();
-        }
-
         if (!s.lastMessageTime || isNaN(s.lastMessageTime)) {
           s.lastMessageTime = Date.now();
         }
 
-        // -----------------------------
-        // 🔥 ZAMAN FARKLARI
-        // -----------------------------
+        if (!s.followUpStage || isNaN(s.followUpStage)) {
+          s.followUpStage = 0;
+        }
+
+        if (!s.pingSentOnce) {
+          s.pingSentOnce = false;
+        }
+
         const diffMinutesLast = (now - s.lastMessageTime) / (1000 * 60);
-        const diffHours = (now - s.firstMessageTime) / (1000 * 60 * 60);
+        const diffHoursLast = (now - s.lastMessageTime) / (1000 * 60 * 60);
 
         const topics = Array.isArray(s.topics) ? s.topics : [];
         const lastTopic = topics.length ? topics[topics.length - 1] : "general";
         const lang = typeof s.lang === "string" ? s.lang : "en";
-
-        if (typeof s.followUpStage !== "number") {
-          s.followUpStage = 0;
-        }
 
         // -----------------------------
         // 🔥 CANLI DESTEK OTOMATİK KAPANMA (10 dakika)
         // -----------------------------
         if (s.humanOverride && diffMinutesLast >= 10) {
           s.humanOverride = false;
+          console.log(`[CRON] ${user} → Canlı destek otomatik kapandı`);
         }
+
+        // CANLI DESTEK AÇIKKEN HİÇBİR OTOMATİK MESAJ GÖNDERME
+        if (s.humanOverride) continue;
 
         // -----------------------------
         // 🔥 10 DAKİKA PING — SADECE 1 KERE
@@ -2052,97 +2057,62 @@ cron.schedule("*/10 * * * *", async () => {
           continue;
         }
 
+        // Kullanıcı tekrar yazdıysa ping reset
         if (diffMinutesLast < 10 && s.pingSentOnce) {
           s.pingSentOnce = false;
         }
 
         // -----------------------------
-        // 🔥 3 SAAT FOLLOW-UP
+        // 🔥 FOLLOW-UP ZAMANLAMASI (SON MESAJ ÜZERİNDEN)
         // -----------------------------
-        if (s.followUpStage === 0 && diffHours >= 3) {
-          const msg = getFollowUpMessage(lang, lastTopic, "3h");
 
+        // 3 SAAT
+        if (s.followUpStage === 0 && diffHoursLast >= 3) {
+          const msg = getFollowUpMessage(lang, lastTopic, "3h");
           if (msg) {
-            try {
-              await sendMessage(user, msg);
-            } catch (e) {
-              console.error("[CRON] sendMessage 3h error:", e);
-            }
+            try { await sendMessage(user, msg); } catch {}
             s.followUpStage = 1;
           }
-
           continue;
         }
 
-        // -----------------------------
-        // 🔥 24 SAAT FOLLOW-UP
-        // -----------------------------
-        if (s.followUpStage === 1 && diffHours >= 24) {
+        // 24 SAAT
+        if (s.followUpStage === 1 && diffHoursLast >= 24) {
           const msg = getFollowUpMessage(lang, lastTopic, "24h");
-
           if (msg) {
-            try {
-              await sendMessage(user, msg);
-            } catch (e) {
-              console.error("[CRON] sendMessage 24h error:", e);
-            }
+            try { await sendMessage(user, msg); } catch {}
             s.followUpStage = 2;
           }
-
           continue;
         }
 
-        // -----------------------------
-        // 🔥 48 SAAT FOLLOW-UP
-        // -----------------------------
-        if (s.followUpStage === 2 && diffHours >= 48) {
+        // 48 SAAT
+        if (s.followUpStage === 2 && diffHoursLast >= 48) {
           const msg = getFollowUpMessage(lang, lastTopic, "48h");
-
           if (msg) {
-            try {
-              await sendMessage(user, msg);
-            } catch (e) {
-              console.error("[CRON] sendMessage 48h error:", e);
-            }
+            try { await sendMessage(user, msg); } catch {}
             s.followUpStage = 3;
           }
-
           continue;
         }
 
-        // -----------------------------
-        // 🔥 72 SAAT FOLLOW-UP
-        // -----------------------------
-        if (s.followUpStage === 3 && diffHours >= 72) {
+        // 72 SAAT
+        if (s.followUpStage === 3 && diffHoursLast >= 72) {
           const msg = getFollowUpMessage(lang, lastTopic, "72h");
-
           if (msg) {
-            try {
-              await sendMessage(user, msg);
-            } catch (e) {
-              console.error("[CRON] sendMessage 72h error:", e);
-            }
+            try { await sendMessage(user, msg); } catch {}
             s.followUpStage = 4;
           }
-
           continue;
         }
 
-        // -----------------------------
-        // 🔥 7 GÜN FOLLOW-UP
-        // -----------------------------
-        if (s.followUpStage === 4 && diffHours >= 168) {
+        // 7 GÜN
+        if (s.followUpStage === 4 && diffHoursLast >= 168) {
           const msg = getFollowUpMessage(lang, lastTopic, "7d");
-
           if (msg) {
-            try {
-              await sendMessage(user, msg);
-            } catch (e) {
-              console.error("[CRON] sendMessage 7d error:", e);
-            }
+            try { await sendMessage(user, msg); } catch {}
             s.followUpStage = 5;
           }
-
           continue;
         }
 
@@ -2155,6 +2125,7 @@ cron.schedule("*/10 * * * *", async () => {
     console.error("[CRON] Genel hata:", err);
   }
 });
+
 
 
 
