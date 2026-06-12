@@ -609,18 +609,17 @@ app.post("/webhook", async (req, res) => {
     }
 
     // -----------------------------
-    //  BURADAN SONRA GELEN TÜM KODLAR
-    //  (Gemini, cevap üretme, session update)
-    //  AYNEN ÇALIŞACAK
+    //  BURADAN SONRA GEMINI / CEVAP ÜRETME BLOĞUN
+    //  (mevcut kodun burada devam edecek)
     // -----------------------------
 
   } catch (err) {
     console.error("[WEBHOOK ERROR]:", err);
   }
 
+  // 🔥 DIKKAT: Bu return, app.post callback'inin İÇİNDE.
   return res.sendStatus(200);
 });
-
 
 // -----------------------------
 //  LANGUAGE SELECTION (ORİJİNAL BLOK)
