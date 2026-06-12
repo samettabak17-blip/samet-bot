@@ -464,6 +464,7 @@ app.get("/webhook", (req, res) => {
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
+
     const message =
       req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
 
@@ -578,7 +579,7 @@ app.post("/webhook", async (req, res) => {
     const session = sessions[from];
 
     // -----------------------------
-    //  AKILLI DİL ALGILAMA (YENİ EKLENDİ)
+    //  AKILLI DİL ALGILAMA
     // -----------------------------
     const smartLangMap = {
       "türkçe": "tr",
@@ -610,16 +611,17 @@ app.post("/webhook", async (req, res) => {
 
     // -----------------------------
     //  BURADAN SONRA GEMINI / CEVAP ÜRETME BLOĞUN
-    //  (mevcut kodun burada devam edecek)
     // -----------------------------
+    // ... senin mevcut kodun burada devam edecek ...
 
   } catch (err) {
     console.error("[WEBHOOK ERROR]:", err);
   }
 
-  // 🔥 DIKKAT: Bu return, app.post callback'inin İÇİNDE.
+  // 🔥 BU SATIR ARTIK DOĞRU YERDE
   return res.sendStatus(200);
 });
+
 
 // -----------------------------
 //  LANGUAGE SELECTION (ORİJİNAL BLOK)
