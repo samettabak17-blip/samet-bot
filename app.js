@@ -612,7 +612,7 @@ app.post("/webhook", async (req, res) => {
     // -----------------------------
     //  BURADAN SONRA GEMINI / CEVAP ÜRETME BLOĞUN
     // -----------------------------
-    // ... senin mevcut kodun burada devam edecek ...
+    // ... senin kodun burada devam ediyor ...
 
   } catch (err) {
     console.error("[WEBHOOK ERROR]:", err);
@@ -621,6 +621,7 @@ app.post("/webhook", async (req, res) => {
   // 🔥 BU SATIR ARTIK DOĞRU YERDE
   return res.sendStatus(200);
 });
+
 
 
 // -----------------------------
