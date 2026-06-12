@@ -611,20 +611,7 @@ app.post("/webhook", async (req, res) => {
       }
     }
 
-    // -----------------------------
-    //  BURADAN SONRA GEMINI / CEVAP ÜRETME BLOĞUN
-    // -----------------------------
-    // ... senin kodun burada devam ediyor ...
-
-  } catch (err) {
-    console.error("[WEBHOOK ERROR]:", err);
-  }
-
-  // 🔥 BU SATIR ARTIK DOĞRU YERDE
-  return res.sendStatus(200);
-});
-
-
+  
 
 // -----------------------------
 //  LANGUAGE SELECTION (ORİJİNAL BLOK)
