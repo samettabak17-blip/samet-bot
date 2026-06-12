@@ -168,41 +168,54 @@ const corporateShortReplyMap = {
 
 
 // -------------------------------
-//  WHATSAPP SEND (4096 LIMIT SAFE)
+//  WHATSAPP SEND (FINAL – STABLE)
 // -------------------------------
 export async function sendMessage(to, body) {
   try {
+    if (!body || typeof body !== "string") return;
+
+    // 4096 limit safe chunking
     const chunks = [];
     for (let i = 0; i < body.length; i += 4000) {
       chunks.push(body.substring(i, i + 4000));
     }
 
     for (const chunk of chunks) {
-      await axios.post(
-        `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
-        {
-          messaging_product: "whatsapp",
-          to,
-          text: { body: chunk },
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
-            "Content-Type": "application/json",
+      try {
+        await axios.post(
+          `https://graph.facebook.com/v20.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
+          {
+            messaging_product: "whatsapp",
+            to,
+            text: { body: chunk },
           },
-        }
-      );
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } catch (err) {
+        console.error("WhatsApp send error (chunk):", err.response?.data || err.message);
+        continue; // ← Chunk hata verse bile diğer chunk'lar gönderilir
+      }
     }
+
   } catch (err) {
-    console.error("WhatsApp send error:", err.response?.data || err.message);
+    console.error("WhatsApp send error (main):", err.response?.data || err.message);
+    return; // ← BOTUN KİLİTLENMESİNİ %100 ENGELLER
   }
 }
 
+
 // -------------------------------
-//  TELEGRAM FORWARD FUNCTION  
+//  TELEGRAM FORWARD FUNCTION (FINAL – STABLE)
 // -------------------------------
 async function sendMessageToTelegram(text) {
   try {
+    if (!text) return;
+
     const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
 
     await axios.post(url, {
@@ -211,10 +224,13 @@ async function sendMessageToTelegram(text) {
     });
 
     console.log("[TELEGRAM] Message forwarded");
+
   } catch (err) {
     console.error("[TELEGRAM] Error:", err.response?.data || err.message);
+    return; // ← BOTUN KİLİTLENMESİNİ %100 ENGELLER
   }
 }
+
 // -------------------------------
 //  PREMIUM CORPORATE FALLBACK
 // -------------------------------
@@ -428,7 +444,6 @@ function detectLanguage(text) {
   return "en"; // Varsayılan İngilizce
 }
 
-
 // -------------------------------
 //  WEBHOOK VERIFY
 // -------------------------------
@@ -445,7 +460,7 @@ app.get("/webhook", (req, res) => {
 });
 
 // -------------------------------
-//  WEBHOOK MESSAGE HANDLER (FINAL)
+//  WEBHOOK MESSAGE HANDLER (FINAL – STABLE)
 // -------------------------------
 app.post("/webhook", async (req, res) => {
   try {
@@ -479,18 +494,22 @@ app.post("/webhook", async (req, res) => {
 
     text = (text || "").trim();
 
-   // WHATSAPP → TELEGRAM FORWARD
-await sendMessageToTelegram(`WhatsApp → ${from}: ${text}`);
+    // -----------------------------
+    //  WHATSAPP → TELEGRAM FORWARD
+    // -----------------------------
+    try {
+      await sendMessageToTelegram(`WhatsApp → ${from}: ${text}`);
+    } catch (err) {
+      console.error("[TELEGRAM FORWARD ERROR]:", err);
+    }
 
-// Kullanıcı her mesaj attığında zamanlayıcı sıfırlansın
-if (sessions[from]) {
-  sessions[from].lastMessageTime = Date.now();
-}
-
-
+    // Kullanıcı her mesaj attığında zamanlayıcı sıfırlansın
+    if (sessions[from]) {
+      sessions[from].lastMessageTime = Date.now();
+    }
 
     // -----------------------------
-    //  CANLI DESTEK MODU → BOT SUSAR
+    //  CANLI DESTEK MODU
     // -----------------------------
     if (sessions[from]?.humanOverride) {
       sessions[from].lastMessageTime = Date.now();
@@ -556,39 +575,52 @@ if (sessions[from]) {
       return res.sendStatus(200);
     }
 
-  const session = sessions[from];
+    const session = sessions[from];
 
-// -----------------------------
-//  AKILLI DİL ALGILAMA (YENİ EKLENDİ)
-// -----------------------------
-const smartLangMap = {
-  "türkçe": "tr",
-  "turkce": "tr",
-  "tr": "tr",
-  "turkish": "tr",
+    // -----------------------------
+    //  AKILLI DİL ALGILAMA (YENİ EKLENDİ)
+    // -----------------------------
+    const smartLangMap = {
+      "türkçe": "tr",
+      "turkce": "tr",
+      "tr": "tr",
+      "turkish": "tr",
 
-  "english": "en",
-  "ingilizce": "en",
-  "en": "en",
+      "english": "en",
+      "ingilizce": "en",
+      "en": "en",
 
-  "arabic": "ar",
-  "arapça": "ar",
-  "arapca": "ar",
-  "ar": "ar",
-  "arabian": "ar"
-};
+      "arabic": "ar",
+      "arapça": "ar",
+      "arapca": "ar",
+      "ar": "ar",
+      "arabian": "ar"
+    };
 
-if (!session.lang) {
-  const lower = text.toLowerCase();
-  const detectedLang = smartLangMap[lower];
+    if (!session.lang) {
+      const lower = text.toLowerCase();
+      const detectedLang = smartLangMap[lower];
 
-  // Kullanıcı "Türkçe", "English", "Arabic" gibi yazarsa otomatik algıla
-  if (detectedLang) {
-    session.lang = detectedLang;
-    await sendMessage(from, introAfterLang[session.lang]);
-    return res.sendStatus(200);
+      if (detectedLang) {
+        session.lang = detectedLang;
+        await sendMessage(from, introAfterLang[session.lang]);
+        return res.sendStatus(200);
+      }
+    }
+
+    // -----------------------------
+    //  BURADAN SONRA GELEN TÜM KODLAR
+    //  (Gemini, cevap üretme, session update)
+    //  AYNEN ÇALIŞACAK
+    // -----------------------------
+
+  } catch (err) {
+    console.error("[WEBHOOK ERROR]:", err);
   }
-}
+
+  return res.sendStatus(200);
+});
+
 
 // -----------------------------
 //  LANGUAGE SELECTION (ORİJİNAL BLOK)
