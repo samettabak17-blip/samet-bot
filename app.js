@@ -170,11 +170,11 @@ const corporateShortReplyMap = {
 // -------------------------------
 //  WHATSAPP SEND (FINAL – STABLE)
 // -------------------------------
-export async function sendMessage(to, body) {
+async function sendMessage(to, body) {
   try {
     if (!body || typeof body !== "string") return;
 
-    // 4096 limit safe chunking
+    // 4000 karakter güvenli chunk
     const chunks = [];
     for (let i = 0; i < body.length; i += 4000) {
       chunks.push(body.substring(i, i + 4000));
@@ -197,16 +197,17 @@ export async function sendMessage(to, body) {
           }
         );
       } catch (err) {
-        console.error("WhatsApp send error (chunk):", err.response?.data || err.message);
-        continue; // ← Chunk hata verse bile diğer chunk'lar gönderilir
+        console.error("[WHATSAPP SEND ERROR - CHUNK]:", err.response?.data || err.message);
+        continue;
       }
     }
 
   } catch (err) {
-    console.error("WhatsApp send error (main):", err.response?.data || err.message);
-    return; // ← BOTUN KİLİTLENMESİNİ %100 ENGELLER
+    console.error("[WHATSAPP SEND ERROR - MAIN]:", err.response?.data || err.message);
+    return;
   }
 }
+
 
 
 // -------------------------------
@@ -226,10 +227,11 @@ async function sendMessageToTelegram(text) {
     console.log("[TELEGRAM] Message forwarded");
 
   } catch (err) {
-    console.error("[TELEGRAM] Error:", err.response?.data || err.message);
-    return; // ← BOTUN KİLİTLENMESİNİ %100 ENGELLER
+    console.error("[TELEGRAM ERROR]:", err.response?.data || err.message);
+    return;
   }
 }
+
 
 // -------------------------------
 //  PREMIUM CORPORATE FALLBACK
